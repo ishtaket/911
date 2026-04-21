@@ -12,11 +12,16 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Warning
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -25,19 +30,27 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.searchaid.domain.model.HistoricalPlace
 import com.searchaid.domain.model.PersonProfile
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -51,6 +64,8 @@ fun PersonProfileScreen(
 ) {
     val profile by viewModel.profile.collectAsStateWithLifecycle()
     val loading by viewModel.loading.collectAsStateWithLifecycle()
+    val places by viewModel.places.collectAsStateWithLifecycle()
+    var showAddPlaceDialog by remember { mutableStateOf(false) }
 
     Scaffold(
         topBar = {
@@ -100,15 +115,37 @@ fun PersonProfileScreen(
                 }
             }
             else -> {
-                ProfileContent(profile = profile!!, modifier = Modifier.padding(padding))
+                ProfileContent(
+                    profile = profile!!,
+                    places = places,
+                    onAddPlace = { showAddPlaceDialog = true },
+                    onDeletePlace = viewModel::deletePlace,
+                    modifier = Modifier.padding(padding),
+                )
             }
         }
+    }
+
+    if (showAddPlaceDialog) {
+        AddHistoricalPlaceDialog(
+            onDismiss = { showAddPlaceDialog = false },
+            onConfirm = { title, lat, lon, source, note ->
+                viewModel.addPlace(title, lat, lon, source, note)
+                showAddPlaceDialog = false
+            },
+        )
     }
 }
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun ProfileContent(profile: PersonProfile, modifier: Modifier = Modifier) {
+private fun ProfileContent(
+    profile: PersonProfile,
+    places: List<HistoricalPlace>,
+    onAddPlace: () -> Unit,
+    onDeletePlace: (Long) -> Unit,
+    modifier: Modifier = Modifier,
+) {
     Column(
         modifier = modifier
             .fillMaxSize()
@@ -137,18 +174,28 @@ private fun ProfileContent(profile: PersonProfile, modifier: Modifier = Modifier
             profile.emails.isNotEmpty() || profile.phones.isNotEmpty()
         ) {
             InfoCard("Identity") {
-                if (profile.aliases.isNotEmpty()) {
-                    ChipRow("Aliases", profile.aliases)
-                }
-                if (profile.nicknames.isNotEmpty()) {
-                    ChipRow("Nicknames", profile.nicknames)
-                }
-                if (profile.emails.isNotEmpty()) {
-                    ChipRow("Emails", profile.emails)
-                }
-                if (profile.phones.isNotEmpty()) {
-                    ChipRow("Phones", profile.phones)
-                }
+                if (profile.aliases.isNotEmpty()) ChipRow("Aliases", profile.aliases)
+                if (profile.nicknames.isNotEmpty()) ChipRow("Nicknames", profile.nicknames)
+                if (profile.emails.isNotEmpty()) ChipRow("Emails", profile.emails)
+                if (profile.phones.isNotEmpty()) ChipRow("Phones", profile.phones)
+            }
+        }
+
+        // Historical places card
+        InfoCard("Historical Places") {
+            if (places.isEmpty()) {
+                Text(
+                    "No places added yet",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            places.forEach { place ->
+                HistoricalPlaceItem(place = place, onDelete = { onDeletePlace(place.id) })
+            }
+            TextButton(onClick = onAddPlace) {
+                Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.padding(end = 4.dp))
+                Text("Add place")
             }
         }
 
@@ -161,6 +208,110 @@ private fun ProfileContent(profile: PersonProfile, modifier: Modifier = Modifier
 
         Spacer(Modifier.height(80.dp))
     }
+}
+
+@Composable
+private fun HistoricalPlaceItem(place: HistoricalPlace, onDelete: () -> Unit) {
+    ListItem(
+        headlineContent = { Text(place.title) },
+        supportingContent = {
+            Text(
+                "%.5f, %.5f".format(place.lat, place.lon),
+                style = MaterialTheme.typography.bodySmall,
+            )
+        },
+        leadingContent = {
+            Icon(Icons.Default.LocationOn, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+        },
+        trailingContent = {
+            IconButton(onClick = onDelete) {
+                Icon(Icons.Default.Delete, contentDescription = "Delete", tint = MaterialTheme.colorScheme.error)
+            }
+        },
+        overlineContent = place.source?.let { { Text(it, style = MaterialTheme.typography.labelSmall) } },
+    )
+}
+
+@Composable
+private fun AddHistoricalPlaceDialog(
+    onDismiss: () -> Unit,
+    onConfirm: (title: String, lat: Double, lon: Double, source: String?, note: String?) -> Unit,
+) {
+    var title by remember { mutableStateOf("") }
+    var lat by remember { mutableStateOf("") }
+    var lon by remember { mutableStateOf("") }
+    var source by remember { mutableStateOf("") }
+    var note by remember { mutableStateOf("") }
+
+    val isValid = title.isNotBlank() && lat.toDoubleOrNull() != null && lon.toDoubleOrNull() != null
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Add Historical Place") },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                OutlinedTextField(
+                    value = title,
+                    onValueChange = { title = it },
+                    label = { Text("Place name *") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    OutlinedTextField(
+                        value = lat,
+                        onValueChange = { lat = it },
+                        label = { Text("Latitude *") },
+                        singleLine = true,
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                        modifier = Modifier.weight(1f),
+                    )
+                    OutlinedTextField(
+                        value = lon,
+                        onValueChange = { lon = it },
+                        label = { Text("Longitude *") },
+                        singleLine = true,
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                        modifier = Modifier.weight(1f),
+                    )
+                }
+                OutlinedTextField(
+                    value = source,
+                    onValueChange = { source = it },
+                    label = { Text("Source") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                OutlinedTextField(
+                    value = note,
+                    onValueChange = { note = it },
+                    label = { Text("Note") },
+                    singleLine = false,
+                    minLines = 2,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            }
+        },
+        confirmButton = {
+            TextButton(
+                onClick = {
+                    onConfirm(
+                        title.trim(),
+                        lat.toDouble(),
+                        lon.toDouble(),
+                        source.trim().ifBlank { null },
+                        note.trim().ifBlank { null },
+                    )
+                },
+                enabled = isValid,
+            ) {
+                Text("Add")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text("Cancel") }
+        },
+    )
 }
 
 @Composable
