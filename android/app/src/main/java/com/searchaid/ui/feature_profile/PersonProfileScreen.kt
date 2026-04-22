@@ -50,8 +50,13 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.searchaid.domain.model.CaseStatus
 import com.searchaid.domain.model.HistoricalPlace
+import com.searchaid.domain.model.MissingCase
 import com.searchaid.domain.model.PersonProfile
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -65,6 +70,7 @@ fun PersonProfileScreen(
     val profile by viewModel.profile.collectAsStateWithLifecycle()
     val loading by viewModel.loading.collectAsStateWithLifecycle()
     val places by viewModel.places.collectAsStateWithLifecycle()
+    val cases by viewModel.cases.collectAsStateWithLifecycle()
     var showAddPlaceDialog by remember { mutableStateOf(false) }
 
     Scaffold(
@@ -118,8 +124,10 @@ fun PersonProfileScreen(
                 ProfileContent(
                     profile = profile!!,
                     places = places,
+                    cases = cases,
                     onAddPlace = { showAddPlaceDialog = true },
                     onDeletePlace = viewModel::deletePlace,
+                    onOpenCase = onOpenCase,
                     modifier = Modifier.padding(padding),
                 )
             }
@@ -142,8 +150,10 @@ fun PersonProfileScreen(
 private fun ProfileContent(
     profile: PersonProfile,
     places: List<HistoricalPlace>,
+    cases: List<MissingCase>,
     onAddPlace: () -> Unit,
     onDeletePlace: (Long) -> Unit,
+    onOpenCase: (Long) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Column(
@@ -153,6 +163,33 @@ private fun ProfileContent(
             .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
+        // Active cases
+        val activeCases = cases.filter { it.status == CaseStatus.ACTIVE }
+        if (activeCases.isNotEmpty()) {
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.errorContainer,
+                ),
+            ) {
+                Column(modifier = Modifier.padding(16.dp)) {
+                    Text(
+                        "Active Cases",
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.error,
+                    )
+                    val fmt = SimpleDateFormat("dd MMM, HH:mm", Locale.getDefault())
+                    activeCases.forEach { case_ ->
+                        TextButton(onClick = { onOpenCase(case_.id) }) {
+                            Icon(Icons.Default.Warning, contentDescription = null, modifier = Modifier.padding(end = 8.dp))
+                            Text("Case from ${fmt.format(Date(case_.createdAt))}")
+                        }
+                    }
+                }
+            }
+        }
+
         // Basic info card
         InfoCard("Basic Info") {
             InfoRow("Name", profile.name)

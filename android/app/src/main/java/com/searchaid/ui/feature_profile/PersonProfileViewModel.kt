@@ -4,9 +4,11 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.searchaid.domain.model.HistoricalPlace
+import com.searchaid.domain.model.MissingCase
 import com.searchaid.domain.model.PersonProfile
 import com.searchaid.domain.usecase.AddHistoricalPlaceUseCase
 import com.searchaid.domain.usecase.DeleteHistoricalPlaceUseCase
+import com.searchaid.domain.usecase.GetCasesByPersonUseCase
 import com.searchaid.domain.usecase.GetHistoricalPlacesUseCase
 import com.searchaid.domain.usecase.GetPersonProfileUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -22,6 +24,7 @@ class PersonProfileViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
     private val getProfile: GetPersonProfileUseCase,
     getHistoricalPlaces: GetHistoricalPlacesUseCase,
+    getCasesByPerson: GetCasesByPersonUseCase,
     private val addHistoricalPlace: AddHistoricalPlaceUseCase,
     private val deleteHistoricalPlace: DeleteHistoricalPlaceUseCase,
 ) : ViewModel() {
@@ -35,6 +38,9 @@ class PersonProfileViewModel @Inject constructor(
     val loading: StateFlow<Boolean> = _loading
 
     val places: StateFlow<List<HistoricalPlace>> = getHistoricalPlaces(profileId)
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
+    val cases: StateFlow<List<MissingCase>> = getCasesByPerson(profileId)
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
     init {

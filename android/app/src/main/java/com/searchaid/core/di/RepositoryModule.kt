@@ -1,8 +1,10 @@
 package com.searchaid.core.di
 
 import com.searchaid.data.repository.HistoricalPlaceRepositoryImpl
+import com.searchaid.data.repository.MissingCaseRepositoryImpl
 import com.searchaid.data.repository.PersonProfileRepositoryImpl
 import com.searchaid.domain.repository.HistoricalPlaceRepository
+import com.searchaid.domain.repository.MissingCaseRepository
 import com.searchaid.domain.repository.PersonProfileRepository
 import dagger.Binds
 import dagger.Module
@@ -25,4 +27,10 @@ abstract class RepositoryModule {
     abstract fun bindHistoricalPlaceRepository(
         impl: HistoricalPlaceRepositoryImpl,
     ): HistoricalPlaceRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindMissingCaseRepository(
+        impl: MissingCaseRepositoryImpl,
+    ): MissingCaseRepository
 }
