@@ -40,6 +40,44 @@ fun CreateEditProfileScreen(
     viewModel: CreateEditProfileViewModel = hiltViewModel(),
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
+    CreateEditProfileContent(
+        state = state,
+        onBack = onBack,
+        onSaved = onSaved,
+        onSave = viewModel::save,
+        onNameChange = viewModel::onNameChange,
+        onAgeChange = viewModel::onAgeChange,
+        onConditionChange = viewModel::onConditionChange,
+        onFeaturesChange = viewModel::onFeaturesChange,
+        onHabitsChange = viewModel::onHabitsChange,
+        onLocationsChange = viewModel::onLocationsChange,
+        onAliasesChange = viewModel::onAliasesChange,
+        onNicknamesChange = viewModel::onNicknamesChange,
+        onEmailsChange = viewModel::onEmailsChange,
+        onPhonesChange = viewModel::onPhonesChange,
+        onFamilyNotesChange = viewModel::onFamilyNotesChange,
+    )
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+internal fun CreateEditProfileContent(
+    state: ProfileFormState,
+    onBack: () -> Unit,
+    onSaved: () -> Unit,
+    onSave: () -> Unit,
+    onNameChange: (String) -> Unit,
+    onAgeChange: (String) -> Unit,
+    onConditionChange: (String) -> Unit,
+    onFeaturesChange: (String) -> Unit,
+    onHabitsChange: (String) -> Unit,
+    onLocationsChange: (String) -> Unit,
+    onAliasesChange: (String) -> Unit,
+    onNicknamesChange: (String) -> Unit,
+    onEmailsChange: (String) -> Unit,
+    onPhonesChange: (String) -> Unit,
+    onFamilyNotesChange: (String) -> Unit,
+) {
 
     LaunchedEffect(state.saved) {
         if (state.saved) onSaved()
@@ -63,7 +101,7 @@ fun CreateEditProfileScreen(
         },
         floatingActionButton = {
             if (!state.loading) {
-                FloatingActionButton(onClick = viewModel::save) {
+                FloatingActionButton(onClick = onSave) {
                     Icon(Icons.Default.Check, contentDescription = "Save")
                 }
             }
@@ -84,23 +122,23 @@ fun CreateEditProfileScreen(
                 Spacer(Modifier.height(8.dp))
 
                 SectionHeader("Basic Info")
-                FormField("Full name *", state.name, viewModel::onNameChange)
-                FormField("Age", state.age, viewModel::onAgeChange, keyboardType = KeyboardType.Number)
-                FormField("Condition / Diagnosis", state.condition, viewModel::onConditionChange)
-                FormField("Distinguishing features", state.distinguishingFeatures, viewModel::onFeaturesChange, singleLine = false)
+                FormField("Full name *", state.name, onNameChange)
+                FormField("Age", state.age, onAgeChange, keyboardType = KeyboardType.Number)
+                FormField("Condition / Diagnosis", state.condition, onConditionChange)
+                FormField("Distinguishing features", state.distinguishingFeatures, onFeaturesChange, singleLine = false)
 
                 SectionHeader("Behavior")
-                FormField("Habits", state.habits, viewModel::onHabitsChange, singleLine = false)
-                FormField("Known locations", state.knownLocations, viewModel::onLocationsChange, singleLine = false)
+                FormField("Habits", state.habits, onHabitsChange, singleLine = false)
+                FormField("Known locations", state.knownLocations, onLocationsChange, singleLine = false)
 
                 SectionHeader("Identity")
-                FormField("Aliases (comma-separated)", state.aliases, viewModel::onAliasesChange)
-                FormField("Nicknames (comma-separated)", state.nicknames, viewModel::onNicknamesChange)
-                FormField("Emails (comma-separated)", state.emails, viewModel::onEmailsChange, keyboardType = KeyboardType.Email)
-                FormField("Phones (comma-separated)", state.phones, viewModel::onPhonesChange, keyboardType = KeyboardType.Phone)
+                FormField("Aliases (comma-separated)", state.aliases, onAliasesChange)
+                FormField("Nicknames (comma-separated)", state.nicknames, onNicknamesChange)
+                FormField("Emails (comma-separated)", state.emails, onEmailsChange, keyboardType = KeyboardType.Email)
+                FormField("Phones (comma-separated)", state.phones, onPhonesChange, keyboardType = KeyboardType.Phone)
 
                 SectionHeader("Family")
-                FormField("Family notes", state.familyNotes, viewModel::onFamilyNotesChange, singleLine = false)
+                FormField("Family notes", state.familyNotes, onFamilyNotesChange, singleLine = false)
 
                 Spacer(Modifier.height(80.dp))
             }
@@ -109,7 +147,7 @@ fun CreateEditProfileScreen(
 }
 
 @Composable
-private fun SectionHeader(title: String) {
+internal fun SectionHeader(title: String) {
     Text(
         text = title,
         style = MaterialTheme.typography.titleSmall,
@@ -119,7 +157,7 @@ private fun SectionHeader(title: String) {
 }
 
 @Composable
-private fun FormField(
+internal fun FormField(
     label: String,
     value: String,
     onValueChange: (String) -> Unit,

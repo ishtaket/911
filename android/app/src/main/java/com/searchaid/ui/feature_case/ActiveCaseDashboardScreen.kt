@@ -60,7 +60,34 @@ fun ActiveCaseDashboardScreen(
     viewModel: ActiveCaseDashboardViewModel = hiltViewModel(),
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
-    val caseId = viewModel.caseId
+    ActiveCaseDashboardContent(
+        state = state,
+        caseId = viewModel.caseId,
+        onBack = onBack,
+        onOpenMap = onOpenMap,
+        onOpenLeads = onOpenLeads,
+        onOpenWitness = onOpenWitness,
+        onOpenOutreach = onOpenOutreach,
+        onOpenAudit = onOpenAudit,
+        onMarkFound = viewModel::markFound,
+        onCloseCase = viewModel::closeCase,
+    )
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+internal fun ActiveCaseDashboardContent(
+    state: CaseDashboardState,
+    caseId: Long,
+    onBack: () -> Unit,
+    onOpenMap: (Long) -> Unit,
+    onOpenLeads: (Long) -> Unit,
+    onOpenWitness: (Long) -> Unit,
+    onOpenOutreach: (Long) -> Unit,
+    onOpenAudit: (Long) -> Unit,
+    onMarkFound: () -> Unit,
+    onCloseCase: () -> Unit,
+) {
 
     val topBarColor = when (state.case_?.status) {
         CaseStatus.ACTIVE -> MaterialTheme.colorScheme.error
@@ -239,14 +266,14 @@ fun ActiveCaseDashboardScreen(
                             horizontalArrangement = Arrangement.spacedBy(12.dp),
                         ) {
                             FilledTonalButton(
-                                onClick = viewModel::markFound,
+                                onClick = onMarkFound,
                                 modifier = Modifier.weight(1f),
                             ) {
                                 Icon(Icons.Default.CheckCircle, contentDescription = null, modifier = Modifier.padding(end = 4.dp))
                                 Text("FOUND")
                             }
                             OutlinedButton(
-                                onClick = viewModel::closeCase,
+                                onClick = onCloseCase,
                                 modifier = Modifier.weight(1f),
                             ) {
                                 Icon(Icons.Default.Close, contentDescription = null, modifier = Modifier.padding(end = 4.dp))

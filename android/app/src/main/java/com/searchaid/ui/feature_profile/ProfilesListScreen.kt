@@ -38,6 +38,20 @@ fun ProfilesListScreen(
     viewModel: ProfilesListViewModel = hiltViewModel(),
 ) {
     val profiles by viewModel.profiles.collectAsStateWithLifecycle()
+    ProfilesListScreenContent(
+        profiles = profiles,
+        onProfileClick = onProfileClick,
+        onCreateClick = onCreateClick,
+    )
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+internal fun ProfilesListScreenContent(
+    profiles: List<PersonProfile>,
+    onProfileClick: (Long) -> Unit,
+    onCreateClick: () -> Unit,
+) {
 
     Scaffold(
         topBar = {

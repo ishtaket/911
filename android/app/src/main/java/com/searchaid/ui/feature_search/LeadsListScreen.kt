@@ -56,6 +56,44 @@ fun LeadsListScreen(
     viewModel: LeadsListViewModel = hiltViewModel(),
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
+    LeadsListScreenContent(
+        state = state,
+        onBack = onBack,
+        onShowAddDialog = viewModel::showAddDialog,
+        onDismissAddDialog = viewModel::dismissAddDialog,
+        onConfirmLead = viewModel::confirmLead,
+        onRejectLead = viewModel::rejectLead,
+        onTypeChange = viewModel::onTypeChange,
+        onPlatformChange = viewModel::onPlatformChange,
+        onMatchedValueChange = viewModel::onMatchedValueChange,
+        onTextSnippetChange = viewModel::onTextSnippetChange,
+        onLocationNameChange = viewModel::onLocationNameChange,
+        onLatChange = viewModel::onLatChange,
+        onLonChange = viewModel::onLonChange,
+        onConfidenceChange = viewModel::onConfidenceChange,
+        onSubmitLead = viewModel::submitLead,
+    )
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+internal fun LeadsListScreenContent(
+    state: LeadsListState,
+    onBack: () -> Unit,
+    onShowAddDialog: () -> Unit,
+    onDismissAddDialog: () -> Unit,
+    onConfirmLead: (Long) -> Unit,
+    onRejectLead: (Long) -> Unit,
+    onTypeChange: (LeadType) -> Unit,
+    onPlatformChange: (String) -> Unit,
+    onMatchedValueChange: (String) -> Unit,
+    onTextSnippetChange: (String) -> Unit,
+    onLocationNameChange: (String) -> Unit,
+    onLatChange: (String) -> Unit,
+    onLonChange: (String) -> Unit,
+    onConfidenceChange: (String) -> Unit,
+    onSubmitLead: () -> Unit,
+) {
 
     Scaffold(
         topBar = {
@@ -69,7 +107,7 @@ fun LeadsListScreen(
             )
         },
         floatingActionButton = {
-            FloatingActionButton(onClick = viewModel::showAddDialog) {
+            FloatingActionButton(onClick = onShowAddDialog) {
                 Icon(Icons.Default.Add, contentDescription = "Add lead")
             }
         },
@@ -91,8 +129,8 @@ fun LeadsListScreen(
                 items(state.leads, key = { it.id }) { lead ->
                     LeadCard(
                         lead = lead,
-                        onConfirm = { viewModel.confirmLead(lead.id) },
-                        onReject = { viewModel.rejectLead(lead.id) },
+                        onConfirm = { onConfirmLead(lead.id) },
+                        onReject = { onRejectLead(lead.id) },
                     )
                 }
             }
@@ -102,16 +140,16 @@ fun LeadsListScreen(
     if (state.showAddDialog) {
         AddLeadDialog(
             form = state.addForm,
-            onTypeChange = viewModel::onTypeChange,
-            onPlatformChange = viewModel::onPlatformChange,
-            onMatchedValueChange = viewModel::onMatchedValueChange,
-            onTextSnippetChange = viewModel::onTextSnippetChange,
-            onLocationNameChange = viewModel::onLocationNameChange,
-            onLatChange = viewModel::onLatChange,
-            onLonChange = viewModel::onLonChange,
-            onConfidenceChange = viewModel::onConfidenceChange,
-            onSubmit = viewModel::submitLead,
-            onDismiss = viewModel::dismissAddDialog,
+            onTypeChange = onTypeChange,
+            onPlatformChange = onPlatformChange,
+            onMatchedValueChange = onMatchedValueChange,
+            onTextSnippetChange = onTextSnippetChange,
+            onLocationNameChange = onLocationNameChange,
+            onLatChange = onLatChange,
+            onLonChange = onLonChange,
+            onConfidenceChange = onConfidenceChange,
+            onSubmit = onSubmitLead,
+            onDismiss = onDismissAddDialog,
         )
     }
 }
