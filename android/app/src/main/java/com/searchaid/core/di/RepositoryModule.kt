@@ -1,8 +1,10 @@
 package com.searchaid.core.di
 
+import com.searchaid.data.repository.AuditLogRepositoryImpl
 import com.searchaid.data.repository.HistoricalPlaceRepositoryImpl
 import com.searchaid.data.repository.MissingCaseRepositoryImpl
 import com.searchaid.data.repository.PersonProfileRepositoryImpl
+import com.searchaid.domain.repository.AuditLogRepository
 import com.searchaid.domain.repository.HistoricalPlaceRepository
 import com.searchaid.domain.repository.MissingCaseRepository
 import com.searchaid.domain.repository.PersonProfileRepository
@@ -33,4 +35,10 @@ abstract class RepositoryModule {
     abstract fun bindMissingCaseRepository(
         impl: MissingCaseRepositoryImpl,
     ): MissingCaseRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindAuditLogRepository(
+        impl: AuditLogRepositoryImpl,
+    ): AuditLogRepository
 }

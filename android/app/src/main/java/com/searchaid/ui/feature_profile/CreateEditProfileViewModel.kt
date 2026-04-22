@@ -6,6 +6,7 @@ import androidx.lifecycle.viewModelScope
 import com.searchaid.domain.model.PersonProfile
 import com.searchaid.domain.usecase.CreatePersonProfileUseCase
 import com.searchaid.domain.usecase.GetPersonProfileUseCase
+import com.searchaid.domain.usecase.LogActionUseCase
 import com.searchaid.domain.usecase.UpdatePersonProfileUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -37,6 +38,7 @@ class CreateEditProfileViewModel @Inject constructor(
     private val getProfile: GetPersonProfileUseCase,
     private val createProfile: CreatePersonProfileUseCase,
     private val updateProfile: UpdatePersonProfileUseCase,
+    private val logAction: LogActionUseCase,
 ) : ViewModel() {
 
     private val profileId: Long = savedStateHandle["profileId"] ?: -1L
@@ -114,8 +116,10 @@ class CreateEditProfileViewModel @Inject constructor(
 
             if (existingProfile != null) {
                 updateProfile(profile)
+                logAction("PROFILE_UPDATED", details = "Updated profile: ${profile.name}")
             } else {
-                createProfile(profile)
+                val id = createProfile(profile)
+                logAction("PROFILE_CREATED", details = "Created profile: ${profile.name} (id=$id)")
             }
 
             _state.update { it.copy(loading = false, saved = true) }

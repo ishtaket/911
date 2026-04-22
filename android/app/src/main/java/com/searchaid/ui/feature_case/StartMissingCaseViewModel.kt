@@ -6,6 +6,7 @@ import androidx.lifecycle.viewModelScope
 import com.searchaid.domain.model.MissingCase
 import com.searchaid.domain.model.PersonProfile
 import com.searchaid.domain.usecase.GetPersonProfileUseCase
+import com.searchaid.domain.usecase.LogActionUseCase
 import com.searchaid.domain.usecase.StartMissingCaseUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -31,6 +32,7 @@ class StartMissingCaseViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
     private val getProfile: GetPersonProfileUseCase,
     private val startCase: StartMissingCaseUseCase,
+    private val logAction: LogActionUseCase,
 ) : ViewModel() {
 
     private val profileId: Long = savedStateHandle["profileId"] ?: -1L
@@ -70,6 +72,11 @@ class StartMissingCaseViewModel @Inject constructor(
             )
 
             val caseId = startCase(case)
+            logAction(
+                "CASE_STARTED",
+                caseId = caseId,
+                details = "Missing case started for ${s.person!!.name}, last seen: ${s.lastSeenLocationName.ifBlank { "unknown" }}",
+            )
             _state.update { it.copy(submitting = false, createdCaseId = caseId) }
         }
     }

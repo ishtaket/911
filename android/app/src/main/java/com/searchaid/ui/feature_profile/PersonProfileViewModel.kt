@@ -11,6 +11,7 @@ import com.searchaid.domain.usecase.DeleteHistoricalPlaceUseCase
 import com.searchaid.domain.usecase.GetCasesByPersonUseCase
 import com.searchaid.domain.usecase.GetHistoricalPlacesUseCase
 import com.searchaid.domain.usecase.GetPersonProfileUseCase
+import com.searchaid.domain.usecase.LogActionUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -27,6 +28,7 @@ class PersonProfileViewModel @Inject constructor(
     getCasesByPerson: GetCasesByPersonUseCase,
     private val addHistoricalPlace: AddHistoricalPlaceUseCase,
     private val deleteHistoricalPlace: DeleteHistoricalPlaceUseCase,
+    private val logAction: LogActionUseCase,
 ) : ViewModel() {
 
     val profileId: Long = savedStateHandle["profileId"] ?: -1L
@@ -62,10 +64,14 @@ class PersonProfileViewModel @Inject constructor(
                     note = note,
                 )
             )
+            logAction("PLACE_ADDED", details = "Added place: $title (${lat}, ${lon})")
         }
     }
 
     fun deletePlace(id: Long) {
-        viewModelScope.launch { deleteHistoricalPlace(id) }
+        viewModelScope.launch {
+            deleteHistoricalPlace(id)
+            logAction("PLACE_DELETED", details = "Deleted place id=$id")
+        }
     }
 }

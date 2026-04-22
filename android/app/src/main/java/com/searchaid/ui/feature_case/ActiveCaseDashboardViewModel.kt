@@ -8,6 +8,7 @@ import com.searchaid.domain.model.MissingCase
 import com.searchaid.domain.model.PersonProfile
 import com.searchaid.domain.usecase.GetMissingCaseUseCase
 import com.searchaid.domain.usecase.GetPersonProfileUseCase
+import com.searchaid.domain.usecase.LogActionUseCase
 import com.searchaid.domain.usecase.UpdateCaseStatusUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -29,6 +30,7 @@ class ActiveCaseDashboardViewModel @Inject constructor(
     private val getCase: GetMissingCaseUseCase,
     private val getProfile: GetPersonProfileUseCase,
     private val updateStatus: UpdateCaseStatusUseCase,
+    private val logAction: LogActionUseCase,
 ) : ViewModel() {
 
     val caseId: Long = savedStateHandle["caseId"] ?: -1L
@@ -51,6 +53,7 @@ class ActiveCaseDashboardViewModel @Inject constructor(
     fun markFound() {
         viewModelScope.launch {
             updateStatus(caseId, CaseStatus.FOUND)
+            logAction("CASE_FOUND", caseId = caseId, details = "Person found, case marked as FOUND")
             _state.update {
                 it.copy(case_ = it.case_?.copy(status = CaseStatus.FOUND), statusUpdated = true)
             }
@@ -60,6 +63,7 @@ class ActiveCaseDashboardViewModel @Inject constructor(
     fun closeCase() {
         viewModelScope.launch {
             updateStatus(caseId, CaseStatus.CLOSED)
+            logAction("CASE_CLOSED", caseId = caseId, details = "Case closed")
             _state.update {
                 it.copy(case_ = it.case_?.copy(status = CaseStatus.CLOSED), statusUpdated = true)
             }
