@@ -1,3 +1,5 @@
+import java.util.Properties
+
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
@@ -14,7 +16,7 @@ android {
         minSdk = 29
         targetSdk = 34
         versionCode = 1
-        versionName = "0.1.0"
+        versionName = "1.0.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
@@ -22,13 +24,32 @@ android {
         }
     }
 
+    signingConfigs {
+        create("release") {
+            val props = Properties().apply {
+                val f = rootProject.file("local.properties")
+                if (f.exists()) load(f.inputStream())
+            }
+            val ksFile = props.getProperty("RELEASE_STORE_FILE", "")
+            if (ksFile.isNotBlank()) {
+                storeFile = file(ksFile)
+                storePassword = props.getProperty("RELEASE_STORE_PASSWORD", "")
+                keyAlias = props.getProperty("RELEASE_KEY_ALIAS", "")
+                keyPassword = props.getProperty("RELEASE_KEY_PASSWORD", "")
+            }
+        }
+    }
+
     buildTypes {
         release {
-            isMinifyEnabled = false
+            isMinifyEnabled = true
+            isShrinkResources = true
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
+            val releaseKs = signingConfigs.getByName("release")
+            signingConfig = if (releaseKs.storeFile?.exists() == true) releaseKs else signingConfigs.getByName("debug")
         }
     }
 

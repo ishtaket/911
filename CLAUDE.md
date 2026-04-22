@@ -8,6 +8,11 @@ Do not stop at writing code only. Always verify.
 ## Project
 SearchAid (911) — Android-first system for early missing-person response and digitally assisted search for vulnerable people (Alzheimer's, dementia, elderly) who may leave home without a phone.
 
+Full product spec: `docs/PRODUCT.md`
+
+## Key value
+Reduce time between disappearance and structured search launch. The system does NOT rely on the missing person having a phone.
+
 ## Default workflow
 For any non-trivial task:
 1. Explore the codebase and relevant files first.
@@ -25,17 +30,57 @@ Every feature is considered incomplete until it passes all three levels:
 - Edge cases and failure cases
 
 ### Level 2 — Integration Verification
-- Room + Repository tests
-- ViewModel + UseCase tests
+- Room + Repository tests (use `RoomTestBase` in `test/.../data/local/`)
+- ViewModel + UseCase tests (use `MainDispatcherRule` + mockk + Turbine)
 - API integration tests
 - State propagation tests
 
 ### Level 3 — Runtime / Scenario Verification
-- UI tests / end-to-end scenarios
-- Manual QA scripts
-- Real runtime path verification
+- Compose UI tests with Robolectric + `createComposeRule()`
+- Extract `*Content` composables (accept plain state, not StateFlow) for testability
+- Use `performScrollTo()` for off-screen elements
+- Manual QA scripts / real runtime path verification
 
 **No merge to main without all three levels covered.**
+
+## Architecture
+- Clean Architecture: `domain/` (models, repository interfaces, use cases) → `data/` (entities, DAOs, repository impls) → `ui/` (ViewModels, Screens)
+- Unidirectional data flow: ViewModel → StateFlow → Compose
+- Repository pattern with Room DAOs
+- Hilt DI with `@HiltViewModel`, `@Inject`, `@Module`, `@Binds`
+
+## Module pattern (for new CRUD features)
+Follow this exact structure (see SearchLead or WitnessReport as reference):
+1. `domain/model/` — data class + enums
+2. `domain/repository/` — interface with `observeByX`, `add`, `updateStatus`
+3. `data/local/entity/` — Room entity with `toDomain()` / `fromDomain()`
+4. `data/local/dao/` — Room DAO with `@Query`, `@Insert`, `@Update`
+5. `data/repository/` — `@Singleton` impl with DAO injection
+6. `core/di/RepositoryModule.kt` — `@Binds` binding
+7. `domain/usecase/` — one class per operation (`Get*`, `Add*`, `Update*`)
+8. `ui/feature_*/` — ViewModel (state + form + actions) + Screen (wrapper + Content)
+9. `ui/navigation/SearchAidNavHost.kt` — route registration
+
+## Core entities
+PersonProfile, MissingCase, HistoricalPlace, SearchLead, WitnessReport, AuditLog, SearchZone, SocialSource, OutreachMessage
+
+## Implemented modules (Phase 1 — all complete)
+- Profile Module (CRUD + historical places)
+- Missing Case Module (full lifecycle)
+- SearchLead Module (CRUD + manual leads)
+- WitnessReport Module (CRUD + verify/reject)
+- Audit Log Module (full action tracking)
+- SearchZone Module (CRUD + mark checked)
+- SocialSource Module (full stack)
+- Outreach Module (send/track messages, status management)
+- Search Map (Google Maps with zones, leads, reports)
+
+## Upcoming modules (Phase 2)
+- Identity Engine (alias normalization, query builder)
+- Open Web Search (search by name/alias/email)
+- Social Network Search (public profiles/groups)
+- Signal Engine (aggregate signals, score leads, generate search zones)
+- Firebase integration (Auth, Firestore, FCM)
 
 ## Engineering rules
 - Prefer simple, maintainable solutions.
@@ -64,7 +109,6 @@ Every feature is considered incomplete until it passes all three levels:
 - Never modify secrets or credentials unless explicitly asked.
 - Never deploy to production unless explicitly asked.
 - Never perform destructive actions without warning.
-- Ask only when truly blocked or when an irreversible action is required.
 - No hacking, no private data access, no illegal databases.
 - Only open and permitted sources.
 
@@ -86,6 +130,20 @@ Every feature is considered incomplete until it passes all three levels:
 - Hilt DI
 - Room (offline-first)
 - Google Maps SDK
-- Firebase (Auth, Firestore, Storage, FCM, Cloud Functions)
 - WorkManager for background tasks
 - Clean Architecture (domain/data/ui)
+
+## Test stack
+- JUnit 4 + mockk + Turbine (Flow testing)
+- Robolectric (JVM-based Android tests)
+- Room in-memory DB via `RoomTestBase`
+- Compose UI testing via `createComposeRule()`
+- Release unit tests disabled (Robolectric incompatibility)
+
+## Current state
+- 224 tests passing (L1 + L2 + L3)
+- Phase 1 MVP complete — all 10 screens functional
+- 9 entities, DB version 3
+- Release build with R8 minification verified
+- ProGuard rules configured for all dependencies
+- Release signing config ready (requires keystore setup)

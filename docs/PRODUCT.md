@@ -37,24 +37,75 @@ Reduce the time between disappearance and structured search launch.
 11. Zones update dynamically
 
 ## Core Entities
-- **PersonProfile** — name, age, photo, diagnosis, habits, known locations, aliases, emails, phones
-- **MissingCase** — person, status, last seen, clothing, notes
-- **HistoricalPlace** — title, coordinates, source
-- **SocialSource** — platform, handle, region, visibility
-- **SearchLead** — type, platform, matched value, confidence, status
-- **WitnessReport** — source, text, possible location, confidence
-- **SearchZone** — coordinates, radius, score, reason
+
+### PersonProfile
+- id, name, age, photo, condition/diagnosis
+- distinguishing features, habits
+- knownLocations, historicalPlaces
+- aliases, nicknames, emails, phones
+- familyNotes
+
+### MissingCase
+- id, personId, status (ACTIVE/FOUND/CLOSED)
+- createdAt, lastSeenTime, lastSeenLocation
+- clothesDescription, notes, operatorId
+
+### HistoricalPlace
+- id, personId, title, lat, lon, source, note
+
+### SocialSource
+- id, platform, sourceType, title
+- handleOrAlias, region, url
+- visibility, enabled
+
+### SearchLead
+- id, caseId, type (WEB/SOCIAL/MESSENGER/WITNESS/MANUAL)
+- platform, matchedValue, textSnippet
+- possibleLocationName, lat/lon (optional)
+- timestamp (optional), confidence, status (NEW/CONFIRMED/REJECTED/ARCHIVED)
+
+### WitnessReport
+- id, caseId, sourceName, sourceType
+- text, timestamp
+- possibleLocationName, lat/lon (optional)
+- confidence, status (NEW/VERIFIED/REJECTED)
+
+### SearchZone
+- id, caseId, lat, lon, radius
+- score, reason
+
+### AuditLog
+- id, action, caseId (optional)
+- details, timestamp
 
 ## Modules
-1. **Profile Module** — create/edit person profiles with photos, places, aliases
-2. **Alert / Missing Case Module** — "missing" button, last seen, case lifecycle
-3. **Identity Engine** — normalize names, build search query variants
-4. **Open Web Search Module** — search by name/alias/email across open web
-5. **Social Network Search Module** — search public profiles and groups
-6. **Messenger Outreach Module** — template messages, contact lists, send tracking
-7. **Signal Engine** — aggregate signals, score leads, generate search zones
-8. **Search Map Module** — visualize all data on map with zone checking
-9. **Audit / Log Module** — full action journal
+
+### 1. Profile Module
+Create/edit person profiles with photos, historical places, aliases, emails, phones, family notes.
+
+### 2. Alert / Missing Case Module
+"Missing" button, last seen input, case lifecycle (ACTIVE → FOUND/CLOSED).
+
+### 3. Identity Engine
+Normalize names, build identity pack, store aliases/nicknames/emails/phones, generate search query variants.
+
+### 4. Open Web Search Module
+Search by name, alias, nickname, email, name+city/district. Manual save of useful web leads.
+
+### 5. Social Network Search Module
+Store marked social networks, search public profiles and groups, search mentions by aliases, equal priority for all enabled platforms, save found leads.
+
+### 6. Messenger Outreach Module
+Contact and group lists, message templates, send journal, manual/semi-automatic outreach, witness response tracking.
+
+### 7. Signal Engine
+Aggregate signals from: family, historical places, web search, social networks, messengers, witness reports. Calculate scores, generate search zones, update probability map.
+
+### 8. Search Map Module
+Show: last seen, historical places, leads, witness reports, search zones. Mark areas as "checked."
+
+### 9. Audit / Log Module
+Full action journal: who searched, what queries ran, which groups were contacted, which leads were confirmed/rejected.
 
 ## MVP Screens
 1. Profiles List
@@ -93,6 +144,7 @@ Reduce the time between disappearance and structured search launch.
 - No hidden automatic activity beyond defined rules
 
 ## Boundaries
+
 ### What the project DOES
 - Works with open and permitted sources
 - Uses system's own social media accounts
@@ -106,12 +158,43 @@ Reduce the time between disappearance and structured search launch.
 - Does not use illegal databases or leaks
 - Does not promise "magically find a person" — increases probability and speed
 
+## Tech Stack
+
+### Client
+- Kotlin + Jetpack Compose + Material 3
+- MVVM + StateFlow + Navigation
+- Hilt DI
+- Room (offline-first)
+- Google Maps SDK
+- WorkManager for background tasks
+
+### Backend (planned)
+- Firebase Auth, Firestore, Storage, FCM, Cloud Functions
+- Kotlin Ktor or Node.js/NestJS
+- REST API + background workers
+
+### Search layer (planned)
+- Search orchestrator
+- Normalization engine
+- Query builder
+- Lead scoring service
+
 ## MVP Roadmap
-### Phase 1
-Profile, missing case, historical places, aliases, manual leads, search map, audit log, three-level verification baseline
+
+### Phase 1 (current)
+Profile, missing case, historical places, aliases, manual leads, witness reports, search map, audit log, three-level verification baseline.
 
 ### Phase 2
-Web query builder, social source registry, messenger outreach, signal scoring, witness intake
+Web query builder, social source registry, messenger outreach, signal scoring, witness intake automation.
 
 ### Phase 3
-Semi-automation, richer ranking, map heat zones, advanced scenario verification
+Semi-automation, richer ranking, map heat zones, advanced scenario verification.
+
+## Three-Level Verification Rule
+
+Every feature is considered incomplete until it passes:
+1. **Level 1 — Logic Verification**: unit tests for pure logic, use cases, scoring
+2. **Level 2 — Integration Verification**: Room+Repository, ViewModel+UseCase, API tests
+3. **Level 3 — Runtime Verification**: UI tests, end-to-end scenarios, manual QA
+
+No merge to main without all three levels covered.
