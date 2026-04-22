@@ -6,9 +6,11 @@ import com.searchaid.data.local.SearchAidDatabase
 import com.searchaid.data.local.dao.AuditLogDao
 import com.searchaid.data.local.dao.HistoricalPlaceDao
 import com.searchaid.data.local.dao.MissingCaseDao
+import com.searchaid.data.local.dao.OutreachMessageDao
 import com.searchaid.data.local.dao.PersonProfileDao
 import com.searchaid.data.local.dao.SearchLeadDao
 import com.searchaid.data.local.dao.SearchZoneDao
+import com.searchaid.data.local.dao.SocialSourceDao
 import com.searchaid.data.local.dao.WitnessReportDao
 import dagger.Module
 import dagger.Provides
@@ -34,5 +36,7 @@ object DatabaseModule {
     @Provides fun provideSearchLeadDao(db: SearchAidDatabase): SearchLeadDao = db.searchLeadDao()
     @Provides fun provideWitnessReportDao(db: SearchAidDatabase): WitnessReportDao = db.witnessReportDao()
     @Provides fun provideSearchZoneDao(db: SearchAidDatabase): SearchZoneDao = db.searchZoneDao()
+    @Provides fun provideSocialSourceDao(db: SearchAidDatabase): SocialSourceDao = db.socialSourceDao()
+    @Provides fun provideOutreachMessageDao(db: SearchAidDatabase): OutreachMessageDao = db.outreachMessageDao()
     @Provides fun provideAuditLogDao(db: SearchAidDatabase): AuditLogDao = db.auditLogDao()
 }

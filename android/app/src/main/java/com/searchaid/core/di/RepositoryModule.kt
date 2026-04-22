@@ -5,11 +5,19 @@ import com.searchaid.data.repository.HistoricalPlaceRepositoryImpl
 import com.searchaid.data.repository.MissingCaseRepositoryImpl
 import com.searchaid.data.repository.PersonProfileRepositoryImpl
 import com.searchaid.data.repository.SearchLeadRepositoryImpl
+import com.searchaid.data.repository.OutreachMessageRepositoryImpl
+import com.searchaid.data.repository.SearchZoneRepositoryImpl
+import com.searchaid.data.repository.SocialSourceRepositoryImpl
+import com.searchaid.data.repository.WitnessReportRepositoryImpl
 import com.searchaid.domain.repository.AuditLogRepository
 import com.searchaid.domain.repository.HistoricalPlaceRepository
 import com.searchaid.domain.repository.MissingCaseRepository
 import com.searchaid.domain.repository.PersonProfileRepository
 import com.searchaid.domain.repository.SearchLeadRepository
+import com.searchaid.domain.repository.OutreachMessageRepository
+import com.searchaid.domain.repository.SearchZoneRepository
+import com.searchaid.domain.repository.SocialSourceRepository
+import com.searchaid.domain.repository.WitnessReportRepository
 import dagger.Binds
 import dagger.Module
 import dagger.hilt.InstallIn
@@ -49,4 +57,28 @@ abstract class RepositoryModule {
     abstract fun bindSearchLeadRepository(
         impl: SearchLeadRepositoryImpl,
     ): SearchLeadRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindWitnessReportRepository(
+        impl: WitnessReportRepositoryImpl,
+    ): WitnessReportRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindSearchZoneRepository(
+        impl: SearchZoneRepositoryImpl,
+    ): SearchZoneRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindSocialSourceRepository(
+        impl: SocialSourceRepositoryImpl,
+    ): SocialSourceRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindOutreachMessageRepository(
+        impl: OutreachMessageRepositoryImpl,
+    ): OutreachMessageRepository
 }

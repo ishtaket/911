@@ -6,17 +6,21 @@ import androidx.room.TypeConverters
 import com.searchaid.data.local.converter.Converters
 import com.searchaid.data.local.dao.AuditLogDao
 import com.searchaid.data.local.dao.HistoricalPlaceDao
+import com.searchaid.data.local.dao.OutreachMessageDao
 import com.searchaid.data.local.dao.MissingCaseDao
 import com.searchaid.data.local.dao.PersonProfileDao
 import com.searchaid.data.local.dao.SearchLeadDao
 import com.searchaid.data.local.dao.SearchZoneDao
+import com.searchaid.data.local.dao.SocialSourceDao
 import com.searchaid.data.local.dao.WitnessReportDao
 import com.searchaid.data.local.entity.AuditLogEntryEntity
 import com.searchaid.data.local.entity.HistoricalPlaceEntity
+import com.searchaid.data.local.entity.OutreachMessageEntity
 import com.searchaid.data.local.entity.MissingCaseEntity
 import com.searchaid.data.local.entity.PersonProfileEntity
 import com.searchaid.data.local.entity.SearchLeadEntity
 import com.searchaid.data.local.entity.SearchZoneEntity
+import com.searchaid.data.local.entity.SocialSourceEntity
 import com.searchaid.data.local.entity.WitnessReportEntity
 
 @Database(
@@ -27,9 +31,11 @@ import com.searchaid.data.local.entity.WitnessReportEntity
         SearchLeadEntity::class,
         WitnessReportEntity::class,
         SearchZoneEntity::class,
+        SocialSourceEntity::class,
+        OutreachMessageEntity::class,
         AuditLogEntryEntity::class,
     ],
-    version = 1,
+    version = 3,
     exportSchema = false,
 )
 @TypeConverters(Converters::class)
@@ -40,5 +46,7 @@ abstract class SearchAidDatabase : RoomDatabase() {
     abstract fun searchLeadDao(): SearchLeadDao
     abstract fun witnessReportDao(): WitnessReportDao
     abstract fun searchZoneDao(): SearchZoneDao
+    abstract fun socialSourceDao(): SocialSourceDao
+    abstract fun outreachMessageDao(): OutreachMessageDao
     abstract fun auditLogDao(): AuditLogDao
 }
