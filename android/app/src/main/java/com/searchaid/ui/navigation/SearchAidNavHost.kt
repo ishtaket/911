@@ -15,7 +15,7 @@ import com.searchaid.ui.feature_profile.CreateEditProfileScreen
 import com.searchaid.ui.feature_profile.PersonProfileScreen
 import com.searchaid.ui.feature_profile.ProfilesListScreen
 import com.searchaid.ui.feature_search.LeadsListScreen
-import com.searchaid.ui.feature_search.WitnessReportsScreen
+import com.searchaid.ui.feature_witness.WitnessReportsScreen
 
 @Composable
 fun SearchAidNavHost() {

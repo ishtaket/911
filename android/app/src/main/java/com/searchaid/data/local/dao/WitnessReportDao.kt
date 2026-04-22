@@ -13,6 +13,9 @@ interface WitnessReportDao {
     @Query("SELECT * FROM witness_reports WHERE caseId = :caseId ORDER BY timestamp DESC")
     fun observeByCase(caseId: Long): Flow<List<WitnessReportEntity>>
 
+    @Query("SELECT * FROM witness_reports WHERE id = :id")
+    suspend fun getById(id: Long): WitnessReportEntity?
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insert(report: WitnessReportEntity): Long
 
