@@ -4,10 +4,12 @@ import com.searchaid.data.repository.AuditLogRepositoryImpl
 import com.searchaid.data.repository.HistoricalPlaceRepositoryImpl
 import com.searchaid.data.repository.MissingCaseRepositoryImpl
 import com.searchaid.data.repository.PersonProfileRepositoryImpl
+import com.searchaid.data.repository.SearchLeadRepositoryImpl
 import com.searchaid.domain.repository.AuditLogRepository
 import com.searchaid.domain.repository.HistoricalPlaceRepository
 import com.searchaid.domain.repository.MissingCaseRepository
 import com.searchaid.domain.repository.PersonProfileRepository
+import com.searchaid.domain.repository.SearchLeadRepository
 import dagger.Binds
 import dagger.Module
 import dagger.hilt.InstallIn
@@ -41,4 +43,10 @@ abstract class RepositoryModule {
     abstract fun bindAuditLogRepository(
         impl: AuditLogRepositoryImpl,
     ): AuditLogRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindSearchLeadRepository(
+        impl: SearchLeadRepositoryImpl,
+    ): SearchLeadRepository
 }

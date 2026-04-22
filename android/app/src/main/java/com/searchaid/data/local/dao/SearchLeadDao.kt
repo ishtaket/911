@@ -13,6 +13,9 @@ interface SearchLeadDao {
     @Query("SELECT * FROM search_leads WHERE caseId = :caseId ORDER BY confidence DESC")
     fun observeByCase(caseId: Long): Flow<List<SearchLeadEntity>>
 
+    @Query("SELECT * FROM search_leads WHERE id = :id")
+    suspend fun getById(id: Long): SearchLeadEntity?
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insert(lead: SearchLeadEntity): Long
 
