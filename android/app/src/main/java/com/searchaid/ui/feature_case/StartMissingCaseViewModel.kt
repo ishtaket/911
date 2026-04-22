@@ -55,7 +55,8 @@ class StartMissingCaseViewModel @Inject constructor(
 
     fun submit() {
         val s = _state.value
-        if (s.submitting || s.person == null) return
+        val person = s.person ?: return
+        if (s.submitting) return
 
         viewModelScope.launch {
             _state.update { it.copy(submitting = true) }
@@ -75,7 +76,7 @@ class StartMissingCaseViewModel @Inject constructor(
             logAction(
                 "CASE_STARTED",
                 caseId = caseId,
-                details = "Missing case started for ${s.person!!.name}, last seen: ${s.lastSeenLocationName.ifBlank { "unknown" }}",
+                details = "Missing case started for ${person.name}, last seen: ${s.lastSeenLocationName.ifBlank { "unknown" }}",
             )
             _state.update { it.copy(submitting = false, createdCaseId = caseId) }
         }
