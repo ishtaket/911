@@ -1,0 +1,101 @@
+package com.searchaid.ui.feature_map
+
+import androidx.lifecycle.SavedStateHandle
+import com.searchaid.MainDispatcherRule
+import com.searchaid.domain.model.CaseStatus
+import com.searchaid.domain.model.MissingCase
+import com.searchaid.domain.model.SearchZone
+import com.searchaid.domain.usecase.GetLeadsByCaseUseCase
+import com.searchaid.domain.usecase.GetMissingCaseUseCase
+import com.searchaid.domain.usecase.GetSearchZonesByCaseUseCase
+import com.searchaid.domain.usecase.GetWitnessReportsByCaseUseCase
+import com.searchaid.domain.usecase.LogActionUseCase
+import com.searchaid.domain.usecase.MarkZoneCheckedUseCase
+import io.mockk.coEvery
+import io.mockk.coVerify
+import io.mockk.every
+import io.mockk.mockk
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.test.advanceUntilIdle
+import kotlinx.coroutines.test.runTest
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotNull
+import org.junit.Rule
+import org.junit.Test
+
+@OptIn(ExperimentalCoroutinesApi::class)
+class SearchMapViewModelTest {
+
+    @get:Rule
+    val mainDispatcherRule = MainDispatcherRule()
+
+    private val getCase = mockk<GetMissingCaseUseCase>()
+    private val getZones = mockk<GetSearchZonesByCaseUseCase>()
+    private val getLeads = mockk<GetLeadsByCaseUseCase>()
+    private val getReports = mockk<GetWitnessReportsByCaseUseCase>()
+    private val markZoneChecked = mockk<MarkZoneCheckedUseCase>(relaxed = true)
+    private val logAction = mockk<LogActionUseCase>(relaxed = true)
+
+    private val testCase = MissingCase(
+        id = 10, personId = 1, status = CaseStatus.ACTIVE,
+        createdAt = 1000L, lastSeenTime = 900L,
+        lastSeenLocationName = "Park", lastSeenLat = 55.75, lastSeenLon = 37.61,
+        clothesDescription = "Blue jacket", notes = null, operatorId = null,
+    )
+
+    private val testZone = SearchZone(
+        id = 1, caseId = 10, lat = 55.76, lon = 37.62,
+        radiusMeters = 500.0, score = 0.8f, reason = "Historical place",
+    )
+
+    private fun createViewModel(): SearchMapViewModel {
+        coEvery { getCase(10L) } returns testCase
+        every { getZones(10L) } returns flowOf(listOf(testZone))
+        every { getLeads(10L) } returns flowOf(emptyList())
+        every { getReports(10L) } returns flowOf(emptyList())
+        return SearchMapViewModel(
+            SavedStateHandle(mapOf("caseId" to 10L)),
+            getCase, getZones, getLeads, getReports, markZoneChecked, logAction,
+        )
+    }
+
+    @Test
+    fun `init loads case and zones`() = runTest {
+        val vm = createViewModel()
+        advanceUntilIdle()
+
+        assertNotNull(vm.state.value.case_)
+        assertEquals("Park", vm.state.value.case_?.lastSeenLocationName)
+        assertEquals(1, vm.state.value.zones.size)
+        assertFalse(vm.state.value.loading)
+    }
+
+    @Test
+    fun `onZoneChecked calls markZoneChecked and logs`() = runTest {
+        val vm = createViewModel()
+        advanceUntilIdle()
+
+        vm.onZoneChecked(1L)
+        advanceUntilIdle()
+
+        coVerify { markZoneChecked(1L) }
+        coVerify { logAction("ZONE_CHECKED", caseId = 10L, details = any()) }
+    }
+
+    @Test
+    fun `state reflects empty zones when none exist`() = runTest {
+        coEvery { getCase(10L) } returns testCase
+        every { getZones(10L) } returns flowOf(emptyList())
+        every { getLeads(10L) } returns flowOf(emptyList())
+        every { getReports(10L) } returns flowOf(emptyList())
+        val vm = SearchMapViewModel(
+            SavedStateHandle(mapOf("caseId" to 10L)),
+            getCase, getZones, getLeads, getReports, markZoneChecked, logAction,
+        )
+        advanceUntilIdle()
+
+        assertEquals(0, vm.state.value.zones.size)
+    }
+}
