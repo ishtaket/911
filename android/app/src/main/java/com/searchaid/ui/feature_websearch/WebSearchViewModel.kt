@@ -30,8 +30,14 @@ data class WebSearchState(
     val queries: List<String> = emptyList(),
     val results: List<WebSearchResult> = emptyList(),
     val identityPack: IdentityPack? = null,
+    val includeImages: Boolean = true,
     val error: String? = null,
-)
+) {
+    val textResults: List<WebSearchResult>
+        get() = results.filter { it.source != "google_images" }
+    val imageResults: List<WebSearchResult>
+        get() = results.filter { it.source == "google_images" }
+}
 
 @HiltViewModel
 class WebSearchViewModel @Inject constructor(
@@ -85,7 +91,7 @@ class WebSearchViewModel @Inject constructor(
 
         viewModelScope.launch {
             try {
-                val results = searchWeb(pack, caseId)
+                val results = searchWeb(pack, caseId, includeImages = _state.value.includeImages)
                 _state.update { it.copy(searching = false, results = results) }
                 logAction("WEB_SEARCH", caseId = caseId, details = "Found ${results.size} results")
             } catch (e: Exception) {
@@ -120,6 +126,10 @@ class WebSearchViewModel @Inject constructor(
                 )
             }
         }
+    }
+
+    fun toggleImages() {
+        _state.update { it.copy(includeImages = !it.includeImages) }
     }
 
     fun dismissResult(result: WebSearchResult) {

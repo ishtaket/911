@@ -49,7 +49,7 @@ class SearchSocialUseCase @Inject constructor(
 
         // 3. If no specific platforms, search common ones by name
         if (platforms.isEmpty()) {
-            val defaultPlatforms = listOf("VK", "OK", "Telegram")
+            val defaultPlatforms = listOf("Facebook", "Instagram", "TikTok")
             for (platform in defaultPlatforms) {
                 val results = repository.searchByName(platform, pack.primaryName, pack.region)
                 for (result in results) {

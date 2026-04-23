@@ -255,13 +255,13 @@ internal fun ActiveCaseDashboardContent(
                     ActionButton(
                         icon = Icons.Default.Star,
                         label = "Web Search",
-                        subtitle = "Search by name, aliases, contacts",
+                        subtitle = "Google search + photos, archives",
                         onClick = { onOpenWebSearch(caseId) },
                     )
                     ActionButton(
                         icon = Icons.Default.Person,
                         label = "Social Search",
-                        subtitle = "VK, OK, Telegram profiles",
+                        subtitle = "Facebook, Instagram, TikTok profiles",
                         onClick = { onOpenSocialSearch(caseId) },
                     )
                     ActionButton(

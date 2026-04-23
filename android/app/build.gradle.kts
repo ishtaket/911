@@ -27,6 +27,14 @@ android {
         vectorDrawables {
             useSupportLibrary = true
         }
+
+        // API keys from local.properties (empty string = stub mode)
+        val props = Properties().apply {
+            val f = rootProject.file("local.properties")
+            if (f.exists()) load(f.inputStream())
+        }
+        buildConfigField("String", "GOOGLE_CSE_API_KEY", "\"${props.getProperty("GOOGLE_CSE_API_KEY", "")}\"")
+        buildConfigField("String", "GOOGLE_CSE_CX", "\"${props.getProperty("GOOGLE_CSE_CX", "")}\"")
     }
 
     signingConfigs {
@@ -69,6 +77,7 @@ android {
 
     buildFeatures {
         compose = true
+        buildConfig = true
     }
 
     composeOptions {
@@ -135,6 +144,15 @@ dependencies {
     implementation("com.google.android.gms:play-services-maps:18.2.0")
     implementation("com.google.android.gms:play-services-location:21.2.0")
     implementation("com.google.maps.android:maps-compose:4.3.3")
+
+    // Networking (Retrofit + OkHttp)
+    implementation("com.squareup.retrofit2:retrofit:2.11.0")
+    implementation("com.squareup.retrofit2:converter-gson:2.11.0")
+    implementation("com.squareup.okhttp3:okhttp:4.12.0")
+    implementation("com.squareup.okhttp3:logging-interceptor:4.12.0")
+
+    // Image loading (Coil for Compose)
+    implementation("io.coil-kt:coil-compose:2.6.0")
 
     // Firebase (conditional — works without google-services.json via offline stubs)
     implementation(platform("com.google.firebase:firebase-bom:33.1.0"))

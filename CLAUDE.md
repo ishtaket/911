@@ -75,11 +75,12 @@ PersonProfile, MissingCase, HistoricalPlace, SearchLead, WitnessReport, AuditLog
 - Outreach Module (send/track messages, status management)
 - Search Map (Google Maps with zones, leads, reports + Signal Engine integration)
 
-## Implemented modules (Phase 2 — in progress)
+## Implemented modules (Phase 2 — complete)
 - Identity Engine (NameNormalizer, BuildIdentityPackUseCase, GenerateSearchQueriesUseCase)
 - Signal Engine (SignalScorer, ZoneGenerator, AggregateSignalsUseCase)
-- Open Web Search (WebSearchRepository, SearchWebUseCase, screen with promote-to-lead)
-- Social Network Search (SocialSearchRepository, SearchSocialUseCase, screen with platform filter + promote-to-lead)
+- Open Web Search (Google CSE API — text + image search, promote-to-lead, photo carousel)
+- Social Network Search (Google CSE with site: — Facebook, Instagram, TikTok profiles)
+- Web Archives (Wayback Machine CDX API — cached profile search)
 - Firebase abstractions (Auth, Sync, Notifications — offline stubs, ready for Firebase swap via DI)
 
 ## Engineering rules
@@ -129,7 +130,12 @@ PersonProfile, MissingCase, HistoricalPlace, SearchLead, WitnessReport, AuditLog
 - MVVM + StateFlow + Navigation
 - Hilt DI
 - Room (offline-first)
+- Retrofit + OkHttp (API clients)
+- Coil (image loading)
 - Google Maps SDK
+- Google Custom Search API (web + image + social search)
+- Wayback Machine CDX API (archive search)
+- Firebase (Auth, Firestore, FCM — conditional)
 - WorkManager for background tasks
 - Clean Architecture (domain/data/ui)
 
@@ -141,9 +147,11 @@ PersonProfile, MissingCase, HistoricalPlace, SearchLead, WitnessReport, AuditLog
 - Release unit tests disabled (Robolectric incompatibility)
 
 ## Current state
-- 346 tests passing (L1 + L2 + L3)
+- 361 tests passing (L1 + L2 + L3)
 - Phase 1 complete, Phase 2 complete — 12 screens functional
 - 9 DB entities, version 3 with proper migrations
 - Release build with R8 minification + release keystore signing
-- Identity Engine + Signal Engine + Open Web Search + Social Search + Firebase abstractions operational
+- Real API integrations: Google CSE (text + images), Wayback Machine archives
+- Social search via Google CSE: Facebook, Instagram, TikTok
+- Retrofit + OkHttp + Coil networking stack
 - ProGuard rules configured for all dependencies

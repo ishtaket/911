@@ -11,8 +11,9 @@ import com.searchaid.data.repository.SearchLeadRepositoryImpl
 import com.searchaid.data.repository.OutreachMessageRepositoryImpl
 import com.searchaid.data.repository.SearchZoneRepositoryImpl
 import com.searchaid.data.repository.SocialSourceRepositoryImpl
-import com.searchaid.data.repository.StubSocialSearchRepository
-import com.searchaid.data.repository.StubWebSearchRepository
+import com.searchaid.data.repository.GoogleSocialSearchRepository
+import com.searchaid.data.repository.GoogleWebSearchRepository
+import com.searchaid.data.repository.WaybackArchiveRepository
 import com.searchaid.data.repository.WitnessReportRepositoryImpl
 import com.searchaid.domain.repository.AuditLogRepository
 import com.searchaid.domain.repository.AuthRepository
@@ -24,6 +25,7 @@ import com.searchaid.domain.repository.SearchLeadRepository
 import com.searchaid.domain.repository.OutreachMessageRepository
 import com.searchaid.domain.repository.SearchZoneRepository
 import com.searchaid.domain.repository.SocialSourceRepository
+import com.searchaid.domain.repository.ArchiveRepository
 import com.searchaid.domain.repository.SocialSearchRepository
 import com.searchaid.domain.repository.SyncRepository
 import com.searchaid.domain.repository.WebSearchRepository
@@ -95,14 +97,20 @@ abstract class RepositoryModule {
     @Binds
     @Singleton
     abstract fun bindWebSearchRepository(
-        impl: StubWebSearchRepository,
+        impl: GoogleWebSearchRepository,
     ): WebSearchRepository
 
     @Binds
     @Singleton
     abstract fun bindSocialSearchRepository(
-        impl: StubSocialSearchRepository,
+        impl: GoogleSocialSearchRepository,
     ): SocialSearchRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindArchiveRepository(
+        impl: WaybackArchiveRepository,
+    ): ArchiveRepository
 
     // Firebase abstractions — swap implementations when Firebase is configured
     @Binds

@@ -8,6 +8,8 @@ data class WebSearchResult(
     val snippet: String,
     val url: String,
     val source: String,
+    val thumbnailUrl: String? = null,
+    val imageUrl: String? = null,
     val relevanceScore: Float = 0f,
     val status: SearchResultStatus = SearchResultStatus.NEW,
     val foundAt: Long = System.currentTimeMillis(),

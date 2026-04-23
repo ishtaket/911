@@ -109,9 +109,9 @@ class SearchSocialUseCaseTest {
         coEvery { repository.searchByName(any(), any(), any()) } returns emptyList()
 
         useCase(pack, emptyList(), caseId = 10L)
-        coVerify { repository.searchByName("VK", any(), any()) }
-        coVerify { repository.searchByName("OK", any(), any()) }
-        coVerify { repository.searchByName("Telegram", any(), any()) }
+        coVerify { repository.searchByName("Facebook", any(), any()) }
+        coVerify { repository.searchByName("Instagram", any(), any()) }
+        coVerify { repository.searchByName("TikTok", any(), any()) }
     }
 
     @Test

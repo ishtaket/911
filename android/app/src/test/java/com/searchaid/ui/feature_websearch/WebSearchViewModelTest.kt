@@ -89,7 +89,7 @@ class WebSearchViewModelTest {
             snippet = "Match", url = "https://example.com",
             source = "google", relevanceScore = 0.8f,
         )
-        coEvery { searchWeb(any(), any(), any(), any()) } returns listOf(result)
+        coEvery { searchWeb(any(), any(), any(), any(), any()) } returns listOf(result)
 
         val vm = createViewModel()
         advanceUntilIdle()
@@ -109,7 +109,7 @@ class WebSearchViewModelTest {
             snippet = "Match", url = "https://example.com",
             source = "google", relevanceScore = 0.8f,
         )
-        coEvery { searchWeb(any(), any(), any(), any()) } returns listOf(result)
+        coEvery { searchWeb(any(), any(), any(), any(), any()) } returns listOf(result)
 
         val vm = createViewModel()
         advanceUntilIdle()
@@ -130,7 +130,7 @@ class WebSearchViewModelTest {
             snippet = "Not a match", url = "https://spam.com",
             source = "google", relevanceScore = 0.1f,
         )
-        coEvery { searchWeb(any(), any(), any(), any()) } returns listOf(result)
+        coEvery { searchWeb(any(), any(), any(), any(), any()) } returns listOf(result)
 
         val vm = createViewModel()
         advanceUntilIdle()

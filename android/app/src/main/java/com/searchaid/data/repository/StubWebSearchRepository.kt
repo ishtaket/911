@@ -12,8 +12,6 @@ import javax.inject.Singleton
  */
 @Singleton
 class StubWebSearchRepository @Inject constructor() : WebSearchRepository {
-    override suspend fun search(query: String, maxResults: Int): List<WebSearchResult> {
-        // No-op stub — real implementation will call external search API
-        return emptyList()
-    }
+    override suspend fun search(query: String, maxResults: Int): List<WebSearchResult> = emptyList()
+    override suspend fun searchImages(query: String, maxResults: Int): List<WebSearchResult> = emptyList()
 }

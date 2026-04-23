@@ -8,4 +8,5 @@ import com.searchaid.domain.model.WebSearchResult
  */
 interface WebSearchRepository {
     suspend fun search(query: String, maxResults: Int = 10): List<WebSearchResult>
+    suspend fun searchImages(query: String, maxResults: Int = 10): List<WebSearchResult>
 }

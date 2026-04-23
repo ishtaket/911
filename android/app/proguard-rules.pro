@@ -33,6 +33,20 @@
 -keep class com.google.android.gms.maps.** { *; }
 -keep class com.google.maps.android.** { *; }
 
+# ---- Retrofit / OkHttp / Gson ----
+-dontwarn okhttp3.**
+-dontwarn okio.**
+-dontwarn retrofit2.**
+-keep class retrofit2.** { *; }
+-keepattributes Signature
+-keepattributes Exceptions
+-keepclassmembers,allowshrinking,allowobfuscation interface * {
+    @retrofit2.http.* <methods>;
+}
+-keep class com.searchaid.data.remote.model.** { *; }
+-keep,allowobfuscation,allowshrinking class com.google.gson.reflect.TypeToken
+-keep,allowobfuscation,allowshrinking class * extends com.google.gson.reflect.TypeToken
+
 # ---- Firebase ----
 -keep class com.google.firebase.** { *; }
 -dontwarn com.google.firebase.**
