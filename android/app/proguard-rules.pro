@@ -33,6 +33,11 @@
 -keep class com.google.android.gms.maps.** { *; }
 -keep class com.google.maps.android.** { *; }
 
+# ---- Firebase ----
+-keep class com.google.firebase.** { *; }
+-dontwarn com.google.firebase.**
+-keep class com.google.android.gms.internal.** { *; }
+
 # ---- WorkManager ----
 -keep class * extends androidx.work.Worker
 -keep class * extends androidx.work.ListenableWorker { public <init>(android.content.Context, androidx.work.WorkerParameters); }

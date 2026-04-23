@@ -7,6 +7,11 @@ plugins {
     id("com.google.dagger.hilt.android")
 }
 
+// Apply google-services plugin only when google-services.json exists
+if (file("google-services.json").exists()) {
+    apply(plugin = "com.google.gms.google-services")
+}
+
 android {
     namespace = "com.searchaid"
     compileSdk = 34
@@ -130,6 +135,12 @@ dependencies {
     implementation("com.google.android.gms:play-services-maps:18.2.0")
     implementation("com.google.android.gms:play-services-location:21.2.0")
     implementation("com.google.maps.android:maps-compose:4.3.3")
+
+    // Firebase (conditional — works without google-services.json via offline stubs)
+    implementation(platform("com.google.firebase:firebase-bom:33.1.0"))
+    implementation("com.google.firebase:firebase-auth-ktx")
+    implementation("com.google.firebase:firebase-firestore-ktx")
+    implementation("com.google.firebase:firebase-messaging-ktx")
 
     // WorkManager
     implementation("androidx.work:work-runtime-ktx:2.9.0")

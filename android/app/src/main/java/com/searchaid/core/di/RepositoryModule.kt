@@ -2,7 +2,10 @@ package com.searchaid.core.di
 
 import com.searchaid.data.repository.AuditLogRepositoryImpl
 import com.searchaid.data.repository.HistoricalPlaceRepositoryImpl
+import com.searchaid.data.repository.LocalNotificationRepository
 import com.searchaid.data.repository.MissingCaseRepositoryImpl
+import com.searchaid.data.repository.OfflineAuthRepository
+import com.searchaid.data.repository.OfflineSyncRepository
 import com.searchaid.data.repository.PersonProfileRepositoryImpl
 import com.searchaid.data.repository.SearchLeadRepositoryImpl
 import com.searchaid.data.repository.OutreachMessageRepositoryImpl
@@ -12,14 +15,17 @@ import com.searchaid.data.repository.StubSocialSearchRepository
 import com.searchaid.data.repository.StubWebSearchRepository
 import com.searchaid.data.repository.WitnessReportRepositoryImpl
 import com.searchaid.domain.repository.AuditLogRepository
+import com.searchaid.domain.repository.AuthRepository
 import com.searchaid.domain.repository.HistoricalPlaceRepository
 import com.searchaid.domain.repository.MissingCaseRepository
+import com.searchaid.domain.repository.NotificationRepository
 import com.searchaid.domain.repository.PersonProfileRepository
 import com.searchaid.domain.repository.SearchLeadRepository
 import com.searchaid.domain.repository.OutreachMessageRepository
 import com.searchaid.domain.repository.SearchZoneRepository
 import com.searchaid.domain.repository.SocialSourceRepository
 import com.searchaid.domain.repository.SocialSearchRepository
+import com.searchaid.domain.repository.SyncRepository
 import com.searchaid.domain.repository.WebSearchRepository
 import com.searchaid.domain.repository.WitnessReportRepository
 import dagger.Binds
@@ -97,4 +103,23 @@ abstract class RepositoryModule {
     abstract fun bindSocialSearchRepository(
         impl: StubSocialSearchRepository,
     ): SocialSearchRepository
+
+    // Firebase abstractions — swap implementations when Firebase is configured
+    @Binds
+    @Singleton
+    abstract fun bindAuthRepository(
+        impl: OfflineAuthRepository,
+    ): AuthRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindSyncRepository(
+        impl: OfflineSyncRepository,
+    ): SyncRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindNotificationRepository(
+        impl: LocalNotificationRepository,
+    ): NotificationRepository
 }
