@@ -48,6 +48,6 @@ Before multi-user production:
 - [x] Parameterized Room queries (no SQL injection)
 - [ ] API key restricted in Google Cloud Console
 - [ ] SQLCipher database encryption
-- [ ] Certificate pinning for API domains
+- [x] Certificate pinning for API domains (GTS Root R1 + GlobalSign)
 - [ ] Firebase Auth enabled
 - [ ] Role-based access control
