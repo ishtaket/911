@@ -107,7 +107,7 @@ Show: last seen, historical places, leads, witness reports, search zones. Mark a
 ### 9. Audit / Log Module
 Full action journal: who searched, what queries ran, which groups were contacted, which leads were confirmed/rejected.
 
-## MVP Screens
+## Screens
 1. Profiles List
 2. Person Profile
 3. Create / Edit Profile
@@ -118,6 +118,8 @@ Full action journal: who searched, what queries ran, which groups were contacted
 8. Witness Reports
 9. Outreach Screen
 10. Audit Log
+11. Web Search (text + photos + archives)
+12. Social Search (Facebook, Instagram, TikTok)
 
 ## MVP Use Cases
 - CreatePersonProfile
@@ -173,22 +175,22 @@ Full action journal: who searched, what queries ran, which groups were contacted
 - Kotlin Ktor or Node.js/NestJS
 - REST API + background workers
 
-### Search layer (planned)
-- Search orchestrator
-- Normalization engine
-- Query builder
-- Lead scoring service
+### Search layer
+- Identity Engine (name normalization, identity pack, query generation)
+- Signal Engine (signal scoring, clustering, zone generation)
+- Google Custom Search API (text + image + social site search)
+- Wayback Machine CDX API (archive search)
 
-## MVP Roadmap
+## Roadmap
 
-### Phase 1 (current)
+### Phase 1 (complete)
 Profile, missing case, historical places, aliases, manual leads, witness reports, search map, audit log, three-level verification baseline.
 
-### Phase 2
-Web query builder, social source registry, messenger outreach, signal scoring, witness intake automation.
+### Phase 2 (complete)
+Identity engine, signal engine, web search (text + photos + archives), social search (Facebook, Instagram, TikTok), messenger outreach, social source registry, search map with Signal Engine integration.
 
 ### Phase 3
-Semi-automation, richer ranking, map heat zones, advanced scenario verification.
+Semi-automation, richer ranking, map heat zones, advanced scenario verification, Firebase backend integration.
 
 ## Three-Level Verification Rule
 

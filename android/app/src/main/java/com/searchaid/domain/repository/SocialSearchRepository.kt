@@ -4,7 +4,7 @@ import com.searchaid.domain.model.SocialSearchResult
 
 /**
  * Abstraction for social network profile search. Implementations may
- * query public APIs (VK, OK, Telegram) or use a local stub.
+ * search public profiles via Google CSE with site: operators (Facebook, Instagram, TikTok).
  */
 interface SocialSearchRepository {
     suspend fun searchByHandle(platform: String, handle: String): List<SocialSearchResult>
