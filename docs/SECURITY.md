@@ -31,10 +31,20 @@ Room database is encrypted via SQLCipher (`net.zetetic:android-database-sqlciphe
 ## Authentication
 
 Current implementation uses `OfflineAuthRepository` (local-only stub).
-Before multi-user production:
-- Enable Firebase Auth (DI binding swap in RepositoryModule)
-- Implement role-based access control
-- Add session timeout and re-authentication
+`FirebaseAuthRepository` is implemented and ready to swap.
+
+To enable Firebase Auth:
+1. Create Firebase project at console.firebase.google.com
+2. Enable Authentication (Anonymous + Email/Password)
+3. Download `google-services.json` to `android/app/`
+4. In `RepositoryModule.kt`, change:
+   ```kotlin
+   // FROM:
+   abstract fun bindAuthRepository(impl: OfflineAuthRepository): AuthRepository
+   // TO:
+   abstract fun bindAuthRepository(impl: FirebaseAuthRepository): AuthRepository
+   ```
+5. Build and test
 
 ## Audit Checklist (MASVS L2)
 
