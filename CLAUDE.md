@@ -129,7 +129,7 @@ PersonProfile, MissingCase, HistoricalPlace, SearchLead, WitnessReport, AuditLog
 - Kotlin + Jetpack Compose + Material 3
 - MVVM + StateFlow + Navigation
 - Hilt DI
-- Room (offline-first)
+- Room (offline-first, SQLCipher encrypted)
 - Retrofit + OkHttp (API clients)
 - Coil (image loading)
 - Google Maps SDK
@@ -155,3 +155,5 @@ PersonProfile, MissingCase, HistoricalPlace, SearchLead, WitnessReport, AuditLog
 - Social search via Google CSE: Facebook, Instagram, TikTok
 - Retrofit + OkHttp + Coil networking stack
 - ProGuard rules configured for all dependencies
+- Security hardened: SQLCipher, cert pinning, network security config, no backup
+- Security audit: docs/SECURITY.md
