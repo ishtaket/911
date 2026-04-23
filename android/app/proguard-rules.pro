@@ -17,6 +17,10 @@
 -keep class * extends androidx.room.RoomDatabase { *; }
 -keepclassmembers class * { @androidx.room.* <methods>; }
 
+# ---- SQLCipher ----
+-keep class net.sqlcipher.** { *; }
+-dontwarn net.sqlcipher.**
+
 # ---- Hilt / Dagger ----
 -dontwarn dagger.hilt.internal.**
 -keep class dagger.hilt.** { *; }

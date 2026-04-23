@@ -21,10 +21,12 @@ This is a known limitation of client-only architecture.
 
 ## Database Encryption
 
-Room database is currently unencrypted. For production with real PII:
-- Integrate SQLCipher via `net.zetetic:android-database-sqlcipher`
-- Store encryption key in Android Keystore
-- Consider field-level encryption for most sensitive columns (medical conditions, locations)
+Room database is encrypted via SQLCipher (`net.zetetic:android-database-sqlcipher:4.5.4`).
+- 256-bit AES encryption of the entire database file
+- Encryption passphrase generated via `SecureRandom` (32 bytes)
+- Passphrase encrypted with AES-GCM using Android Keystore hardware-backed key
+- Encrypted passphrase stored in app-private file (`db_passphrase.enc`)
+- Key manager: `core/security/DatabaseKeyManager.kt`
 
 ## Authentication
 
@@ -47,7 +49,7 @@ Before multi-user production:
 - [x] No WebView, clipboard, or file storage exposure
 - [x] Parameterized Room queries (no SQL injection)
 - [ ] API key restricted in Google Cloud Console
-- [ ] SQLCipher database encryption
+- [x] SQLCipher database encryption (AES-256, Android Keystore)
 - [x] Certificate pinning for API domains (GTS Root R1 + GlobalSign)
 - [ ] Firebase Auth enabled
 - [ ] Role-based access control

@@ -2,6 +2,7 @@ package com.searchaid.core.di
 
 import android.content.Context
 import androidx.room.Room
+import com.searchaid.core.security.DatabaseKeyManager
 import com.searchaid.data.local.SearchAidDatabase
 import com.searchaid.data.local.dao.AuditLogDao
 import com.searchaid.data.local.dao.HistoricalPlaceDao
@@ -17,6 +18,7 @@ import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
+import net.sqlcipher.database.SupportFactory
 import javax.inject.Singleton
 
 @Module
@@ -25,13 +27,18 @@ object DatabaseModule {
 
     @Provides
     @Singleton
-    fun provideDatabase(@ApplicationContext context: Context): SearchAidDatabase =
-        Room.databaseBuilder(context, SearchAidDatabase::class.java, "searchaid.db")
+    fun provideDatabase(@ApplicationContext context: Context): SearchAidDatabase {
+        val passphrase = DatabaseKeyManager.getPassphrase(context)
+        val factory = SupportFactory(passphrase)
+
+        return Room.databaseBuilder(context, SearchAidDatabase::class.java, "searchaid.db")
+            .openHelperFactory(factory)
             .addMigrations(
                 SearchAidDatabase.MIGRATION_1_2,
                 SearchAidDatabase.MIGRATION_2_3,
             )
             .build()
+    }
 
     @Provides fun providePersonProfileDao(db: SearchAidDatabase): PersonProfileDao = db.personProfileDao()
     @Provides fun provideMissingCaseDao(db: SearchAidDatabase): MissingCaseDao = db.missingCaseDao()
