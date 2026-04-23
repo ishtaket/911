@@ -5,6 +5,7 @@ import com.searchaid.MainDispatcherRule
 import com.searchaid.domain.model.CaseStatus
 import com.searchaid.domain.model.MissingCase
 import com.searchaid.domain.model.SearchZone
+import com.searchaid.domain.signal.HeatMapDataBuilder
 import com.searchaid.domain.signal.SignalScorer
 import com.searchaid.domain.signal.ZoneGenerator
 import com.searchaid.domain.usecase.AggregateSignalsUseCase
@@ -67,7 +68,7 @@ class SearchMapViewModelTest {
             SavedStateHandle(mapOf("caseId" to 10L)),
             getCase, getZones, getLeads, getReports,
             getHistoricalPlaces, aggregateSignals,
-            markZoneChecked, logAction,
+            markZoneChecked, logAction, HeatMapDataBuilder(),
         )
     }
 
@@ -114,7 +115,7 @@ class SearchMapViewModelTest {
             SavedStateHandle(mapOf("caseId" to 10L)),
             getCase, getZones, getLeads, getReports,
             getHistoricalPlaces, aggregateSignals,
-            markZoneChecked, logAction,
+            markZoneChecked, logAction, HeatMapDataBuilder(),
         )
         advanceUntilIdle()
 
@@ -129,11 +130,64 @@ class SearchMapViewModelTest {
             SavedStateHandle(mapOf("caseId" to 10L)),
             getCase, getZones, getLeads, getReports,
             getHistoricalPlaces, aggregateSignals,
-            markZoneChecked, logAction,
+            markZoneChecked, logAction, HeatMapDataBuilder(),
         )
         advanceUntilIdle()
 
         assertFalse(vm.state.value.loading)
         assertTrue(vm.state.value.suggestedZones.isEmpty())
+    }
+
+    // ---- Heat Map L2 Tests ----
+
+    @Test
+    fun `heat map is disabled by default`() = runTest {
+        val vm = createViewModel()
+        advanceUntilIdle()
+
+        assertFalse(vm.state.value.heatMapEnabled)
+    }
+
+    @Test
+    fun `onToggleHeatMap enables heat map`() = runTest {
+        val vm = createViewModel()
+        advanceUntilIdle()
+
+        vm.onToggleHeatMap()
+        assertTrue(vm.state.value.heatMapEnabled)
+    }
+
+    @Test
+    fun `onToggleHeatMap twice disables heat map`() = runTest {
+        val vm = createViewModel()
+        advanceUntilIdle()
+
+        vm.onToggleHeatMap()
+        vm.onToggleHeatMap()
+        assertFalse(vm.state.value.heatMapEnabled)
+    }
+
+    @Test
+    fun `heat map points are generated from suggested zones`() = runTest {
+        val vm = createViewModel()
+        advanceUntilIdle()
+
+        // Case has last seen location, so signals exist → heat map points should be generated
+        assertTrue(vm.state.value.heatMapPoints.isNotEmpty())
+    }
+
+    @Test
+    fun `no case produces empty heat map points`() = runTest {
+        coEvery { getCase(10L) } returns null
+        every { getZones(10L) } returns flowOf(emptyList())
+        val vm = SearchMapViewModel(
+            SavedStateHandle(mapOf("caseId" to 10L)),
+            getCase, getZones, getLeads, getReports,
+            getHistoricalPlaces, aggregateSignals,
+            markZoneChecked, logAction, HeatMapDataBuilder(),
+        )
+        advanceUntilIdle()
+
+        assertTrue(vm.state.value.heatMapPoints.isEmpty())
     }
 }

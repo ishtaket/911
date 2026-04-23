@@ -7,6 +7,8 @@ import com.searchaid.domain.model.MissingCase
 import com.searchaid.domain.model.SearchLead
 import com.searchaid.domain.model.SearchZone
 import com.searchaid.domain.model.WitnessReport
+import com.searchaid.domain.signal.HeatMapDataBuilder
+import com.searchaid.domain.signal.HeatMapPoint
 import com.searchaid.domain.signal.ScoredZone
 import com.searchaid.domain.usecase.AggregateSignalsUseCase
 import com.searchaid.domain.usecase.GetHistoricalPlacesUseCase
@@ -30,6 +32,8 @@ data class SearchMapState(
     val suggestedZones: List<ScoredZone> = emptyList(),
     val leads: List<SearchLead> = emptyList(),
     val reports: List<WitnessReport> = emptyList(),
+    val heatMapEnabled: Boolean = false,
+    val heatMapPoints: List<HeatMapPoint> = emptyList(),
     val loading: Boolean = true,
 )
 
@@ -44,6 +48,7 @@ class SearchMapViewModel @Inject constructor(
     private val aggregateSignals: AggregateSignalsUseCase,
     private val markZoneChecked: MarkZoneCheckedUseCase,
     private val logAction: LogActionUseCase,
+    private val heatMapDataBuilder: HeatMapDataBuilder,
 ) : ViewModel() {
 
     val caseId: Long = savedStateHandle["caseId"] ?: -1L
@@ -66,11 +71,14 @@ class SearchMapViewModel @Inject constructor(
                     Triple(leads, reports, places)
                 }.collect { (leads, reports, places) ->
                     val suggested = aggregateSignals(case_, leads, reports, places)
+                    val allSignals = suggested.flatMap { it.signals }
+                    val heatPoints = heatMapDataBuilder.build(allSignals)
                     _state.update {
                         it.copy(
                             leads = leads,
                             reports = reports,
                             suggestedZones = suggested,
+                            heatMapPoints = heatPoints,
                             loading = false,
                         )
                     }
@@ -84,6 +92,10 @@ class SearchMapViewModel @Inject constructor(
                 _state.update { it.copy(zones = zones) }
             }
         }
+    }
+
+    fun onToggleHeatMap() {
+        _state.update { it.copy(heatMapEnabled = !it.heatMapEnabled) }
     }
 
     fun onZoneChecked(zoneId: Long) {
