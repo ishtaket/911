@@ -95,7 +95,7 @@ class SocialSearchViewModel @Inject constructor(
                 _state.update { it.copy(searching = false, results = results) }
                 logAction("SOCIAL_SEARCH", caseId = caseId, details = "Found ${results.size} profiles")
             } catch (e: Exception) {
-                _state.update { it.copy(searching = false, error = e.message) }
+                _state.update { it.copy(searching = false, error = "Search failed. Check your connection and try again.") }
             }
         }
     }

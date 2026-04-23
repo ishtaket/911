@@ -112,7 +112,7 @@ class WebSearchViewModel @Inject constructor(
                     details = "Found ${results.size} web + ${archives.size} archive results",
                 )
             } catch (e: Exception) {
-                _state.update { it.copy(searching = false, error = e.message) }
+                _state.update { it.copy(searching = false, error = "Search failed. Check your connection and try again.") }
             }
         }
     }

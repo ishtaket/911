@@ -37,27 +37,28 @@
 -dontwarn okhttp3.**
 -dontwarn okio.**
 -dontwarn retrofit2.**
--keep class retrofit2.** { *; }
+-keepclassmembers,allowobfuscation class retrofit2.** { *; }
 -keepattributes Signature
 -keepattributes Exceptions
 -keepclassmembers,allowshrinking,allowobfuscation interface * {
     @retrofit2.http.* <methods>;
 }
--keep class com.searchaid.data.remote.model.** { *; }
+# Keep field names for Gson deserialization, allow class name obfuscation
+-keepclassmembers class com.searchaid.data.remote.model.** { <fields>; }
 -keep,allowobfuscation,allowshrinking class com.google.gson.reflect.TypeToken
 -keep,allowobfuscation,allowshrinking class * extends com.google.gson.reflect.TypeToken
 
 # ---- Firebase ----
--keep class com.google.firebase.** { *; }
 -dontwarn com.google.firebase.**
--keep class com.google.android.gms.internal.** { *; }
+-keep class com.google.firebase.** { *; }
+-dontwarn com.google.android.gms.internal.**
 
 # ---- WorkManager ----
 -keep class * extends androidx.work.Worker
 -keep class * extends androidx.work.ListenableWorker { public <init>(android.content.Context, androidx.work.WorkerParameters); }
 
-# ---- Data classes (domain models) ----
--keep class com.searchaid.domain.model.** { *; }
+# ---- Data classes (domain models — keep members for Room/serialization) ----
+-keepclassmembers class com.searchaid.domain.model.** { <fields>; <init>(...); }
 -keep class com.searchaid.data.local.entity.** { *; }
 
 # ---- Enums ----
