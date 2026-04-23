@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- Search magnifying glass with person silhouette -->
+    <!-- Glass circle -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M46,32 A16,16 0 1,1 46,64 A16,16 0 1,1 46,32Z"
+        android:strokeWidth="3"
+        android:strokeColor="#FFFFFF" />
+    <path
+        android:fillColor="#D84315"
+        android:pathData="M46,35 A13,13 0 1,1 46,61 A13,13 0 1,1 46,35Z" />
+    <!-- Glass handle -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M57,57 L68,68 L65,71 L54,60Z" />
+    <!-- Person silhouette inside glass -->
+    <!-- Head -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M46,40 A3.5,3.5 0 1,1 46,47 A3.5,3.5 0 1,1 46,40Z" />
+    <!-- Body -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M40,57 Q40,49 46,49 Q52,49 52,57Z" />
+</vector>

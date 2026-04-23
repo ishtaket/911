@@ -27,7 +27,10 @@ object DatabaseModule {
     @Singleton
     fun provideDatabase(@ApplicationContext context: Context): SearchAidDatabase =
         Room.databaseBuilder(context, SearchAidDatabase::class.java, "searchaid.db")
-            .fallbackToDestructiveMigration()
+            .addMigrations(
+                SearchAidDatabase.MIGRATION_1_2,
+                SearchAidDatabase.MIGRATION_2_3,
+            )
             .build()
 
     @Provides fun providePersonProfileDao(db: SearchAidDatabase): PersonProfileDao = db.personProfileDao()

@@ -3,6 +3,8 @@ package com.searchaid.data.local
 import androidx.room.Database
 import androidx.room.RoomDatabase
 import androidx.room.TypeConverters
+import androidx.room.migration.Migration
+import androidx.sqlite.db.SupportSQLiteDatabase
 import com.searchaid.data.local.converter.Converters
 import com.searchaid.data.local.dao.AuditLogDao
 import com.searchaid.data.local.dao.HistoricalPlaceDao
@@ -36,7 +38,7 @@ import com.searchaid.data.local.entity.WitnessReportEntity
         AuditLogEntryEntity::class,
     ],
     version = 3,
-    exportSchema = false,
+    exportSchema = true,
 )
 @TypeConverters(Converters::class)
 abstract class SearchAidDatabase : RoomDatabase() {
@@ -49,4 +51,41 @@ abstract class SearchAidDatabase : RoomDatabase() {
     abstract fun socialSourceDao(): SocialSourceDao
     abstract fun outreachMessageDao(): OutreachMessageDao
     abstract fun auditLogDao(): AuditLogDao
+
+    companion object {
+        val MIGRATION_1_2 = object : Migration(1, 2) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("""
+                    CREATE TABLE IF NOT EXISTS `social_sources` (
+                        `id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                        `personId` INTEGER NOT NULL,
+                        `platform` TEXT NOT NULL,
+                        `sourceType` TEXT NOT NULL,
+                        `title` TEXT,
+                        `handleOrAlias` TEXT,
+                        `region` TEXT,
+                        `url` TEXT,
+                        `visibility` TEXT,
+                        `enabled` INTEGER NOT NULL
+                    )
+                """.trimIndent())
+            }
+        }
+
+        val MIGRATION_2_3 = object : Migration(2, 3) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("""
+                    CREATE TABLE IF NOT EXISTS `outreach_messages` (
+                        `id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                        `caseId` INTEGER NOT NULL,
+                        `channel` TEXT NOT NULL,
+                        `recipient` TEXT NOT NULL,
+                        `messageText` TEXT NOT NULL,
+                        `sentAt` INTEGER,
+                        `status` TEXT NOT NULL
+                    )
+                """.trimIndent())
+            }
+        }
+    }
 }
