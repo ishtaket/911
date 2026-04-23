@@ -17,7 +17,7 @@
 - [x] HTTP logging disabled in release
 - [x] Error messages sanitized
 - [x] No secrets in source code
-- [ ] Restrict Google CSE API key in Cloud Console (Android app restriction)
+- [x] Restrict Google CSE API key in Cloud Console (Android app restriction)
 
 ## Play Store Submission
 - [x] Privacy policy written (docs/PRIVACY_POLICY.md)

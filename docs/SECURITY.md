@@ -48,7 +48,7 @@ Before multi-user production:
 - [x] All dependencies at current versions
 - [x] No WebView, clipboard, or file storage exposure
 - [x] Parameterized Room queries (no SQL injection)
-- [ ] API key restricted in Google Cloud Console
+- [x] API key restricted in Google Cloud Console (Android app + Custom Search API only)
 - [x] SQLCipher database encryption (AES-256, Android Keystore)
 - [x] Certificate pinning for API domains (GTS Root R1 + GlobalSign)
 - [ ] Firebase Auth enabled
