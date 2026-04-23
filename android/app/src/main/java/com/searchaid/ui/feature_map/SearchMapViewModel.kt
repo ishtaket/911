@@ -7,6 +7,9 @@ import com.searchaid.domain.model.MissingCase
 import com.searchaid.domain.model.SearchLead
 import com.searchaid.domain.model.SearchZone
 import com.searchaid.domain.model.WitnessReport
+import com.searchaid.domain.signal.ScoredZone
+import com.searchaid.domain.usecase.AggregateSignalsUseCase
+import com.searchaid.domain.usecase.GetHistoricalPlacesUseCase
 import com.searchaid.domain.usecase.GetLeadsByCaseUseCase
 import com.searchaid.domain.usecase.GetMissingCaseUseCase
 import com.searchaid.domain.usecase.GetSearchZonesByCaseUseCase
@@ -16,6 +19,7 @@ import com.searchaid.domain.usecase.MarkZoneCheckedUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -23,6 +27,7 @@ import javax.inject.Inject
 data class SearchMapState(
     val case_: MissingCase? = null,
     val zones: List<SearchZone> = emptyList(),
+    val suggestedZones: List<ScoredZone> = emptyList(),
     val leads: List<SearchLead> = emptyList(),
     val reports: List<WitnessReport> = emptyList(),
     val loading: Boolean = true,
@@ -35,6 +40,8 @@ class SearchMapViewModel @Inject constructor(
     private val getZones: GetSearchZonesByCaseUseCase,
     private val getLeads: GetLeadsByCaseUseCase,
     private val getReports: GetWitnessReportsByCaseUseCase,
+    private val getHistoricalPlaces: GetHistoricalPlacesUseCase,
+    private val aggregateSignals: AggregateSignalsUseCase,
     private val markZoneChecked: MarkZoneCheckedUseCase,
     private val logAction: LogActionUseCase,
 ) : ViewModel() {
@@ -46,22 +53,35 @@ class SearchMapViewModel @Inject constructor(
 
     init {
         viewModelScope.launch {
-            val case = getCase(caseId)
-            _state.update { it.copy(case_ = case) }
+            val case_ = getCase(caseId)
+            _state.update { it.copy(case_ = case_) }
+
+            if (case_ != null) {
+                // Combine reactive data streams to recompute suggested zones
+                combine(
+                    getLeads(caseId),
+                    getReports(caseId),
+                    getHistoricalPlaces(case_.personId),
+                ) { leads, reports, places ->
+                    Triple(leads, reports, places)
+                }.collect { (leads, reports, places) ->
+                    val suggested = aggregateSignals(case_, leads, reports, places)
+                    _state.update {
+                        it.copy(
+                            leads = leads,
+                            reports = reports,
+                            suggestedZones = suggested,
+                            loading = false,
+                        )
+                    }
+                }
+            } else {
+                _state.update { it.copy(loading = false) }
+            }
         }
         viewModelScope.launch {
             getZones(caseId).collect { zones ->
-                _state.update { it.copy(zones = zones, loading = false) }
-            }
-        }
-        viewModelScope.launch {
-            getLeads(caseId).collect { leads ->
-                _state.update { it.copy(leads = leads) }
-            }
-        }
-        viewModelScope.launch {
-            getReports(caseId).collect { reports ->
-                _state.update { it.copy(reports = reports) }
+                _state.update { it.copy(zones = zones) }
             }
         }
     }

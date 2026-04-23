@@ -93,6 +93,7 @@ internal fun SearchMapScreenContent(
                 // Legend
                 MapLegend(
                     zonesCount = state.zones.size,
+                    suggestedCount = state.suggestedZones.size,
                     leadsCount = state.leads.size,
                     reportsCount = state.reports.size,
                 )
@@ -111,14 +112,8 @@ internal fun SearchMapScreenContent(
                         )
                     }
 
-                    // Search zones (circles)
+                    // Manual search zones (orange/green circles)
                     state.zones.forEach { zone ->
-                        val color = if (zone.checked) {
-                            Color(0x3000C853) // Green, checked
-                        } else {
-                            Color((0x30FF0000 + (zone.score * 0xCC).toInt() * 0x10000).toLong())
-                                .copy(alpha = 0.2f + zone.score * 0.3f)
-                        }
                         Circle(
                             center = LatLng(zone.lat, zone.lon),
                             radius = zone.radiusMeters,
@@ -127,6 +122,17 @@ internal fun SearchMapScreenContent(
                             strokeWidth = 2f,
                             clickable = !zone.checked,
                             onClick = { onZoneChecked(zone.id) },
+                        )
+                    }
+
+                    // Signal Engine suggested zones (purple circles)
+                    state.suggestedZones.forEach { zone ->
+                        Circle(
+                            center = LatLng(zone.lat, zone.lon),
+                            radius = zone.radiusMeters,
+                            fillColor = Color(0x207B1FA2).copy(alpha = 0.1f + zone.score * 0.2f),
+                            strokeColor = Color(0xFF7B1FA2),
+                            strokeWidth = 3f,
                         )
                     }
 
@@ -166,13 +172,13 @@ internal fun SearchMapScreenContent(
 }
 
 @Composable
-private fun MapLegend(zonesCount: Int, leadsCount: Int, reportsCount: Int) {
-    if (zonesCount == 0 && leadsCount == 0 && reportsCount == 0) return
+private fun MapLegend(zonesCount: Int, suggestedCount: Int, leadsCount: Int, reportsCount: Int) {
+    if (zonesCount == 0 && suggestedCount == 0 && leadsCount == 0 && reportsCount == 0) return
     Column(
         Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp),
     ) {
         Text(
-            "Zones: $zonesCount | Leads: $leadsCount | Reports: $reportsCount",
+            "Zones: $zonesCount | Suggested: $suggestedCount | Leads: $leadsCount | Reports: $reportsCount",
             style = MaterialTheme.typography.labelSmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )

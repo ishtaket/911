@@ -5,6 +5,10 @@ import com.searchaid.MainDispatcherRule
 import com.searchaid.domain.model.CaseStatus
 import com.searchaid.domain.model.MissingCase
 import com.searchaid.domain.model.SearchZone
+import com.searchaid.domain.signal.SignalScorer
+import com.searchaid.domain.signal.ZoneGenerator
+import com.searchaid.domain.usecase.AggregateSignalsUseCase
+import com.searchaid.domain.usecase.GetHistoricalPlacesUseCase
 import com.searchaid.domain.usecase.GetLeadsByCaseUseCase
 import com.searchaid.domain.usecase.GetMissingCaseUseCase
 import com.searchaid.domain.usecase.GetSearchZonesByCaseUseCase
@@ -22,6 +26,7 @@ import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 
@@ -35,6 +40,8 @@ class SearchMapViewModelTest {
     private val getZones = mockk<GetSearchZonesByCaseUseCase>()
     private val getLeads = mockk<GetLeadsByCaseUseCase>()
     private val getReports = mockk<GetWitnessReportsByCaseUseCase>()
+    private val getHistoricalPlaces = mockk<GetHistoricalPlacesUseCase>()
+    private val aggregateSignals = AggregateSignalsUseCase(SignalScorer(), ZoneGenerator())
     private val markZoneChecked = mockk<MarkZoneCheckedUseCase>(relaxed = true)
     private val logAction = mockk<LogActionUseCase>(relaxed = true)
 
@@ -55,9 +62,12 @@ class SearchMapViewModelTest {
         every { getZones(10L) } returns flowOf(listOf(testZone))
         every { getLeads(10L) } returns flowOf(emptyList())
         every { getReports(10L) } returns flowOf(emptyList())
+        every { getHistoricalPlaces(1L) } returns flowOf(emptyList())
         return SearchMapViewModel(
             SavedStateHandle(mapOf("caseId" to 10L)),
-            getCase, getZones, getLeads, getReports, markZoneChecked, logAction,
+            getCase, getZones, getLeads, getReports,
+            getHistoricalPlaces, aggregateSignals,
+            markZoneChecked, logAction,
         )
     }
 
@@ -70,6 +80,15 @@ class SearchMapViewModelTest {
         assertEquals("Park", vm.state.value.case_?.lastSeenLocationName)
         assertEquals(1, vm.state.value.zones.size)
         assertFalse(vm.state.value.loading)
+    }
+
+    @Test
+    fun `init generates suggested zones from last seen`() = runTest {
+        val vm = createViewModel()
+        advanceUntilIdle()
+
+        // Last seen location should produce at least one suggested zone
+        assertTrue(vm.state.value.suggestedZones.isNotEmpty())
     }
 
     @Test
@@ -90,12 +109,31 @@ class SearchMapViewModelTest {
         every { getZones(10L) } returns flowOf(emptyList())
         every { getLeads(10L) } returns flowOf(emptyList())
         every { getReports(10L) } returns flowOf(emptyList())
+        every { getHistoricalPlaces(1L) } returns flowOf(emptyList())
         val vm = SearchMapViewModel(
             SavedStateHandle(mapOf("caseId" to 10L)),
-            getCase, getZones, getLeads, getReports, markZoneChecked, logAction,
+            getCase, getZones, getLeads, getReports,
+            getHistoricalPlaces, aggregateSignals,
+            markZoneChecked, logAction,
         )
         advanceUntilIdle()
 
         assertEquals(0, vm.state.value.zones.size)
+    }
+
+    @Test
+    fun `no case produces empty state`() = runTest {
+        coEvery { getCase(10L) } returns null
+        every { getZones(10L) } returns flowOf(emptyList())
+        val vm = SearchMapViewModel(
+            SavedStateHandle(mapOf("caseId" to 10L)),
+            getCase, getZones, getLeads, getReports,
+            getHistoricalPlaces, aggregateSignals,
+            markZoneChecked, logAction,
+        )
+        advanceUntilIdle()
+
+        assertFalse(vm.state.value.loading)
+        assertTrue(vm.state.value.suggestedZones.isEmpty())
     }
 }
