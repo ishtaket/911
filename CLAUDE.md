@@ -83,6 +83,9 @@ PersonProfile, MissingCase, HistoricalPlace, SearchLead, WitnessReport, AuditLog
 - Web Archives (Wayback Machine CDX API — cached profile search)
 - Firebase abstractions (Auth, Sync, Notifications — offline stubs, ready for Firebase swap via DI)
 
+## Implemented modules (Phase 3 — in progress)
+- Heat Map Zones (HeatMapDataBuilder, toggle FAB, HeatmapTileProvider overlay on Search Map)
+
 ## Engineering rules
 - Prefer simple, maintainable solutions.
 - Do not overengineer.
@@ -147,7 +150,7 @@ PersonProfile, MissingCase, HistoricalPlace, SearchLead, WitnessReport, AuditLog
 - Release unit tests disabled (Robolectric incompatibility)
 
 ## Current state
-- 364 tests passing (L1 + L2 + L3)
+- 388 tests passing (L1 + L2 + L3)
 - Phase 1 complete, Phase 2 complete — 12 screens functional
 - 9 DB entities, version 3 with proper migrations
 - Release build with R8 minification + release keystore signing

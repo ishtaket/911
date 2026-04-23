@@ -39,7 +39,8 @@
 - [ ] Enable Firebase Auth (add google-services.json + swap 3 bindings in RepositoryModule)
 - [x] Set up CI/CD (GitHub Actions — .github/workflows/ci.yml)
 - [ ] Monitor API quota usage in Google Cloud Console
-- [ ] Plan Phase 3 features (see PRODUCT.md)
+- [x] Heat Map Zones overlay on Search Map
+- [ ] Plan remaining Phase 3 features (see PRODUCT.md)
 
 ## Build Commands
 ```bash
