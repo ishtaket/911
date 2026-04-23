@@ -147,7 +147,7 @@ PersonProfile, MissingCase, HistoricalPlace, SearchLead, WitnessReport, AuditLog
 - Release unit tests disabled (Robolectric incompatibility)
 
 ## Current state
-- 361 tests passing (L1 + L2 + L3)
+- 364 tests passing (L1 + L2 + L3)
 - Phase 1 complete, Phase 2 complete — 12 screens functional
 - 9 DB entities, version 3 with proper migrations
 - Release build with R8 minification + release keystore signing
