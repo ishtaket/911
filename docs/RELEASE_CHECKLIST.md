@@ -37,7 +37,7 @@
 ## Post-Release
 - [ ] Set up Firebase Crashlytics for crash reporting
 - [ ] Enable Firebase Auth (add google-services.json + swap 3 bindings in RepositoryModule)
-- [ ] Set up CI/CD (GitHub Actions)
+- [x] Set up CI/CD (GitHub Actions — .github/workflows/ci.yml)
 - [ ] Monitor API quota usage in Google Cloud Console
 - [ ] Plan Phase 3 features (see PRODUCT.md)
 
