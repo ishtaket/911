@@ -30,6 +30,9 @@ sealed class Screen(val route: String) {
     data object WebSearch : Screen("web_search/{caseId}") {
         fun withId(id: Long) = "web_search/$id"
     }
+    data object SocialSearch : Screen("social_search/{caseId}") {
+        fun withId(id: Long) = "social_search/$id"
+    }
     data object AuditLog : Screen("audit_log?caseId={caseId}") {
         fun forCase(id: Long) = "audit_log?caseId=$id"
         fun all() = "audit_log"

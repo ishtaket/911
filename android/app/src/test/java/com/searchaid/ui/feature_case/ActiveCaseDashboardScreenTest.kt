@@ -48,7 +48,8 @@ class ActiveCaseDashboardScreenTest {
                 state = state,
                 caseId = 10L,
                 onBack = {}, onOpenMap = {}, onOpenLeads = {},
-                onOpenWitness = {}, onOpenOutreach = {}, onOpenWebSearch = {}, onOpenAudit = {},
+                onOpenWitness = {}, onOpenOutreach = {}, onOpenWebSearch = {},
+                onOpenSocialSearch = {}, onOpenAudit = {},
                 onMarkFound = onMarkFound, onCloseCase = onCloseCase,
             )
         }

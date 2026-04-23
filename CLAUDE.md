@@ -79,9 +79,9 @@ PersonProfile, MissingCase, HistoricalPlace, SearchLead, WitnessReport, AuditLog
 - Identity Engine (NameNormalizer, BuildIdentityPackUseCase, GenerateSearchQueriesUseCase)
 - Signal Engine (SignalScorer, ZoneGenerator, AggregateSignalsUseCase)
 - Open Web Search (WebSearchRepository, SearchWebUseCase, screen with promote-to-lead)
+- Social Network Search (SocialSearchRepository, SearchSocialUseCase, screen with platform filter + promote-to-lead)
 
 ## Upcoming modules (Phase 2)
-- Social Network Search (public profiles/groups)
 - Firebase integration (Auth, Firestore, FCM)
 
 ## Engineering rules
@@ -143,9 +143,9 @@ PersonProfile, MissingCase, HistoricalPlace, SearchLead, WitnessReport, AuditLog
 - Release unit tests disabled (Robolectric incompatibility)
 
 ## Current state
-- 309 tests passing (L1 + L2 + L3)
-- Phase 1 complete, Phase 2 in progress — 11 screens functional
+- 329 tests passing (L1 + L2 + L3)
+- Phase 1 complete, Phase 2 in progress — 12 screens functional
 - 9 DB entities, version 3 with proper migrations
 - Release build with R8 minification + release keystore signing
-- Identity Engine + Signal Engine + Open Web Search operational
+- Identity Engine + Signal Engine + Open Web Search + Social Search operational
 - ProGuard rules configured for all dependencies

@@ -58,6 +58,7 @@ fun ActiveCaseDashboardScreen(
     onOpenWitness: (Long) -> Unit,
     onOpenOutreach: (Long) -> Unit,
     onOpenWebSearch: (Long) -> Unit,
+    onOpenSocialSearch: (Long) -> Unit,
     onOpenAudit: (Long) -> Unit,
     viewModel: ActiveCaseDashboardViewModel = hiltViewModel(),
 ) {
@@ -71,6 +72,7 @@ fun ActiveCaseDashboardScreen(
         onOpenWitness = onOpenWitness,
         onOpenOutreach = onOpenOutreach,
         onOpenWebSearch = onOpenWebSearch,
+        onOpenSocialSearch = onOpenSocialSearch,
         onOpenAudit = onOpenAudit,
         onMarkFound = viewModel::markFound,
         onCloseCase = viewModel::closeCase,
@@ -88,6 +90,7 @@ internal fun ActiveCaseDashboardContent(
     onOpenWitness: (Long) -> Unit,
     onOpenOutreach: (Long) -> Unit,
     onOpenWebSearch: (Long) -> Unit,
+    onOpenSocialSearch: (Long) -> Unit,
     onOpenAudit: (Long) -> Unit,
     onMarkFound: () -> Unit,
     onCloseCase: () -> Unit,
@@ -254,6 +257,12 @@ internal fun ActiveCaseDashboardContent(
                         label = "Web Search",
                         subtitle = "Search by name, aliases, contacts",
                         onClick = { onOpenWebSearch(caseId) },
+                    )
+                    ActionButton(
+                        icon = Icons.Default.Person,
+                        label = "Social Search",
+                        subtitle = "VK, OK, Telegram profiles",
+                        onClick = { onOpenSocialSearch(caseId) },
                     )
                     ActionButton(
                         icon = Icons.AutoMirrored.Filled.List,
