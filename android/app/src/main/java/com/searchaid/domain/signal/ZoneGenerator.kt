@@ -51,8 +51,10 @@ class ZoneGenerator @Inject constructor() {
             val maxDist = cluster.maxOf { haversineMeters(centroidLat, centroidLon, it.lat, it.lon) }
             val radius = maxOf(maxDist + RADIUS_PADDING, MIN_ZONE_RADIUS)
 
-            // Composite score: weighted sum, capped at 1.0
-            val compositeScore = cluster.sumOf { it.score.toDouble() }.toFloat().coerceAtMost(1.0f)
+            // Composite score: weighted sum with multi-source correlation bonus, capped at 1.0
+            val rawScore = cluster.sumOf { it.score.toDouble() }.toFloat()
+            val correlationBonus = sourceCorrelationBonus(cluster)
+            val compositeScore = (rawScore * correlationBonus).coerceAtMost(1.0f)
 
             // Build reason from top signals
             val reason = cluster
@@ -71,10 +73,26 @@ class ZoneGenerator @Inject constructor() {
         }.sortedByDescending { it.score }
     }
 
+    /**
+     * Zones with signals from multiple independent source types get a bonus.
+     * 2 distinct sources → 10% boost, 3+ → 20% boost.
+     * This rewards corroborating evidence from different channels.
+     */
+    internal fun sourceCorrelationBonus(signals: List<Signal>): Float {
+        val distinctSources = signals.map { it.source }.toSet().size
+        return when {
+            distinctSources >= 3 -> CORRELATION_BONUS_HIGH
+            distinctSources == 2 -> CORRELATION_BONUS_MEDIUM
+            else -> 1.0f
+        }
+    }
+
     companion object {
         const val DEFAULT_CLUSTER_RADIUS = 500.0 // meters
         const val RADIUS_PADDING = 100.0 // meters beyond outermost signal
         const val MIN_ZONE_RADIUS = 200.0 // minimum zone radius
+        const val CORRELATION_BONUS_MEDIUM = 1.1f // 2 distinct source types
+        const val CORRELATION_BONUS_HIGH = 1.2f   // 3+ distinct source types
 
         private const val EARTH_RADIUS_M = 6_371_000.0
 

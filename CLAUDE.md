@@ -85,6 +85,7 @@ PersonProfile, MissingCase, HistoricalPlace, SearchLead, WitnessReport, AuditLog
 
 ## Implemented modules (Phase 3 — in progress)
 - Heat Map Zones (HeatMapDataBuilder, toggle FAB, HeatmapTileProvider overlay on Search Map)
+- Richer Ranking (lead type weighting, recency boost, multi-source correlation bonus)
 
 ## Engineering rules
 - Prefer simple, maintainable solutions.
@@ -150,7 +151,7 @@ PersonProfile, MissingCase, HistoricalPlace, SearchLead, WitnessReport, AuditLog
 - Release unit tests disabled (Robolectric incompatibility)
 
 ## Current state
-- 388 tests passing (L1 + L2 + L3)
+- 402 tests passing (L1 + L2 + L3)
 - Phase 1 complete, Phase 2 complete — 12 screens functional
 - 9 DB entities, version 3 with proper migrations
 - Release build with R8 minification + release keystore signing

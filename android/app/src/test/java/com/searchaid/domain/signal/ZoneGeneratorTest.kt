@@ -112,4 +112,61 @@ class ZoneGeneratorTest {
         val zones = generator.generate(signals, clusterRadiusMeters = 500.0)
         assertEquals(3, zones.size)
     }
+
+    // ---- Source Correlation Bonus ----
+
+    @Test
+    fun `sourceCorrelationBonus single source returns 1`() {
+        val signals = listOf(
+            signal(source = SignalSource.LEAD_NEW),
+            signal(source = SignalSource.LEAD_NEW),
+        )
+        assertEquals(1.0f, generator.sourceCorrelationBonus(signals))
+    }
+
+    @Test
+    fun `sourceCorrelationBonus two sources returns medium bonus`() {
+        val signals = listOf(
+            signal(source = SignalSource.LEAD_NEW),
+            signal(source = SignalSource.WITNESS_VERIFIED),
+        )
+        assertEquals(ZoneGenerator.CORRELATION_BONUS_MEDIUM, generator.sourceCorrelationBonus(signals))
+    }
+
+    @Test
+    fun `sourceCorrelationBonus three sources returns high bonus`() {
+        val signals = listOf(
+            signal(source = SignalSource.LEAD_NEW),
+            signal(source = SignalSource.WITNESS_VERIFIED),
+            signal(source = SignalSource.HISTORICAL_PLACE),
+        )
+        assertEquals(ZoneGenerator.CORRELATION_BONUS_HIGH, generator.sourceCorrelationBonus(signals))
+    }
+
+    @Test
+    fun `multi-source zone scores higher than single-source zone`() {
+        val multiSource = listOf(
+            signal(lat = 55.75, lon = 37.62, score = 0.3f, source = SignalSource.LEAD_NEW),
+            signal(lat = 55.7501, lon = 37.6201, score = 0.3f, source = SignalSource.WITNESS_NEW),
+        )
+        val singleSource = listOf(
+            signal(lat = 55.80, lon = 37.70, score = 0.3f, source = SignalSource.LEAD_NEW),
+            signal(lat = 55.8001, lon = 37.7001, score = 0.3f, source = SignalSource.LEAD_NEW),
+        )
+        val zones = generator.generate(multiSource + singleSource, clusterRadiusMeters = 500.0)
+        assertEquals(2, zones.size)
+        // Multi-source zone should rank first due to correlation bonus
+        assertTrue(zones[0].signals.map { it.source }.toSet().size > 1)
+    }
+
+    @Test
+    fun `correlation bonus still capped at 1`() {
+        val signals = listOf(
+            signal(lat = 55.75, lon = 37.62, score = 0.5f, source = SignalSource.LEAD_CONFIRMED),
+            signal(lat = 55.7501, lon = 37.6201, score = 0.5f, source = SignalSource.WITNESS_VERIFIED),
+            signal(lat = 55.7502, lon = 37.6202, score = 0.5f, source = SignalSource.HISTORICAL_PLACE),
+        )
+        val zones = generator.generate(signals, clusterRadiusMeters = 500.0)
+        assertEquals(1.0f, zones[0].score) // 1.5 * 1.2 = 1.8 → capped at 1.0
+    }
 }

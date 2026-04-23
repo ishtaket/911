@@ -158,4 +158,74 @@ class SignalScorerTest {
     fun `timeDecay null timestamp returns moderate value`() {
         assertEquals(0.7f, scorer.timeDecay(null, now))
     }
+
+    // ---- Lead Type Factor ----
+
+    @Test
+    fun `leadTypeFactor witness highest of lead types`() {
+        val witness = scorer.leadTypeFactor(LeadType.WITNESS)
+        val web = scorer.leadTypeFactor(LeadType.WEB)
+        assertTrue(witness > web)
+        assertEquals(SignalScorer.LEAD_TYPE_WITNESS, witness)
+    }
+
+    @Test
+    fun `leadTypeFactor manual higher than social`() {
+        val manual = scorer.leadTypeFactor(LeadType.MANUAL)
+        val social = scorer.leadTypeFactor(LeadType.SOCIAL)
+        assertTrue(manual > social)
+    }
+
+    @Test
+    fun `leadTypeFactor web lowest`() {
+        val web = scorer.leadTypeFactor(LeadType.WEB)
+        LeadType.entries.forEach { type ->
+            assertTrue("$type should be >= WEB", scorer.leadTypeFactor(type) >= web)
+        }
+    }
+
+    @Test
+    fun `scoreLead witness type scores higher than web type same status`() {
+        val witnessLead = scorer.scoreLead(
+            lead(status = LeadStatus.NEW).copy(type = LeadType.WITNESS), now,
+        )
+        val webLead = scorer.scoreLead(
+            lead(status = LeadStatus.NEW).copy(type = LeadType.WEB), now,
+        )
+        assertTrue(witnessLead!!.score > webLead!!.score)
+    }
+
+    // ---- Recency Boost ----
+
+    @Test
+    fun `recencyBoost within 1 hour returns boost`() {
+        val boost = scorer.recencyBoost(now - 30 * 60_000L, now) // 30 min ago
+        assertEquals(SignalScorer.RECENCY_BOOST, boost)
+    }
+
+    @Test
+    fun `recencyBoost after 1 hour returns 1`() {
+        val boost = scorer.recencyBoost(now - 2 * 3_600_000L, now) // 2 hours ago
+        assertEquals(1.0f, boost)
+    }
+
+    @Test
+    fun `recencyBoost exactly 1 hour returns 1`() {
+        val boost = scorer.recencyBoost(now - 3_600_000L, now) // exactly 1 hour
+        assertEquals(1.0f, boost)
+    }
+
+    @Test
+    fun `recencyBoost null timestamp returns 1`() {
+        assertEquals(1.0f, scorer.recencyBoost(null, now))
+    }
+
+    @Test
+    fun `scoreLead very recent lead gets recency boost`() {
+        val recent = scorer.scoreLead(lead(timestamp = now - 30 * 60_000L), now)
+        val older = scorer.scoreLead(lead(timestamp = now - 3_600_000L), now)
+        // Same base weight, confidence, and time decay (both within 6h)
+        // but recent one gets 1.2× recency boost
+        assertTrue(recent!!.score > older!!.score)
+    }
 }

@@ -2,6 +2,7 @@ package com.searchaid.domain.signal
 
 import com.searchaid.domain.model.HistoricalPlace
 import com.searchaid.domain.model.LeadStatus
+import com.searchaid.domain.model.LeadType
 import com.searchaid.domain.model.MissingCase
 import com.searchaid.domain.model.ReportStatus
 import com.searchaid.domain.model.SearchLead
@@ -39,9 +40,11 @@ class SignalScorer @Inject constructor() {
             LeadStatus.REJECTED -> return null
         }
 
+        val typeFactor = leadTypeFactor(lead.type)
         val confidenceFactor = lead.confidence.coerceIn(0f, 1f)
         val decayFactor = timeDecay(lead.timestamp, nowMs)
-        val score = baseWeight * (0.5f + 0.5f * confidenceFactor) * decayFactor
+        val recencyBoost = recencyBoost(lead.timestamp, nowMs)
+        val score = baseWeight * typeFactor * (0.5f + 0.5f * confidenceFactor) * decayFactor * recencyBoost
 
         return Signal(
             lat = lat, lon = lon,
@@ -65,7 +68,8 @@ class SignalScorer @Inject constructor() {
 
         val confidenceFactor = report.confidence.coerceIn(0f, 1f)
         val decayFactor = timeDecay(report.timestamp, nowMs)
-        val score = baseWeight * (0.5f + 0.5f * confidenceFactor) * decayFactor
+        val recencyBoost = recencyBoost(report.timestamp, nowMs)
+        val score = baseWeight * (0.5f + 0.5f * confidenceFactor) * decayFactor * recencyBoost
 
         return Signal(
             lat = lat, lon = lon,
@@ -83,6 +87,28 @@ class SignalScorer @Inject constructor() {
             source = SignalSource.HISTORICAL_PLACE,
             label = place.title,
         )
+    }
+
+    /**
+     * Lead type factor: first-person sighting types (WITNESS, MANUAL) are
+     * weighted higher than automated/web sources.
+     */
+    internal fun leadTypeFactor(type: LeadType): Float = when (type) {
+        LeadType.WITNESS -> LEAD_TYPE_WITNESS
+        LeadType.MANUAL -> LEAD_TYPE_MANUAL
+        LeadType.SOCIAL -> LEAD_TYPE_SOCIAL
+        LeadType.MESSENGER -> LEAD_TYPE_MESSENGER
+        LeadType.WEB -> LEAD_TYPE_WEB
+    }
+
+    /**
+     * Recency boost: signals less than 1 hour old get a 1.2× multiplier.
+     * This prioritizes the freshest data points without penalizing older ones.
+     */
+    internal fun recencyBoost(timestampMs: Long?, nowMs: Long): Float {
+        if (timestampMs == null) return 1.0f
+        val hoursAgo = (nowMs - timestampMs).toFloat() / MILLIS_PER_HOUR
+        return if (hoursAgo < 1f) RECENCY_BOOST else 1.0f
     }
 
     /**
@@ -107,6 +133,16 @@ class SignalScorer @Inject constructor() {
         const val WITNESS_VERIFIED_WEIGHT = 0.85f
         const val WITNESS_NEW_WEIGHT = 0.4f
         const val HISTORICAL_WEIGHT = 0.3f
+
+        // Lead type multipliers: first-person sources score higher
+        const val LEAD_TYPE_WITNESS = 1.2f
+        const val LEAD_TYPE_MANUAL = 1.1f
+        const val LEAD_TYPE_SOCIAL = 1.0f
+        const val LEAD_TYPE_MESSENGER = 0.95f
+        const val LEAD_TYPE_WEB = 0.85f
+
+        // Very fresh signals (< 1 hour) get a 20% boost
+        const val RECENCY_BOOST = 1.2f
 
         private const val MILLIS_PER_HOUR = 3_600_000f
     }
