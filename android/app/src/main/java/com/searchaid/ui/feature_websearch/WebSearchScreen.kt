@@ -48,6 +48,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
+import com.searchaid.domain.model.ArchiveResult
 import com.searchaid.domain.model.SearchResultStatus
 import com.searchaid.domain.model.WebSearchResult
 
@@ -225,6 +226,20 @@ internal fun WebSearchScreenContent(
                                     onPromote = { onPromoteToLead(result) },
                                     onDismiss = { onDismiss(result) },
                                 )
+                            }
+                        }
+
+                        // Archive results
+                        if (state.archiveResults.isNotEmpty()) {
+                            item {
+                                Text(
+                                    "${state.archiveResults.size} archived snapshots",
+                                    style = MaterialTheme.typography.labelLarge,
+                                    modifier = Modifier.padding(top = 12.dp),
+                                )
+                            }
+                            items(state.archiveResults, key = { it.archiveUrl }) { archive ->
+                                ArchiveResultCard(archive = archive)
                             }
                         }
                     } else if (state.queries.isNotEmpty()) {
@@ -412,4 +427,54 @@ private fun SearchResultCard(
             }
         }
     }
+}
+
+@Composable
+private fun ArchiveResultCard(archive: ArchiveResult) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.5f),
+        ),
+    ) {
+        Column(Modifier.padding(12.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    archive.platform ?: "Web",
+                    style = MaterialTheme.typography.labelMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.tertiary,
+                )
+                val formatted = formatArchiveTimestamp(archive.timestamp)
+                Text(
+                    formatted,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            Spacer(Modifier.height(4.dp))
+            Text(
+                archive.originalUrl,
+                style = MaterialTheme.typography.bodySmall,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
+            )
+            Text(
+                archive.archiveUrl,
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.primary,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
+    }
+}
+
+private fun formatArchiveTimestamp(ts: String): String {
+    if (ts.length < 8) return ts
+    return "${ts.substring(0, 4)}-${ts.substring(4, 6)}-${ts.substring(6, 8)}"
 }

@@ -3,6 +3,7 @@ package com.searchaid.ui.feature_websearch
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.searchaid.domain.model.ArchiveResult
 import com.searchaid.domain.model.IdentityPack
 import com.searchaid.domain.model.LeadType
 import com.searchaid.domain.model.SearchLead
@@ -15,7 +16,9 @@ import com.searchaid.domain.usecase.GetPersonProfileUseCase
 import com.searchaid.domain.usecase.GetMissingCaseUseCase
 import com.searchaid.domain.usecase.GetSocialSourcesByPersonUseCase
 import com.searchaid.domain.usecase.LogActionUseCase
+import com.searchaid.domain.usecase.SearchArchivesUseCase
 import com.searchaid.domain.usecase.SearchWebUseCase
+import kotlinx.coroutines.async
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -29,6 +32,7 @@ data class WebSearchState(
     val searching: Boolean = false,
     val queries: List<String> = emptyList(),
     val results: List<WebSearchResult> = emptyList(),
+    val archiveResults: List<ArchiveResult> = emptyList(),
     val identityPack: IdentityPack? = null,
     val includeImages: Boolean = true,
     val error: String? = null,
@@ -48,6 +52,7 @@ class WebSearchViewModel @Inject constructor(
     private val buildIdentityPack: BuildIdentityPackUseCase,
     private val generateQueries: GenerateSearchQueriesUseCase,
     private val searchWeb: SearchWebUseCase,
+    private val searchArchives: SearchArchivesUseCase,
     private val addLead: AddLeadUseCase,
     private val logAction: LogActionUseCase,
 ) : ViewModel() {
@@ -91,9 +96,21 @@ class WebSearchViewModel @Inject constructor(
 
         viewModelScope.launch {
             try {
-                val results = searchWeb(pack, caseId, includeImages = _state.value.includeImages)
-                _state.update { it.copy(searching = false, results = results) }
-                logAction("WEB_SEARCH", caseId = caseId, details = "Found ${results.size} results")
+                val webDeferred = async { searchWeb(pack, caseId, includeImages = _state.value.includeImages) }
+                val archiveDeferred = async {
+                    try { searchArchives(pack) } catch (_: Exception) { emptyList() }
+                }
+
+                val results = webDeferred.await()
+                val archives = archiveDeferred.await()
+
+                _state.update {
+                    it.copy(searching = false, results = results, archiveResults = archives)
+                }
+                logAction(
+                    "WEB_SEARCH", caseId = caseId,
+                    details = "Found ${results.size} web + ${archives.size} archive results",
+                )
             } catch (e: Exception) {
                 _state.update { it.copy(searching = false, error = e.message) }
             }

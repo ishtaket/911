@@ -6,6 +6,7 @@ import com.searchaid.domain.identity.NameNormalizer
 import com.searchaid.domain.model.CaseStatus
 import com.searchaid.domain.model.MissingCase
 import com.searchaid.domain.model.PersonProfile
+import com.searchaid.domain.model.ArchiveResult
 import com.searchaid.domain.model.SearchResultStatus
 import com.searchaid.domain.model.WebSearchResult
 import com.searchaid.domain.usecase.AddLeadUseCase
@@ -15,6 +16,7 @@ import com.searchaid.domain.usecase.GetMissingCaseUseCase
 import com.searchaid.domain.usecase.GetPersonProfileUseCase
 import com.searchaid.domain.usecase.GetSocialSourcesByPersonUseCase
 import com.searchaid.domain.usecase.LogActionUseCase
+import com.searchaid.domain.usecase.SearchArchivesUseCase
 import com.searchaid.domain.usecase.SearchWebUseCase
 import io.mockk.coEvery
 import io.mockk.coVerify
@@ -43,6 +45,7 @@ class WebSearchViewModelTest {
     private val buildIdentityPack = BuildIdentityPackUseCase(NameNormalizer())
     private val generateQueries = GenerateSearchQueriesUseCase()
     private val searchWeb = mockk<SearchWebUseCase>()
+    private val searchArchives = mockk<SearchArchivesUseCase>(relaxed = true)
     private val addLead = mockk<AddLeadUseCase>(relaxed = true)
     private val logAction = mockk<LogActionUseCase>(relaxed = true)
 
@@ -67,7 +70,7 @@ class WebSearchViewModelTest {
             SavedStateHandle(mapOf("caseId" to 10L)),
             getCase, getProfile, getSocialSources,
             buildIdentityPack, generateQueries, searchWeb,
-            addLead, logAction,
+            searchArchives, addLead, logAction,
         )
     }
 
@@ -143,13 +146,40 @@ class WebSearchViewModelTest {
     }
 
     @Test
+    fun `runSearch includes archive results`() = runTest {
+        val webResult = WebSearchResult(
+            caseId = 10, query = "test", title = "Found",
+            snippet = "Match", url = "https://example.com",
+            source = "google", relevanceScore = 0.8f,
+        )
+        val archiveResult = ArchiveResult(
+            originalUrl = "https://facebook.com/user",
+            archiveUrl = "https://web.archive.org/web/20240101/https://facebook.com/user",
+            timestamp = "20240101",
+            platform = "Facebook",
+        )
+        coEvery { searchWeb(any(), any(), any(), any(), any()) } returns listOf(webResult)
+        coEvery { searchArchives(any(), any()) } returns listOf(archiveResult)
+
+        val vm = createViewModel()
+        advanceUntilIdle()
+
+        vm.runSearch()
+        advanceUntilIdle()
+
+        assertEquals(1, vm.state.value.results.size)
+        assertEquals(1, vm.state.value.archiveResults.size)
+        assertEquals("Facebook", vm.state.value.archiveResults[0].platform)
+    }
+
+    @Test
     fun `missing case shows error`() = runTest {
         coEvery { getCase(10L) } returns null
         val vm = WebSearchViewModel(
             SavedStateHandle(mapOf("caseId" to 10L)),
             getCase, getProfile, getSocialSources,
             buildIdentityPack, generateQueries, searchWeb,
-            addLead, logAction,
+            searchArchives, addLead, logAction,
         )
         advanceUntilIdle()
 

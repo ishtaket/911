@@ -6,6 +6,7 @@ import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
+import com.searchaid.domain.model.ArchiveResult
 import com.searchaid.domain.model.IdentityPack
 import com.searchaid.domain.model.SearchResultStatus
 import com.searchaid.domain.model.WebSearchResult
@@ -131,5 +132,44 @@ class WebSearchScreenTest {
     fun `top bar shows Web Search title`() {
         content(WebSearchState(loading = false, identityPack = pack))
         composeTestRule.onNodeWithText("Web Search").assertIsDisplayed()
+    }
+
+    @Test
+    fun `archive results section shows count`() {
+        val archive = ArchiveResult(
+            originalUrl = "https://facebook.com/user",
+            archiveUrl = "https://web.archive.org/web/20240101/https://facebook.com/user",
+            timestamp = "20240101",
+            platform = "Facebook",
+        )
+        val webResult = WebSearchResult(
+            caseId = 1, query = "test", title = "R",
+            snippet = "S", url = "https://e.com",
+            source = "google", relevanceScore = 0.5f,
+        )
+        // Render without identityPack/queries to minimize items above archives
+        content(WebSearchState(
+            loading = false,
+            queries = emptyList(),
+            results = listOf(webResult),
+            archiveResults = listOf(archive),
+        ))
+        composeTestRule.onNodeWithText("1 archived snapshots").assertExists()
+    }
+
+    @Test
+    fun `archive section not shown when no archive results`() {
+        val webResult = WebSearchResult(
+            caseId = 1, query = "test", title = "R",
+            snippet = "S", url = "https://e.com",
+            source = "google", relevanceScore = 0.5f,
+        )
+        content(WebSearchState(
+            loading = false,
+            queries = emptyList(),
+            results = listOf(webResult),
+            archiveResults = emptyList(),
+        ))
+        composeTestRule.onNodeWithText("archived snapshots", substring = true).assertDoesNotExist()
     }
 }
