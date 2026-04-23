@@ -62,7 +62,7 @@ Follow this exact structure (see SearchLead or WitnessReport as reference):
 9. `ui/navigation/SearchAidNavHost.kt` — route registration
 
 ## Core entities
-PersonProfile, MissingCase, HistoricalPlace, SearchLead, WitnessReport, AuditLog, SearchZone, SocialSource, OutreachMessage
+PersonProfile, MissingCase, HistoricalPlace, SearchLead, WitnessReport, AuditLog, SearchZone, SocialSource, OutreachMessage, WebSearchResult, IdentityPack
 
 ## Implemented modules (Phase 1 — all complete)
 - Profile Module (CRUD + historical places)
@@ -73,13 +73,15 @@ PersonProfile, MissingCase, HistoricalPlace, SearchLead, WitnessReport, AuditLog
 - SearchZone Module (CRUD + mark checked)
 - SocialSource Module (full stack)
 - Outreach Module (send/track messages, status management)
-- Search Map (Google Maps with zones, leads, reports)
+- Search Map (Google Maps with zones, leads, reports + Signal Engine integration)
+
+## Implemented modules (Phase 2 — in progress)
+- Identity Engine (NameNormalizer, BuildIdentityPackUseCase, GenerateSearchQueriesUseCase)
+- Signal Engine (SignalScorer, ZoneGenerator, AggregateSignalsUseCase)
+- Open Web Search (WebSearchRepository, SearchWebUseCase, screen with promote-to-lead)
 
 ## Upcoming modules (Phase 2)
-- Identity Engine (alias normalization, query builder)
-- Open Web Search (search by name/alias/email)
 - Social Network Search (public profiles/groups)
-- Signal Engine (aggregate signals, score leads, generate search zones)
 - Firebase integration (Auth, Firestore, FCM)
 
 ## Engineering rules
@@ -141,9 +143,9 @@ PersonProfile, MissingCase, HistoricalPlace, SearchLead, WitnessReport, AuditLog
 - Release unit tests disabled (Robolectric incompatibility)
 
 ## Current state
-- 224 tests passing (L1 + L2 + L3)
-- Phase 1 MVP complete — all 10 screens functional
-- 9 entities, DB version 3
-- Release build with R8 minification verified
+- 309 tests passing (L1 + L2 + L3)
+- Phase 1 complete, Phase 2 in progress — 11 screens functional
+- 9 DB entities, version 3 with proper migrations
+- Release build with R8 minification + release keystore signing
+- Identity Engine + Signal Engine + Open Web Search operational
 - ProGuard rules configured for all dependencies
-- Release signing config ready (requires keystore setup)
