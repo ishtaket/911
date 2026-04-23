@@ -8,6 +8,7 @@ import com.searchaid.data.repository.SearchLeadRepositoryImpl
 import com.searchaid.data.repository.OutreachMessageRepositoryImpl
 import com.searchaid.data.repository.SearchZoneRepositoryImpl
 import com.searchaid.data.repository.SocialSourceRepositoryImpl
+import com.searchaid.data.repository.StubWebSearchRepository
 import com.searchaid.data.repository.WitnessReportRepositoryImpl
 import com.searchaid.domain.repository.AuditLogRepository
 import com.searchaid.domain.repository.HistoricalPlaceRepository
@@ -17,6 +18,7 @@ import com.searchaid.domain.repository.SearchLeadRepository
 import com.searchaid.domain.repository.OutreachMessageRepository
 import com.searchaid.domain.repository.SearchZoneRepository
 import com.searchaid.domain.repository.SocialSourceRepository
+import com.searchaid.domain.repository.WebSearchRepository
 import com.searchaid.domain.repository.WitnessReportRepository
 import dagger.Binds
 import dagger.Module
@@ -81,4 +83,10 @@ abstract class RepositoryModule {
     abstract fun bindOutreachMessageRepository(
         impl: OutreachMessageRepositoryImpl,
     ): OutreachMessageRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindWebSearchRepository(
+        impl: StubWebSearchRepository,
+    ): WebSearchRepository
 }

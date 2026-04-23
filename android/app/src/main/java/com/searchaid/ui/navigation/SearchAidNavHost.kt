@@ -15,6 +15,7 @@ import com.searchaid.ui.feature_profile.CreateEditProfileScreen
 import com.searchaid.ui.feature_profile.PersonProfileScreen
 import com.searchaid.ui.feature_profile.ProfilesListScreen
 import com.searchaid.ui.feature_search.LeadsListScreen
+import com.searchaid.ui.feature_websearch.WebSearchScreen
 import com.searchaid.ui.feature_witness.WitnessReportsScreen
 
 @Composable
@@ -76,6 +77,7 @@ fun SearchAidNavHost() {
                 onOpenLeads = { navController.navigate(Screen.LeadsList.withId(it)) },
                 onOpenWitness = { navController.navigate(Screen.WitnessReports.withId(it)) },
                 onOpenOutreach = { navController.navigate(Screen.Outreach.withId(it)) },
+                onOpenWebSearch = { navController.navigate(Screen.WebSearch.withId(it)) },
                 onOpenAudit = { navController.navigate(Screen.AuditLog.forCase(it)) },
             )
         }
@@ -106,6 +108,13 @@ fun SearchAidNavHost() {
             arguments = listOf(navArgument("caseId") { type = NavType.LongType }),
         ) {
             OutreachScreen(onBack = { navController.popBackStack() })
+        }
+
+        composable(
+            Screen.WebSearch.route,
+            arguments = listOf(navArgument("caseId") { type = NavType.LongType }),
+        ) {
+            WebSearchScreen(onBack = { navController.popBackStack() })
         }
 
         composable(

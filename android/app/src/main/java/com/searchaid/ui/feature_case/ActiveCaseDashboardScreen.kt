@@ -20,6 +20,7 @@ import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.MailOutline
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -56,6 +57,7 @@ fun ActiveCaseDashboardScreen(
     onOpenLeads: (Long) -> Unit,
     onOpenWitness: (Long) -> Unit,
     onOpenOutreach: (Long) -> Unit,
+    onOpenWebSearch: (Long) -> Unit,
     onOpenAudit: (Long) -> Unit,
     viewModel: ActiveCaseDashboardViewModel = hiltViewModel(),
 ) {
@@ -68,6 +70,7 @@ fun ActiveCaseDashboardScreen(
         onOpenLeads = onOpenLeads,
         onOpenWitness = onOpenWitness,
         onOpenOutreach = onOpenOutreach,
+        onOpenWebSearch = onOpenWebSearch,
         onOpenAudit = onOpenAudit,
         onMarkFound = viewModel::markFound,
         onCloseCase = viewModel::closeCase,
@@ -84,6 +87,7 @@ internal fun ActiveCaseDashboardContent(
     onOpenLeads: (Long) -> Unit,
     onOpenWitness: (Long) -> Unit,
     onOpenOutreach: (Long) -> Unit,
+    onOpenWebSearch: (Long) -> Unit,
     onOpenAudit: (Long) -> Unit,
     onMarkFound: () -> Unit,
     onCloseCase: () -> Unit,
@@ -244,6 +248,12 @@ internal fun ActiveCaseDashboardContent(
                         label = "Outreach",
                         subtitle = "Messages to groups and contacts",
                         onClick = { onOpenOutreach(caseId) },
+                    )
+                    ActionButton(
+                        icon = Icons.Default.Star,
+                        label = "Web Search",
+                        subtitle = "Search by name, aliases, contacts",
+                        onClick = { onOpenWebSearch(caseId) },
                     )
                     ActionButton(
                         icon = Icons.AutoMirrored.Filled.List,
