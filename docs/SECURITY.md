@@ -61,5 +61,5 @@ To enable Firebase Auth:
 - [x] API key restricted in Google Cloud Console (Android app + Custom Search API only)
 - [x] SQLCipher database encryption (AES-256, Android Keystore)
 - [x] Certificate pinning for API domains (GTS Root R1 + GlobalSign)
-- [ ] Firebase Auth enabled
-- [ ] Role-based access control
+- [x] Firebase Auth implemented (ready for DI swap — needs google-services.json)
+- [ ] Role-based access control (post-launch)
