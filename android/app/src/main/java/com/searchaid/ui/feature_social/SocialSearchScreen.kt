@@ -211,7 +211,10 @@ internal fun SocialSearchScreenContent(
                         item {
                             Box(Modifier.fillMaxWidth().padding(32.dp), contentAlignment = Alignment.Center) {
                                 Text(
-                                    "Tap Search to find social profiles",
+                                    if (state.hasSearched)
+                                        "No social profiles found. Check API key in local.properties."
+                                    else
+                                        "Tap Search to find social profiles",
                                     style = MaterialTheme.typography.bodyLarge,
                                 )
                             }

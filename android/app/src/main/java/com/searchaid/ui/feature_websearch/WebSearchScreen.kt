@@ -246,7 +246,10 @@ internal fun WebSearchScreenContent(
                         item {
                             Box(Modifier.fillMaxWidth().padding(32.dp), contentAlignment = Alignment.Center) {
                                 Text(
-                                    "Tap Search to run queries",
+                                    if (state.hasSearched)
+                                        "No results found. Check API key in local.properties."
+                                    else
+                                        "Tap Search to run queries",
                                     style = MaterialTheme.typography.bodyLarge,
                                 )
                             }

@@ -177,6 +177,35 @@ class SocialSearchViewModelTest {
     }
 
     @Test
+    fun `hasSearched is false before search and true after`() = runTest {
+        coEvery { searchSocial(any(), any(), any()) } returns emptyList()
+
+        val vm = createViewModel()
+        advanceUntilIdle()
+
+        assertFalse(vm.state.value.hasSearched)
+
+        vm.runSearch()
+        advanceUntilIdle()
+
+        assertTrue(vm.state.value.hasSearched)
+    }
+
+    @Test
+    fun `hasSearched is true after failed search`() = runTest {
+        coEvery { searchSocial(any(), any(), any()) } throws RuntimeException("Network error")
+
+        val vm = createViewModel()
+        advanceUntilIdle()
+
+        vm.runSearch()
+        advanceUntilIdle()
+
+        assertTrue(vm.state.value.hasSearched)
+        assertNotNull(vm.state.value.error)
+    }
+
+    @Test
     fun `missing case shows error`() = runTest {
         coEvery { getCase(10L) } returns null
         val vm = SocialSearchViewModel(

@@ -30,6 +30,7 @@ import javax.inject.Inject
 data class WebSearchState(
     val loading: Boolean = true,
     val searching: Boolean = false,
+    val hasSearched: Boolean = false,
     val queries: List<String> = emptyList(),
     val results: List<WebSearchResult> = emptyList(),
     val archiveResults: List<ArchiveResult> = emptyList(),
@@ -105,14 +106,14 @@ class WebSearchViewModel @Inject constructor(
                 val archives = archiveDeferred.await()
 
                 _state.update {
-                    it.copy(searching = false, results = results, archiveResults = archives)
+                    it.copy(searching = false, hasSearched = true, results = results, archiveResults = archives)
                 }
                 logAction(
                     "WEB_SEARCH", caseId = caseId,
                     details = "Found ${results.size} web + ${archives.size} archive results",
                 )
             } catch (e: Exception) {
-                _state.update { it.copy(searching = false, error = "Search failed. Check your connection and try again.") }
+                _state.update { it.copy(searching = false, hasSearched = true, error = "Search failed. Check your connection and try again.") }
             }
         }
     }

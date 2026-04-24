@@ -27,6 +27,7 @@ import javax.inject.Inject
 data class SocialSearchState(
     val loading: Boolean = true,
     val searching: Boolean = false,
+    val hasSearched: Boolean = false,
     val identityPack: IdentityPack? = null,
     val sources: List<SocialSource> = emptyList(),
     val results: List<SocialSearchResult> = emptyList(),
@@ -92,10 +93,10 @@ class SocialSearchViewModel @Inject constructor(
         viewModelScope.launch {
             try {
                 val results = searchSocial(pack, _state.value.sources, caseId)
-                _state.update { it.copy(searching = false, results = results) }
+                _state.update { it.copy(searching = false, hasSearched = true, results = results) }
                 logAction("SOCIAL_SEARCH", caseId = caseId, details = "Found ${results.size} profiles")
             } catch (e: Exception) {
-                _state.update { it.copy(searching = false, error = "Search failed. Check your connection and try again.") }
+                _state.update { it.copy(searching = false, hasSearched = true, error = "Search failed. Check your connection and try again.") }
             }
         }
     }
