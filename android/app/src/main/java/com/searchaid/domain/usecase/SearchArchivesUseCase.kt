@@ -1,22 +1,28 @@
 package com.searchaid.domain.usecase
 
+import com.searchaid.data.preferences.SearchToolPreferences
 import com.searchaid.domain.model.ArchiveResult
 import com.searchaid.domain.model.IdentityPack
 import com.searchaid.domain.repository.ArchiveRepository
+import kotlinx.coroutines.flow.first
 import javax.inject.Inject
 
 /**
  * Searches web archives for cached social profiles.
  * Uses name variants from IdentityPack to find archived pages.
+ * Respects archivesEnabled preference from user settings.
  */
 class SearchArchivesUseCase @Inject constructor(
     private val archiveRepository: ArchiveRepository,
+    private val preferences: SearchToolPreferences,
 ) {
     suspend operator fun invoke(
         pack: IdentityPack,
         platforms: List<String> = listOf("Facebook", "Instagram", "TikTok"),
         limit: Int = 30,
     ): List<ArchiveResult> {
+        val config = preferences.config.first()
+        if (!config.archivesEnabled) return emptyList()
         val results = mutableListOf<ArchiveResult>()
         val seenUrls = mutableSetOf<String>()
 

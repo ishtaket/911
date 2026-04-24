@@ -10,26 +10,49 @@ import com.searchaid.ui.feature_audit.AuditLogScreen
 import com.searchaid.ui.feature_case.ActiveCaseDashboardScreen
 import com.searchaid.ui.feature_case.StartMissingCaseScreen
 import com.searchaid.ui.feature_map.SearchMapScreen
+import com.searchaid.ui.feature_onboarding.OnboardingScreen
 import com.searchaid.ui.feature_outreach.OutreachScreen
 import com.searchaid.ui.feature_profile.CreateEditProfileScreen
 import com.searchaid.ui.feature_profile.PersonProfileScreen
 import com.searchaid.ui.feature_profile.ProfilesListScreen
 import com.searchaid.ui.feature_search.LeadsListScreen
+import com.searchaid.ui.feature_settings.SettingsScreen
 import com.searchaid.ui.feature_social.SocialSearchScreen
 import com.searchaid.ui.feature_websearch.WebSearchScreen
 import com.searchaid.ui.feature_witness.WitnessReportsScreen
 
 @Composable
-fun SearchAidNavHost() {
+fun SearchAidNavHost(onboardingCompleted: Boolean) {
     val navController = rememberNavController()
 
-    NavHost(navController = navController, startDestination = Screen.ProfilesList.route) {
+    val startDestination = if (onboardingCompleted) {
+        Screen.ProfilesList.route
+    } else {
+        Screen.Onboarding.route
+    }
+
+    NavHost(navController = navController, startDestination = startDestination) {
+
+        composable(Screen.Onboarding.route) {
+            OnboardingScreen(
+                onComplete = {
+                    navController.navigate(Screen.ProfilesList.route) {
+                        popUpTo(Screen.Onboarding.route) { inclusive = true }
+                    }
+                },
+            )
+        }
 
         composable(Screen.ProfilesList.route) {
             ProfilesListScreen(
                 onProfileClick = { navController.navigate(Screen.PersonProfile.withId(it)) },
                 onCreateClick = { navController.navigate(Screen.CreateEditProfile.create()) },
+                onSettingsClick = { navController.navigate(Screen.Settings.route) },
             )
+        }
+
+        composable(Screen.Settings.route) {
+            SettingsScreen(onBack = { navController.popBackStack() })
         }
 
         composable(

@@ -1,10 +1,12 @@
 package com.searchaid.data.repository
 
 import com.searchaid.BuildConfig
+import com.searchaid.data.preferences.SearchToolPreferences
 import com.searchaid.data.remote.api.GoogleSearchApi
 import com.searchaid.data.remote.model.GoogleSearchItem
 import com.searchaid.domain.model.WebSearchResult
 import com.searchaid.domain.repository.WebSearchRepository
+import kotlinx.coroutines.flow.first
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -12,34 +14,41 @@ import javax.inject.Singleton
  * Real implementation of WebSearchRepository using Google Custom Search JSON API.
  * Supports both text search and image search.
  *
- * Requires GOOGLE_CSE_API_KEY and GOOGLE_CSE_CX in local.properties.
- * Falls back to empty results when keys are not configured.
+ * Reads API keys from DataStore preferences (set in Settings/Onboarding).
+ * Falls back to BuildConfig keys if DataStore is empty.
+ * Falls back to empty results when no keys are configured anywhere.
  */
 @Singleton
 class GoogleWebSearchRepository @Inject constructor(
     private val api: GoogleSearchApi,
+    private val preferences: SearchToolPreferences,
 ) : WebSearchRepository {
 
-    private val apiKey: String = BuildConfig.GOOGLE_CSE_API_KEY
-    private val cx: String = BuildConfig.GOOGLE_CSE_CX
-
-    private val isConfigured: Boolean
-        get() = apiKey.isNotBlank() && cx.isNotBlank()
+    private suspend fun getKeys(): Pair<String, String> {
+        val config = preferences.config.first()
+        val key = config.googleApiKey.ifBlank { BuildConfig.GOOGLE_CSE_API_KEY }
+        val cx = config.googleCx.ifBlank { BuildConfig.GOOGLE_CSE_CX }
+        return key to cx
+    }
 
     override suspend fun search(query: String, maxResults: Int): List<WebSearchResult> {
-        if (!isConfigured) return emptyList()
-        return executeSearch(query, maxResults, searchType = null)
+        val (apiKey, cx) = getKeys()
+        if (apiKey.isBlank() || cx.isBlank()) return emptyList()
+        return executeSearch(query, maxResults, searchType = null, apiKey = apiKey, cx = cx)
     }
 
     override suspend fun searchImages(query: String, maxResults: Int): List<WebSearchResult> {
-        if (!isConfigured) return emptyList()
-        return executeSearch(query, maxResults, searchType = "image")
+        val (apiKey, cx) = getKeys()
+        if (apiKey.isBlank() || cx.isBlank()) return emptyList()
+        return executeSearch(query, maxResults, searchType = "image", apiKey = apiKey, cx = cx)
     }
 
     private suspend fun executeSearch(
         query: String,
         maxResults: Int,
         searchType: String?,
+        apiKey: String,
+        cx: String,
     ): List<WebSearchResult> {
         val results = mutableListOf<WebSearchResult>()
         // Google CSE returns max 10 results per request, paginate if needed

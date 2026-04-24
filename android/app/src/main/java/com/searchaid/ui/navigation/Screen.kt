@@ -37,4 +37,6 @@ sealed class Screen(val route: String) {
         fun forCase(id: Long) = "audit_log?caseId=$id"
         fun all() = "audit_log"
     }
+    data object Onboarding : Screen("onboarding")
+    data object Settings : Screen("settings")
 }

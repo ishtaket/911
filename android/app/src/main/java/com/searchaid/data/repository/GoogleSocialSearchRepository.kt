@@ -1,11 +1,13 @@
 package com.searchaid.data.repository
 
 import com.searchaid.BuildConfig
+import com.searchaid.data.preferences.SearchToolPreferences
 import com.searchaid.data.remote.api.GoogleSearchApi
 import com.searchaid.data.remote.model.GoogleSearchItem
 import com.searchaid.domain.model.SocialMatchType
 import com.searchaid.domain.model.SocialSearchResult
 import com.searchaid.domain.repository.SocialSearchRepository
+import kotlinx.coroutines.flow.first
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -13,18 +15,21 @@ import javax.inject.Singleton
  * Real social search using Google Custom Search with site: restrictions.
  * Searches public profiles on Facebook, Instagram, TikTok via Google index.
  *
- * Requires GOOGLE_CSE_API_KEY and GOOGLE_CSE_CX in local.properties.
+ * Reads API keys from DataStore preferences (set in Settings/Onboarding).
+ * Falls back to BuildConfig keys if DataStore is empty.
  */
 @Singleton
 class GoogleSocialSearchRepository @Inject constructor(
     private val api: GoogleSearchApi,
+    private val preferences: SearchToolPreferences,
 ) : SocialSearchRepository {
 
-    private val apiKey: String = BuildConfig.GOOGLE_CSE_API_KEY
-    private val cx: String = BuildConfig.GOOGLE_CSE_CX
-
-    private val isConfigured: Boolean
-        get() = apiKey.isNotBlank() && cx.isNotBlank()
+    private suspend fun getKeys(): Pair<String, String> {
+        val config = preferences.config.first()
+        val key = config.googleApiKey.ifBlank { BuildConfig.GOOGLE_CSE_API_KEY }
+        val cx = config.googleCx.ifBlank { BuildConfig.GOOGLE_CSE_CX }
+        return key to cx
+    }
 
     private val platformDomains = mapOf(
         "Facebook" to "facebook.com",
@@ -33,18 +38,22 @@ class GoogleSocialSearchRepository @Inject constructor(
     )
 
     override suspend fun searchByHandle(platform: String, handle: String): List<SocialSearchResult> {
-        if (!isConfigured) return emptyList()
+        val (apiKey, cx) = getKeys()
+        if (apiKey.isBlank() || cx.isBlank()) return emptyList()
         val domain = platformDomains[platform] ?: return emptyList()
         return executeSearch(
             query = handle,
             platform = platform,
             siteSearch = domain,
             matchType = SocialMatchType.HANDLE_EXACT,
+            apiKey = apiKey,
+            cx = cx,
         )
     }
 
     override suspend fun searchByName(platform: String, name: String, region: String?): List<SocialSearchResult> {
-        if (!isConfigured) return emptyList()
+        val (apiKey, cx) = getKeys()
+        if (apiKey.isBlank() || cx.isBlank()) return emptyList()
         val domain = platformDomains[platform] ?: return emptyList()
         val query = if (region != null) "$name $region" else name
         return executeSearch(
@@ -52,6 +61,8 @@ class GoogleSocialSearchRepository @Inject constructor(
             platform = platform,
             siteSearch = domain,
             matchType = SocialMatchType.NAME_PARTIAL,
+            apiKey = apiKey,
+            cx = cx,
         )
     }
 
@@ -60,6 +71,8 @@ class GoogleSocialSearchRepository @Inject constructor(
         platform: String,
         siteSearch: String,
         matchType: SocialMatchType,
+        apiKey: String,
+        cx: String,
     ): List<SocialSearchResult> {
         return try {
             val response = api.search(

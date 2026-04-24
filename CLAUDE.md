@@ -86,6 +86,7 @@ PersonProfile, MissingCase, HistoricalPlace, SearchLead, WitnessReport, AuditLog
 ## Implemented modules (Phase 3 — in progress)
 - Heat Map Zones (HeatMapDataBuilder, toggle FAB, HeatmapTileProvider overlay on Search Map)
 - Richer Ranking (lead type weighting, recency boost, multi-source correlation bonus)
+- Onboarding & Settings (first-run tool selection, API key entry, DataStore preferences, Settings screen)
 
 ## Engineering rules
 - Prefer simple, maintainable solutions.
@@ -139,6 +140,7 @@ PersonProfile, MissingCase, HistoricalPlace, SearchLead, WitnessReport, AuditLog
 - Google Maps SDK
 - Google Custom Search API (web + image + social search)
 - Wayback Machine CDX API (archive search)
+- DataStore Preferences (search tool config, onboarding state)
 - Firebase (Auth, Firestore, FCM — conditional)
 - WorkManager for background tasks
 - Clean Architecture (domain/data/ui)
@@ -151,8 +153,8 @@ PersonProfile, MissingCase, HistoricalPlace, SearchLead, WitnessReport, AuditLog
 - Release unit tests disabled (Robolectric incompatibility)
 
 ## Current state
-- 402 tests passing (L1 + L2 + L3)
-- Phase 1 complete, Phase 2 complete — 12 screens functional
+- 406 tests passing (L1 + L2 + L3)
+- Phase 1 complete, Phase 2 complete — 14 screens functional
 - 9 DB entities, version 3 with proper migrations
 - Release build with R8 minification + release keystore signing
 - Real API integrations: Google CSE (text + images), Wayback Machine archives

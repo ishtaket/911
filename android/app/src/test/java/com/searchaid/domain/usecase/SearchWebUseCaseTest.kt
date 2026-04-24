@@ -1,10 +1,14 @@
 package com.searchaid.domain.usecase
 
+import com.searchaid.data.preferences.SearchToolPreferences
 import com.searchaid.domain.model.IdentityPack
+import com.searchaid.domain.model.SearchToolConfig
 import com.searchaid.domain.model.WebSearchResult
 import com.searchaid.domain.repository.WebSearchRepository
 import io.mockk.coEvery
+import io.mockk.every
 import io.mockk.mockk
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -14,7 +18,14 @@ class SearchWebUseCaseTest {
 
     private val repository = mockk<WebSearchRepository>()
     private val generateQueries = GenerateSearchQueriesUseCase()
-    private val useCase = SearchWebUseCase(repository, generateQueries)
+    private val preferences = mockk<SearchToolPreferences> {
+        every { config } returns flowOf(SearchToolConfig(
+            onboardingCompleted = true,
+            googleWebEnabled = true,
+            googleImagesEnabled = true,
+        ))
+    }
+    private val useCase = SearchWebUseCase(repository, generateQueries, preferences)
 
     private val pack = IdentityPack(
         personId = 1L,

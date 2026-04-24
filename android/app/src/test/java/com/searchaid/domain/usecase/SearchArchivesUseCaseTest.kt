@@ -1,10 +1,14 @@
 package com.searchaid.domain.usecase
 
+import com.searchaid.data.preferences.SearchToolPreferences
 import com.searchaid.domain.model.ArchiveResult
 import com.searchaid.domain.model.IdentityPack
+import com.searchaid.domain.model.SearchToolConfig
 import com.searchaid.domain.repository.ArchiveRepository
 import io.mockk.coEvery
+import io.mockk.every
 import io.mockk.mockk
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -13,7 +17,13 @@ import org.junit.Test
 class SearchArchivesUseCaseTest {
 
     private val archiveRepo = mockk<ArchiveRepository>()
-    private val useCase = SearchArchivesUseCase(archiveRepo)
+    private val preferences = mockk<SearchToolPreferences> {
+        every { config } returns flowOf(SearchToolConfig(
+            onboardingCompleted = true,
+            archivesEnabled = true,
+        ))
+    }
+    private val useCase = SearchArchivesUseCase(archiveRepo, preferences)
 
     private val pack = IdentityPack(
         personId = 1L,
