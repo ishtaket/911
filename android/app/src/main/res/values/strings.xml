@@ -89,4 +89,11 @@
     <string name="settings_data_source_backend">Backend</string>
     <string name="providers_source_backend">Live status from backend</string>
     <string name="providers_source_fallback">Backend unreachable — showing fallback list</string>
+
+    <!-- generic data states -->
+    <string name="state_loading">Loading…</string>
+    <string name="state_empty_cases">No cases yet. Create one with the + button.</string>
+    <string name="state_empty_evidence">No evidence yet for this case.</string>
+    <string name="state_empty_hypotheses">No hypotheses yet for this case.</string>
+    <string name="state_empty_audit">Audit log is empty.</string>
 </resources>

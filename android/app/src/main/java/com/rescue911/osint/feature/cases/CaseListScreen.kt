@@ -26,6 +26,7 @@ import androidx.navigation.NavHostController
 import com.rescue911.osint.R
 import com.rescue911.osint.domain.model.MissingCase
 import com.rescue911.osint.navigation.Routes
+import com.rescue911.osint.ui.components.EmptyState
 import com.rescue911.osint.ui.components.InfoCard
 import com.rescue911.osint.ui.components.ScreenScaffold
 
@@ -47,8 +48,12 @@ fun CaseListScreen(
         }
     ) { inner ->
         ScreenScaffold(stringResource(R.string.nav_cases), padding, Modifier.padding(inner)) {
-            LazyColumn(Modifier.fillMaxWidth()) {
-                items(cases) { c -> CaseRow(c) { navController.navigate(Routes.caseDetail(c.id)) } }
+            when {
+                cases == null -> EmptyState(stringResource(R.string.state_loading))
+                cases!!.isEmpty() -> EmptyState(stringResource(R.string.state_empty_cases))
+                else -> LazyColumn(Modifier.fillMaxWidth()) {
+                    items(cases!!) { c -> CaseRow(c) { navController.navigate(Routes.caseDetail(c.id)) } }
+                }
             }
         }
     }

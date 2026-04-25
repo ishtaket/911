@@ -37,7 +37,8 @@ import kotlinx.coroutines.flow.first
 class CaseDetailViewModel @Inject constructor(
     private val repository: Rescue911Repository,
 ) : ViewModel() {
-    suspend fun load(id: String): MissingCase? = repository.caseById(id).first()
+    suspend fun load(id: String): MissingCase? =
+        runCatching { repository.caseById(id).first() }.getOrNull()
 }
 
 @Composable

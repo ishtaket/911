@@ -26,6 +26,7 @@ import androidx.navigation.NavHostController
 import com.rescue911.osint.R
 import com.rescue911.osint.data.repository.Rescue911Repository
 import com.rescue911.osint.domain.model.Evidence
+import com.rescue911.osint.ui.components.EmptyState
 import com.rescue911.osint.ui.components.InfoCard
 import com.rescue911.osint.ui.components.ScreenScaffold
 import com.rescue911.osint.ui.components.ValidationBadge
@@ -49,12 +50,20 @@ fun EvidenceInboxScreen(
     caseId: String,
     vm: EvidenceInboxViewModel = hiltViewModel(),
 ) {
-    var items by remember { mutableStateOf<List<Evidence>>(emptyList()) }
-    LaunchedEffect(caseId) { items = vm.load(caseId) }
+    var items by remember { mutableStateOf<List<Evidence>?>(null) }
+    LaunchedEffect(caseId) { items = runCatching { vm.load(caseId) }.getOrDefault(emptyList()) }
 
     ScreenScaffold(stringResource(R.string.nav_evidence), padding) {
+        if (items == null) {
+            EmptyState(stringResource(R.string.state_loading))
+            return@ScreenScaffold
+        }
+        if (items!!.isEmpty()) {
+            EmptyState(stringResource(R.string.state_empty_evidence))
+            return@ScreenScaffold
+        }
         LazyColumn(Modifier.fillMaxWidth()) {
-            items(items) { e ->
+            items(items!!) { e ->
                 InfoCard(
                     title = e.title ?: e.provider,
                     body = e.snippet ?: e.url ?: "",

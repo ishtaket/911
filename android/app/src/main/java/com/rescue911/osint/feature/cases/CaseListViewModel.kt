@@ -15,8 +15,8 @@ import kotlinx.coroutines.launch
 class CaseListViewModel @Inject constructor(
     private val repository: Rescue911Repository,
 ) : ViewModel() {
-    private val _cases = MutableStateFlow<List<MissingCase>>(emptyList())
-    val cases: StateFlow<List<MissingCase>> = _cases.asStateFlow()
+    private val _cases = MutableStateFlow<List<MissingCase>?>(null)
+    val cases: StateFlow<List<MissingCase>?> = _cases.asStateFlow()
 
     init {
         viewModelScope.launch {

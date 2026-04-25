@@ -77,4 +77,10 @@
     <string name="settings_data_source_backend">שרת</string>
     <string name="providers_source_backend">סטטוס בזמן אמת מהשרת</string>
     <string name="providers_source_fallback">השרת לא זמין — מוצגת רשימת ברירת מחדל</string>
+
+    <string name="state_loading">טוען…</string>
+    <string name="state_empty_cases">אין תיקים עדיין. צור תיק עם כפתור +.</string>
+    <string name="state_empty_evidence">אין ראיות עדיין לתיק זה.</string>
+    <string name="state_empty_hypotheses">אין השערות עדיין לתיק זה.</string>
+    <string name="state_empty_audit">יומן הביקורת ריק.</string>
 </resources>

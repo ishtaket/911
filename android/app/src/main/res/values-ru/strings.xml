@@ -77,4 +77,10 @@
     <string name="settings_data_source_backend">Бэкенд</string>
     <string name="providers_source_backend">Статус провайдеров с бэкенда</string>
     <string name="providers_source_fallback">Бэкенд недоступен — показан запасной список</string>
+
+    <string name="state_loading">Загрузка…</string>
+    <string name="state_empty_cases">Дел пока нет. Создайте новое кнопкой +.</string>
+    <string name="state_empty_evidence">Свидетельств для этого дела пока нет.</string>
+    <string name="state_empty_hypotheses">Гипотез для этого дела пока нет.</string>
+    <string name="state_empty_audit">Журнал аудита пуст.</string>
 </resources>

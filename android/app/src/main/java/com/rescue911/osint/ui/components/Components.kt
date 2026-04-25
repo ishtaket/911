@@ -201,6 +201,57 @@ fun InfoCard(
     }
 }
 
+enum class DataSource { MOCK, BACKEND, FALLBACK, CHECKING }
+
+@Composable
+fun DataSourceBadge(source: DataSource, modifier: Modifier = Modifier) {
+    val (label, color) = when (source) {
+        DataSource.MOCK -> "Mock" to MutedText
+        DataSource.BACKEND -> "Backend" to Success
+        DataSource.FALLBACK -> "Fallback" to Critical
+        DataSource.CHECKING -> "Checking…" to Gold
+    }
+    Surface(
+        modifier = modifier
+            .clip(RoundedCornerShape(50))
+            .semantics { contentDescription = "Data source: $label" },
+        color = color.copy(alpha = 0.18f),
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(8.dp)
+                    .background(color, RoundedCornerShape(50))
+            )
+            Spacer(Modifier.width(6.dp))
+            Text(
+                "Data: $label",
+                style = MaterialTheme.typography.labelMedium,
+                color = color,
+            )
+        }
+    }
+}
+
+@Composable
+fun EmptyState(message: String, modifier: Modifier = Modifier) {
+    Box(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(24.dp),
+        contentAlignment = Alignment.Center,
+    ) {
+        Text(
+            message,
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+    }
+}
+
 @Composable
 fun TagChip(text: String, modifier: Modifier = Modifier) {
     ElevatedAssistChip(

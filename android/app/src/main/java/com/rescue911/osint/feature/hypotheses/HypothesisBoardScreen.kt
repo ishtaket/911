@@ -22,6 +22,7 @@ import androidx.navigation.NavHostController
 import com.rescue911.osint.R
 import com.rescue911.osint.data.repository.Rescue911Repository
 import com.rescue911.osint.domain.model.Hypothesis
+import com.rescue911.osint.ui.components.EmptyState
 import com.rescue911.osint.ui.components.InfoCard
 import com.rescue911.osint.ui.components.RiskChip
 import com.rescue911.osint.ui.components.ScreenScaffold
@@ -43,12 +44,20 @@ fun HypothesisBoardScreen(
     caseId: String,
     vm: HypothesisViewModel = hiltViewModel(),
 ) {
-    var items by remember { mutableStateOf<List<Hypothesis>>(emptyList()) }
-    LaunchedEffect(caseId) { items = vm.load(caseId) }
+    var items by remember { mutableStateOf<List<Hypothesis>?>(null) }
+    LaunchedEffect(caseId) { items = runCatching { vm.load(caseId) }.getOrDefault(emptyList()) }
 
     ScreenScaffold(stringResource(R.string.nav_hypotheses), padding) {
+        if (items == null) {
+            EmptyState(stringResource(R.string.state_loading))
+            return@ScreenScaffold
+        }
+        if (items!!.isEmpty()) {
+            EmptyState(stringResource(R.string.state_empty_hypotheses))
+            return@ScreenScaffold
+        }
         LazyColumn(Modifier.fillMaxWidth()) {
-            items(items) { h ->
+            items(items!!) { h ->
                 InfoCard(
                     title = "${(h.confidence * 100).toInt()}% — ${h.label}",
                     body = (h.placeName ?: "") + (

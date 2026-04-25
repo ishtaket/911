@@ -1,5 +1,11 @@
 package com.rescue911.osint.navigation
 
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AdminPanelSettings
 import androidx.compose.material.icons.filled.Cases
@@ -12,9 +18,13 @@ import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.unit.dp
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
@@ -22,6 +32,8 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import com.rescue911.osint.feature.common.DataSourceViewModel
+import com.rescue911.osint.ui.components.DataSourceBadge
 import com.rescue911.osint.feature.archive.ArchiveFindingsScreen
 import com.rescue911.osint.feature.audit.AuditLogScreen
 import com.rescue911.osint.feature.cases.CaseDetailScreen
@@ -72,10 +84,13 @@ object Routes {
 private data class BottomItem(val route: String, val labelRes: Int, val icon: ImageVector)
 
 @Composable
-fun Rescue911Nav() {
+fun Rescue911Nav(
+    dataSourceVm: DataSourceViewModel = hiltViewModel(),
+) {
     val navController: NavHostController = rememberNavController()
     val backStack by navController.currentBackStackEntryAsState()
     val current = backStack?.destination?.route
+    val source by dataSourceVm.source.collectAsState()
 
     val items = listOf(
         BottomItem(Routes.CASES, com.rescue911.osint.R.string.nav_cases, Icons.Filled.Cases),
@@ -87,20 +102,31 @@ fun Rescue911Nav() {
 
     Scaffold(
         bottomBar = {
-            NavigationBar {
-                items.forEach { item ->
-                    NavigationBarItem(
-                        selected = current?.substringBefore('?') == item.route.substringBefore('?'),
-                        onClick = {
-                            navController.navigate(item.route) {
-                                launchSingleTop = true
-                                restoreState = true
-                                popUpTo(Routes.CASES) { saveState = true }
-                            }
-                        },
-                        icon = { Icon(item.icon, contentDescription = null) },
-                        label = { Text(androidx.compose.ui.res.stringResource(item.labelRes)) },
-                    )
+            Column {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 12.dp, vertical = 4.dp),
+                    horizontalArrangement = Arrangement.End,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    DataSourceBadge(source)
+                }
+                NavigationBar {
+                    items.forEach { item ->
+                        NavigationBarItem(
+                            selected = current?.substringBefore('?') == item.route.substringBefore('?'),
+                            onClick = {
+                                navController.navigate(item.route) {
+                                    launchSingleTop = true
+                                    restoreState = true
+                                    popUpTo(Routes.CASES) { saveState = true }
+                                }
+                            },
+                            icon = { Icon(item.icon, contentDescription = null) },
+                            label = { Text(androidx.compose.ui.res.stringResource(item.labelRes)) },
+                        )
+                    }
                 }
             }
         }
