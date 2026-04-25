@@ -43,10 +43,12 @@ def test_registry_includes_mock_when_mock_mode_on():
 
 
 def test_registry_returns_only_mock_when_pure_dev():
-    """Default dev: MOCK_PROVIDERS=true and no key → mock-only."""
+    """Default dev: MOCK_PROVIDERS=true and no web-search key of any kind → mock-only."""
     s = get_settings().model_copy(update={
         "mock_providers": True,
         "brave_search_api_key": None,
+        "google_maps_api_key": None,
+        "google_kg_api_key": None,
     })
     providers = get_web_search_providers(s)
     assert len(providers) == 1

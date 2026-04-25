@@ -118,12 +118,35 @@ The Android app is a field tool. Asking volunteers / analysts to paste API keys 
 
 Backend-only keys give us: rotation in one place, central audit log, rate-limit pooling, secret manager integration (Vault / AWS SM / GCP SM), and a clean compliance story.
 
+## Provider keys at a glance — MVP
+
+| Provider | Key env var | Required? | OAuth needed for MVP? |
+|---|---|---|---|
+| Brave Search | `BRAVE_SEARCH_API_KEY` | strict mode | No |
+| Google CSE | `GOOGLE_MAPS_API_KEY` (CSE engine ID is a separate config) | strict mode | No |
+| **Google Knowledge Graph** | `GOOGLE_KG_API_KEY` | strict mode | **No** — entity lookup only |
+| **YouTube Data API v3** | `YOUTUBE_API_KEY` | strict mode | **No** — public search only |
+| **Google Vision** | `GOOGLE_VISION_API_KEY` *or* `GOOGLE_APPLICATION_CREDENTIALS` (SA JSON) | for media analysis | No — backend-side credentials only |
+| Wayback Availability | — | none | No |
+| Wayback CDX | — | none | No |
+| Common Crawl | — | none | No |
+| OSM Nominatim | — | none | No |
+| Reddit / Meta / X / VK / TikTok / IG / LinkedIn | OAuth client + secret | optional, post-MVP | Yes (later) |
+
+**Google OAuth is not required for the public-search MVP.** The three
+Google API keys above unlock all three Google providers; the OAuth
+client id/secret pair (`GOOGLE_OAUTH_CLIENT_ID` / `GOOGLE_OAUTH_CLIENT_SECRET`)
+stays empty until we add per-user data flows.
+
+See also `docs/ARCHIVE_PROVIDERS.md` for the archive-channel details.
+
 ## Next concrete steps
 
-1. **Brave Search** real wiring — flip its provider class to actually call
-   `https://api.search.brave.com/res/v1/web/search` when
-   `BRAVE_SEARCH_API_KEY` is set; remove the silent mock-fallback so
-   `state` is honest. (~30 lines.)
-2. **YouTube Data v3** — same pattern with `YOUTUBE_API_KEY`.
-3. Then the OAuth-flow stubs (`/v1/auth/{provider_id}/{start,callback}`).
-4. Token store with envelope encryption (Fernet + per-tenant key).
+1. **Wire production Brave key** (already real-ready since `615044f`).
+2. **Wire production YouTube key** (already real-ready since this commit).
+3. **Wire production Google Knowledge Graph key** (already real-ready).
+4. **Common Crawl tuning** — currently queries the latest 2 indexes; older
+   captures are reachable by listing more.
+5. OAuth-flow stubs (`/v1/auth/{provider_id}/{start,callback}`) for the
+   social providers above.
+6. Token store with envelope encryption (Fernet + per-tenant key).

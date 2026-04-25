@@ -6,6 +6,7 @@ from app.providers.archive.commoncrawl import CommonCrawlArchiveProvider
 from app.providers.archive.mock import MockArchiveProvider
 from app.providers.archive.snippet import SearchSnippetArchiveProvider
 from app.providers.archive.wayback import WaybackArchiveProvider
+from app.providers.archive.wayback_availability import WaybackAvailabilityProvider
 from app.providers.base import (
     ArchiveProvider,
     GeoIntProvider,
@@ -35,19 +36,24 @@ from app.providers.social.vk import VkPublicProvider
 from app.providers.social.youtube import YouTubePublicProvider
 from app.providers.web_search.brave import BraveWebSearchProvider
 from app.providers.web_search.google_cse import GoogleCseWebSearchProvider
+from app.providers.web_search.google_kg import GoogleKnowledgeGraphProvider
 from app.providers.web_search.mock import MockWebSearchProvider
 
 
 def get_web_search_providers(settings: Settings | None = None) -> list[WebSearchProvider]:
     """Strict mode: when MOCK_PROVIDERS=false the mock is NOT included as a
     silent fallback. Real providers may raise ProviderNotConfigured / errors
-    which the orchestrator audit-logs per provider."""
+    which the orchestrator audit-logs per provider.
+
+    Knowledge Graph is included alongside web-search providers so the case's
+    person name resolves to public entities (people / places / orgs)."""
     s = settings or get_settings()
-    if s.mock_providers and not s.brave_search_api_key:
+    if s.mock_providers and not (s.brave_search_api_key or s.google_kg_api_key):
         return [MockWebSearchProvider()]
     real: list[WebSearchProvider] = [
         BraveWebSearchProvider(api_key=s.brave_search_api_key),
         GoogleCseWebSearchProvider(api_key=s.google_maps_api_key),
+        GoogleKnowledgeGraphProvider(api_key=s.google_kg_api_key),
     ]
     if s.mock_providers:
         real.append(MockWebSearchProvider())
@@ -75,14 +81,20 @@ def get_social_search_providers(settings: Settings | None = None) -> list[Social
 
 
 def get_archive_providers(settings: Settings | None = None) -> list[ArchiveProvider]:
+    """Archive providers need no API keys. Wayback Availability/CDX and
+    Common Crawl are always available even in strict mode. Mock is only
+    included on top when MOCK_PROVIDERS=true (so dev runs without network
+    still see something)."""
     s = settings or get_settings()
-    if s.mock_providers:
-        return [MockArchiveProvider()]
-    return [
+    real: list[ArchiveProvider] = [
+        WaybackAvailabilityProvider(),
         WaybackArchiveProvider(),
         CommonCrawlArchiveProvider(),
         SearchSnippetArchiveProvider(),
     ]
+    if s.mock_providers:
+        real.append(MockArchiveProvider())
+    return real
 
 
 def get_geoint_providers(settings: Settings | None = None) -> list[GeoIntProvider]:

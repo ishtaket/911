@@ -43,6 +43,8 @@ class Settings(BaseSettings):
     azure_vision_key: str | None = None
 
     youtube_api_key: str | None = None
+    google_vision_api_key: str | None = None
+    google_kg_api_key: str | None = None
     telegram_api_id: str | None = None
     telegram_api_hash: str | None = None
     meta_app_id: str | None = None
