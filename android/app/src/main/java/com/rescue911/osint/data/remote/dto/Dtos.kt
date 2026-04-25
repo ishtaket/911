@@ -251,3 +251,14 @@ data class GeoIntStartResponseDto(
     @SerialName("case_id") val caseId: String,
     val message: String,
 )
+
+// ----- archive dispatch -----
+
+@Serializable
+data class ArchiveStartResponseDto(
+    val state: String,
+    @SerialName("case_id") val caseId: String,
+    @SerialName("targets_attempted") val targetsAttempted: Int,
+    val message: String,
+    val evidence: List<EvidenceDto> = emptyList(),
+)

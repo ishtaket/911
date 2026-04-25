@@ -8,6 +8,7 @@ from fastapi import APIRouter, HTTPException
 from app.schemas.evidence import Evidence
 from app.schemas.query import QueryPlan
 from app.services import search_orchestrator, search_service
+from app.services.search_orchestrator import ArchiveStartResponse
 from app.services.store import get_store
 
 router = APIRouter()
@@ -36,8 +37,12 @@ async def start_social_search(case_id: UUID) -> list[Evidence]:
     return await search_orchestrator.run_social(_require_case(case_id))
 
 
-@router.post("/archive/start/{case_id}", response_model=list[Evidence])
-async def start_archive_search(case_id: UUID) -> list[Evidence]:
+@router.post("/archive/start/{case_id}", response_model=ArchiveStartResponse)
+async def start_archive_search(case_id: UUID) -> ArchiveStartResponse:
+    """Strict archive dispatch — only queries URL anchors that already
+    exist in the case's evidence (P1/P2) plus host-wildcards derived from
+    them (P3). Returns a structured response with a `state` field so the
+    UI can distinguish 'no_targets' from 'no_results' from 'completed'."""
     return await search_orchestrator.run_archive(_require_case(case_id))
 
 

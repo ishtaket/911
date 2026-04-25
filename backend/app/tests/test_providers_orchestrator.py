@@ -69,10 +69,22 @@ def test_per_channel_social_dispatch_returns_evidence_list():
     assert isinstance(r.json(), list)
 
 
-def test_per_channel_archive_dispatch_returns_evidence_list():
-    r = client.post(f"/v1/search/archive/start/{_seed_case_id()}")
+def test_per_channel_archive_dispatch_returns_structured_response():
+    """Archive endpoint now returns ArchiveStartResponse, not a bare list.
+    Use a fresh case with no evidence so we hit the fast no_targets path
+    and never make outbound HTTP to archive.org / commoncrawl.org."""
+    new_case = client.post("/v1/cases", json={
+        "title": "ad-hoc orchestrator archive test",
+        "description": "no evidence — exercises no_targets path",
+        "person": {"full_name": "Orchestrator Test"},
+        "languages": ["en"],
+    }).json()
+    r = client.post(f"/v1/search/archive/start/{new_case['id']}")
     assert r.status_code == 200
-    assert isinstance(r.json(), list)
+    body = r.json()
+    assert body["state"] == "no_targets"
+    assert body["evidence"] == []
+    assert body["targets_attempted"] == 0
 
 
 def test_geoint_start_returns_no_media_uploaded_state():

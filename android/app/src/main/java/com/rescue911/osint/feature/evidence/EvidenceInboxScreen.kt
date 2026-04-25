@@ -80,20 +80,34 @@ class EvidenceInboxViewModel @Inject constructor(
             .getOrDefault(emptyList())
     }
 
-    /** Dispatch via the channel-specific backend endpoint. GeoINT is special:
-     *  it has no Dispatch button in the UI, but if called we hit
-     *  /v1/geoint/start which returns a structured 'no_media_uploaded' state
-     *  that we surface as a warning banner (not a failure). */
+    /** Dispatch via the channel-specific backend endpoint.
+     *
+     *  ARCHIVE is special: backend returns a structured ArchiveStartResponse
+     *  with a `state` of no_targets / no_results / completed. We surface the
+     *  state-specific message verbatim so the operator knows whether to run
+     *  web/social search first.
+     *
+     *  GEOINT is special: backend returns a structured GeoIntStartResponse
+     *  with `state=no_media_uploaded` until POST /v1/media is wired. */
     fun dispatchSearch(caseId: String, kind: SearchKind) {
         viewModelScope.launch {
             val result = runCatching {
                 when (kind) {
                     SearchKind.WEB -> api.startWebSearch(caseId).map { it.toDomain() }
                     SearchKind.SOCIAL -> api.startSocialSearch(caseId).map { it.toDomain() }
-                    SearchKind.ARCHIVE -> api.startArchiveSearch(caseId).map { it.toDomain() }
+                    SearchKind.ARCHIVE -> {
+                        val r = api.startArchiveSearch(caseId)
+                        val k = when (r.state) {
+                            "completed" -> BannerKind.SUCCESS
+                            "no_results" -> BannerKind.WARNING
+                            "no_targets" -> BannerKind.WARNING
+                            else -> BannerKind.INFO
+                        }
+                        _banner.value = (r.message + " (state=${r.state}, targets_attempted=${r.targetsAttempted})") to k
+                        r.evidence.map { it.toDomain() }
+                    }
                     SearchKind.GEOINT -> {
                         val r = api.startGeoint(caseId)
-                        // signal no-media via banner; no evidence to add
                         _banner.value = (r.message + " (state=${r.state})") to
                             (if (r.state == "no_media_uploaded") BannerKind.WARNING else BannerKind.SUCCESS)
                         emptyList()
@@ -101,7 +115,7 @@ class EvidenceInboxViewModel @Inject constructor(
                     SearchKind.ALL -> api.startSearch(caseId).map { it.toDomain() }
                 }
             }
-            if (kind == SearchKind.GEOINT) {
+            if (kind == SearchKind.ARCHIVE || kind == SearchKind.GEOINT) {
                 load(caseId)
                 return@launch
             }

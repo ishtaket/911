@@ -1,5 +1,6 @@
 package com.rescue911.osint.data.remote
 
+import com.rescue911.osint.data.remote.dto.ArchiveStartResponseDto
 import com.rescue911.osint.data.remote.dto.AuditEntryDto
 import com.rescue911.osint.data.remote.dto.CaseDto
 import com.rescue911.osint.data.remote.dto.EvidenceDto
@@ -59,7 +60,7 @@ interface Rescue911Api {
     suspend fun startSocialSearch(@Path("caseId") caseId: String): List<EvidenceDto>
 
     @POST("v1/search/archive/start/{caseId}")
-    suspend fun startArchiveSearch(@Path("caseId") caseId: String): List<EvidenceDto>
+    suspend fun startArchiveSearch(@Path("caseId") caseId: String): ArchiveStartResponseDto
 
     @POST("v1/geoint/start/{caseId}")
     suspend fun startGeoint(@Path("caseId") caseId: String): GeoIntStartResponseDto

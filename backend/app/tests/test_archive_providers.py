@@ -162,13 +162,45 @@ async def test_common_crawl_normalizes():
 
 # ---------- archive endpoint ----------
 
-def test_archive_endpoint_returns_only_archive_evidence():
-    """POST /v1/search/archive/start/{case_id} returns ARCHIVE evidence
-    only. With MOCK_PROVIDERS=true it's the mock provider; with strict
-    mode and free-text variants it returns []."""
-    case_id = str(get_store().list_cases()[0].id)
+def test_archive_endpoint_returns_structured_response():
+    """POST /v1/search/archive/start/{case_id} returns ArchiveStartResponse.
+    Use a freshly-created case with no evidence — guarantees the
+    no_targets fast path so we don't hit any live provider HTTP at all."""
+    new_case = client.post("/v1/cases", json={
+        "title": "test archive endpoint contract",
+        "description": "ad-hoc test case with no evidence",
+        "person": {"full_name": "Contract Test"},
+        "languages": ["en"],
+    }).json()
+    case_id = new_case["id"]
     r = client.post(f"/v1/search/archive/start/{case_id}")
     assert r.status_code == 200
-    items = r.json()
-    for it in items:
-        assert it["source_type"] == "archive"
+    body = r.json()
+    assert body["state"] == "no_targets"
+    assert body["case_id"] == case_id
+    assert body["targets_attempted"] == 0
+    assert "message" in body
+    assert body["evidence"] == []
+
+
+def test_archive_endpoint_no_targets_when_case_has_no_urls():
+    """If a case has no URL-bearing evidence, the orchestrator returns
+    state=no_targets *before* any provider call — so this test does NOT
+    need network mocking."""
+    store = get_store()
+    chosen = None
+    for c in store.list_cases():
+        ev = store.list_evidence(case_id=c.id)
+        if not any(e.url and e.url.startswith(("http://", "https://")) for e in ev):
+            chosen = c
+            break
+    if chosen is None:
+        import pytest
+        pytest.skip("no URL-less seed case to exercise no_targets path")
+    r = client.post(f"/v1/search/archive/start/{chosen.id}")
+    assert r.status_code == 200
+    body = r.json()
+    assert body["state"] == "no_targets"
+    assert body["targets_attempted"] == 0
+    assert body["evidence"] == []
+    assert "web or social" in body["message"].lower()
