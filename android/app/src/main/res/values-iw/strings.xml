@@ -92,4 +92,22 @@
 
     <string name="upload_not_implemented">העלאת מדיה עדיין לא מחוברת לשרת.</string>
     <string name="create_case_not_implemented">יצירת תיק דרך POST /v1/cases עדיין לא מחוברת.</string>
+
+    <string name="evidence_results_web">תוצאות חיפוש רשת</string>
+    <string name="evidence_results_social">תוצאות חיפוש חברתי (ציבורי בלבד)</string>
+    <string name="evidence_results_archive">תוצאות ארכיון — Wayback / Common Crawl</string>
+    <string name="evidence_results_geoint">תוצאות GeoINT — EXIF / OCR / Vision</string>
+
+    <string name="evidence_explain_web">חיפוש הרשת רץ בשרת (Brave / Google CSE / SerpAPI). התוצאות נורמליות לראיות עם מקור = web.</string>
+    <string name="evidence_explain_social">חיפוש חברתי ציבורי בלבד (FB / IG / TT / YT / TG / Reddit / X / VK / LinkedIn). ללא חשבונות פרטיים, ללא זהות בדויה, ללא יצירת קשר אוטומטית.</string>
+    <string name="evidence_explain_archive">השרת מתשאל ארכיונים ציבוריים (Wayback CDX, Common Crawl, מראות ציבוריות). ללא מידע בתשלום.</string>
+    <string name="evidence_explain_geoint">צינור: EXIF → OCR → Vision → GeoSeer / Picarta → אימות POI. רץ בשרת לאחר העלאת מדיה.</string>
+
+    <string name="evidence_empty_web">אין ראיות רשת עדיין לתיק זה. הקש על שלח חיפוש כדי להריץ ספקים.</string>
+    <string name="evidence_empty_social">אין ראיות מרשתות חברתיות ציבוריות עדיין. הקש על שלח חיפוש כדי להריץ ספקים.</string>
+    <string name="evidence_empty_archive">אין ממצאי ארכיון עדיין. הקש על שלח חיפוש לתשאל את Wayback / Common Crawl.</string>
+    <string name="evidence_empty_geoint">אין ראיות GeoINT עדיין. העלה מדיה תחילה; השרת יריץ EXIF/OCR/Vision.</string>
+
+    <string name="evidence_geoint_dispatch_hint">לא ניתן לשלוח GeoINT מכאן — הוא רץ אוטומטית לאחר העלאת מדיה לתיק.</string>
+    <string name="evidence_dispatch_now">שלח חיפוש %1$s עכשיו (POST /v1/search/start)</string>
 </resources>

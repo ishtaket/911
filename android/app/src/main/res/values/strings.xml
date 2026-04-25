@@ -107,4 +107,23 @@
     <!-- upload / create-case placeholders -->
     <string name="upload_not_implemented">media upload is not yet wired to the backend.</string>
     <string name="create_case_not_implemented">Case creation via backend POST /v1/cases is not wired yet.</string>
+
+    <!-- typed evidence views -->
+    <string name="evidence_results_web">Web Search Results</string>
+    <string name="evidence_results_social">Social Search Results (public only)</string>
+    <string name="evidence_results_archive">Archive Results — Wayback / Common Crawl</string>
+    <string name="evidence_results_geoint">GeoINT Results — EXIF / OCR / Vision</string>
+
+    <string name="evidence_explain_web">Web search runs on the backend (Brave / Google CSE / SerpAPI). Results are normalized to Evidence with source = web.</string>
+    <string name="evidence_explain_social">Public social search only (FB / IG / TT / YT / TG / Reddit / X / VK / LinkedIn). No private accounts, no fake identities, no automated contacting.</string>
+    <string name="evidence_explain_archive">Backend queries public archives (Wayback CDX, Common Crawl, public mirrors). No paywalled data.</string>
+    <string name="evidence_explain_geoint">Pipeline: EXIF → OCR → Vision → GeoSeer / Picarta → POI validation. Runs on the backend after media upload.</string>
+
+    <string name="evidence_empty_web">No web evidence yet for this case. Tap Dispatch search now to run providers.</string>
+    <string name="evidence_empty_social">No public-social evidence yet for this case. Tap Dispatch search now to run providers.</string>
+    <string name="evidence_empty_archive">No archive findings yet for this case. Tap Dispatch search now to query Wayback / Common Crawl.</string>
+    <string name="evidence_empty_geoint">No GeoINT evidence yet. Upload media first; the backend will then run EXIF/OCR/Vision.</string>
+
+    <string name="evidence_geoint_dispatch_hint">GeoINT cannot be dispatched here — it runs automatically after media is uploaded for this case.</string>
+    <string name="evidence_dispatch_now">Dispatch %1$s search now (POST /v1/search/start)</string>
 </resources>

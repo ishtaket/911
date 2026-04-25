@@ -34,34 +34,34 @@ fun SearchDashboardScreen(
             ActionResultBanner(message = msg, kind = BannerKind.SUCCESS)
         }
 
-        val openEvidence: (String) -> Unit = { label ->
+        val openTyped: (String, String) -> Unit = { label, source ->
             if (caseId.isBlank()) {
                 lastAction = pickCaseFirst
             } else {
-                lastAction = "Opening evidence inbox for $label search"
-                navController.navigate(Routes.evidence(caseId))
+                lastAction = "Opening $label results"
+                navController.navigate(Routes.evidence(caseId, source))
             }
         }
 
         InfoCard(
             title = stringResource(R.string.search_web),
             body = stringResource(R.string.search_web_explainer),
-            onClick = { openEvidence("Web") },
+            onClick = { openTyped("Web", "web") },
         )
         InfoCard(
             title = stringResource(R.string.search_social),
             body = stringResource(R.string.search_social_explainer),
-            onClick = { openEvidence("Social") },
+            onClick = { openTyped("Social", "social") },
         )
         InfoCard(
             title = stringResource(R.string.search_archive),
             body = stringResource(R.string.search_archive_explainer),
-            onClick = { openEvidence("Archive") },
+            onClick = { openTyped("Archive", "archive") },
         )
         InfoCard(
             title = stringResource(R.string.search_geoint),
             body = stringResource(R.string.search_geoint_explainer),
-            onClick = { openEvidence("GeoINT") },
+            onClick = { openTyped("GeoINT", "geoint") },
         )
     }
 }

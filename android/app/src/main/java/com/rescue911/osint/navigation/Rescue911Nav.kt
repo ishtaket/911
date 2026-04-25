@@ -58,7 +58,7 @@ object Routes {
     const val PERSON = "person/{personId}"
     const val UPLOAD_MEDIA = "media/upload?caseId={caseId}"
     const val SEARCH = "search?caseId={caseId}"
-    const val EVIDENCE = "evidence?caseId={caseId}"
+    const val EVIDENCE = "evidence?caseId={caseId}&source={source}"
     const val HYPOTHESES = "hypotheses?caseId={caseId}"
     const val GEOINT_MAP = "geoint?caseId={caseId}"
     const val TIMELINE = "timeline?caseId={caseId}"
@@ -72,7 +72,8 @@ object Routes {
     fun caseDetail(caseId: String) = "cases/$caseId"
     fun person(personId: String) = "person/$personId"
     fun search(caseId: String) = "search?caseId=$caseId"
-    fun evidence(caseId: String) = "evidence?caseId=$caseId"
+    fun evidence(caseId: String, source: String = "") =
+        "evidence?caseId=$caseId&source=$source"
     fun hypotheses(caseId: String) = "hypotheses?caseId=$caseId"
     fun geoint(caseId: String) = "geoint?caseId=$caseId"
     fun upload(caseId: String) = "media/upload?caseId=$caseId"
@@ -168,10 +169,14 @@ fun Rescue911Nav(
             }
             composable(
                 Routes.EVIDENCE,
-                arguments = listOf(navArgument("caseId") { type = NavType.StringType; defaultValue = "" }),
+                arguments = listOf(
+                    navArgument("caseId") { type = NavType.StringType; defaultValue = "" },
+                    navArgument("source") { type = NavType.StringType; defaultValue = "" },
+                ),
             ) {
                 val caseId = it.arguments?.getString("caseId").orEmpty()
-                EvidenceInboxScreen(navController, padding, caseId)
+                val source = it.arguments?.getString("source").orEmpty()
+                EvidenceInboxScreen(navController, padding, caseId, source)
             }
             composable(
                 Routes.HYPOTHESES,

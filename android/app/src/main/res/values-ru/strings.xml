@@ -92,4 +92,22 @@
 
     <string name="upload_not_implemented">загрузка медиа ещё не подключена к бэкенду.</string>
     <string name="create_case_not_implemented">Создание дела через POST /v1/cases ещё не подключено.</string>
+
+    <string name="evidence_results_web">Результаты веб-поиска</string>
+    <string name="evidence_results_social">Результаты соц-поиска (только публичные)</string>
+    <string name="evidence_results_archive">Архивные результаты — Wayback / Common Crawl</string>
+    <string name="evidence_results_geoint">Результаты GeoINT — EXIF / OCR / Vision</string>
+
+    <string name="evidence_explain_web">Поиск в вебе выполняется на бэкенде (Brave / Google CSE / SerpAPI). Результаты нормализуются в свидетельства с источником = web.</string>
+    <string name="evidence_explain_social">Только публичный соц-поиск (FB / IG / TT / YT / TG / Reddit / X / VK / LinkedIn). Никаких приватных аккаунтов, фейковых личностей или автоматических контактов.</string>
+    <string name="evidence_explain_archive">Бэкенд опрашивает публичные архивы (Wayback CDX, Common Crawl, публичные зеркала). Никакого платного контента.</string>
+    <string name="evidence_explain_geoint">Конвейер: EXIF → OCR → Vision → GeoSeer / Picarta → проверка POI. Запускается на бэкенде после загрузки медиа.</string>
+
+    <string name="evidence_empty_web">Веб-свидетельств для этого дела пока нет. Нажмите Запустить поиск, чтобы вызвать провайдеров.</string>
+    <string name="evidence_empty_social">Публичных соц-свидетельств для этого дела пока нет. Нажмите Запустить поиск.</string>
+    <string name="evidence_empty_archive">Архивных находок пока нет. Нажмите Запустить поиск для запроса Wayback / Common Crawl.</string>
+    <string name="evidence_empty_geoint">Свидетельств GeoINT пока нет. Сначала загрузите медиа; бэкенд запустит EXIF/OCR/Vision.</string>
+
+    <string name="evidence_geoint_dispatch_hint">GeoINT нельзя запустить отсюда — он выполняется автоматически после загрузки медиа в дело.</string>
+    <string name="evidence_dispatch_now">Запустить поиск %1$s (POST /v1/search/start)</string>
 </resources>

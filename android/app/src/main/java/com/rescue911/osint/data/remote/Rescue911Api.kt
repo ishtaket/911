@@ -45,4 +45,9 @@ interface Rescue911Api {
         @Path("id") evidenceId: String,
         @Body body: ReviewBodyDto,
     ): EvidenceDto
+
+    /** Dispatches the case's full query plan across web/social/archive providers
+     *  and returns the resulting evidence (mixed source types — caller filters). */
+    @POST("v1/search/start/{caseId}")
+    suspend fun startSearch(@Path("caseId") caseId: String): List<EvidenceDto>
 }
