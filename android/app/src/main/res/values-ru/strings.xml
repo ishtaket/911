@@ -65,4 +65,16 @@
     <string name="settings_language">Язык</string>
     <string name="settings_mock_mode">Mock-режим (безопасные провайдеры-заглушки)</string>
     <string name="settings_open_providers">Статус провайдеров</string>
+
+    <string name="settings_backend_status">Бэкенд</string>
+    <string name="settings_backend_online">В сети</string>
+    <string name="settings_backend_offline">Не в сети</string>
+    <string name="settings_backend_checking">Проверка…</string>
+    <string name="settings_backend_unknown">Неизвестно</string>
+    <string name="settings_backend_check">Проверить</string>
+    <string name="settings_data_source">Источник данных</string>
+    <string name="settings_data_source_mock">Mock</string>
+    <string name="settings_data_source_backend">Бэкенд</string>
+    <string name="providers_source_backend">Статус провайдеров с бэкенда</string>
+    <string name="providers_source_fallback">Бэкенд недоступен — показан запасной список</string>
 </resources>

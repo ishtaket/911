@@ -68,3 +68,16 @@ node_modules/
 
 # Build output
 dist/
+
+# Logs / build artifacts
+logs/
+build_log.txt
+sdk_install_log.txt
+test_log.txt
+*.log
+
+# Images (screenshots, captures) — track explicitly if needed
+*.png
+*.jpg
+*.jpeg
+*.webp

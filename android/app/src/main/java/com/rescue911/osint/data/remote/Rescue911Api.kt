@@ -1,34 +1,39 @@
 package com.rescue911.osint.data.remote
 
-import com.rescue911.osint.domain.model.AuditEntry
-import com.rescue911.osint.domain.model.Evidence
-import com.rescue911.osint.domain.model.Hypothesis
-import com.rescue911.osint.domain.model.MissingCase
+import com.rescue911.osint.data.remote.dto.AuditEntryDto
+import com.rescue911.osint.data.remote.dto.CaseDto
+import com.rescue911.osint.data.remote.dto.EvidenceDto
+import com.rescue911.osint.data.remote.dto.HealthDto
+import com.rescue911.osint.data.remote.dto.HypothesisDto
+import com.rescue911.osint.data.remote.dto.ProviderStatusResponseDto
 import retrofit2.http.GET
-import retrofit2.http.POST
 import retrofit2.http.Path
 import retrofit2.http.Query
 
-/** Backend API contract — Android only ever talks to *our* backend. */
+/**
+ * Backend API contract — Android only ever talks to *our* backend.
+ * Provider keys, OSINT/GeoINT orchestration, and validation live server-side.
+ */
 interface Rescue911Api {
+
     @GET("v1/health")
-    suspend fun health(): Map<String, Any>
+    suspend fun health(): HealthDto
+
+    @GET("v1/provider-status")
+    suspend fun providerStatus(): ProviderStatusResponseDto
 
     @GET("v1/cases")
-    suspend fun listCases(): List<MissingCase>
+    suspend fun listCases(): List<CaseDto>
 
     @GET("v1/cases/{id}")
-    suspend fun getCase(@Path("id") id: String): MissingCase
-
-    @POST("v1/search/start/{caseId}")
-    suspend fun startSearch(@Path("caseId") caseId: String): List<Evidence>
+    suspend fun getCase(@Path("id") id: String): CaseDto
 
     @GET("v1/evidence")
-    suspend fun listEvidence(@Query("case_id") caseId: String? = null): List<Evidence>
+    suspend fun listEvidence(@Query("case_id") caseId: String? = null): List<EvidenceDto>
 
     @GET("v1/hypotheses")
-    suspend fun listHypotheses(@Query("case_id") caseId: String? = null): List<Hypothesis>
+    suspend fun listHypotheses(@Query("case_id") caseId: String? = null): List<HypothesisDto>
 
     @GET("v1/audit")
-    suspend fun audit(@Query("limit") limit: Int = 200): List<AuditEntry>
+    suspend fun listAudit(@Query("limit") limit: Int = 200): List<AuditEntryDto>
 }

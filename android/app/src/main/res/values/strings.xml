@@ -76,4 +76,17 @@
     <string name="settings_language">Language</string>
     <string name="settings_mock_mode">Mock mode (use safe stub providers)</string>
     <string name="settings_open_providers">Provider status</string>
+
+    <!-- backend connectivity -->
+    <string name="settings_backend_status">Backend</string>
+    <string name="settings_backend_online">Online</string>
+    <string name="settings_backend_offline">Offline</string>
+    <string name="settings_backend_checking">Checking…</string>
+    <string name="settings_backend_unknown">Unknown</string>
+    <string name="settings_backend_check">Check</string>
+    <string name="settings_data_source">Data source</string>
+    <string name="settings_data_source_mock">Mock</string>
+    <string name="settings_data_source_backend">Backend</string>
+    <string name="providers_source_backend">Live status from backend</string>
+    <string name="providers_source_fallback">Backend unreachable — showing fallback list</string>
 </resources>
