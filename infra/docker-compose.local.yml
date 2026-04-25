@@ -67,7 +67,7 @@ services:
       redis: { condition: service_healthy }
       minio: { condition: service_healthy }
     ports:
-      - "8000:8000"
+      - "8011:8011"   # Rescue911 dedicated local port (8000 is reserved on this host)
     profiles: ["full"]   # opt-in: scripts can `docker compose --profile full up -d`
 
   # Optional services — opt in with `--profile search` or `--profile vector`

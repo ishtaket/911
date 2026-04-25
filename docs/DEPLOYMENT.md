@@ -15,7 +15,7 @@ See `.env.example` for the full list. At minimum: `DATABASE_URL`, `REDIS_URL`, `
 ## Backend container
 
 `backend/Dockerfile` (Python 3.12-slim):
-- Copies app/, installs requirements, exposes 8000.
+- Copies app/, installs requirements, exposes 8011.
 - Health check: `GET /v1/health`.
 
 ## Database

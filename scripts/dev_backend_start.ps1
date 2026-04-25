@@ -1,4 +1,8 @@
-# Start the Rescue911 backend (FastAPI / uvicorn) on 0.0.0.0:8000.
+# Start the Rescue911 backend (FastAPI / uvicorn) on 127.0.0.1:8011.
+#
+# Port 8000 is reserved for another local service on this machine, so
+# Rescue911 uses 8011 as its dedicated local-dev port. Bind only to
+# 127.0.0.1 (loopback) — the Android emulator reaches it via 10.0.2.2:8011.
 #
 # Usage:
 #   powershell -ExecutionPolicy Bypass -File scripts\dev_backend_start.ps1
@@ -8,7 +12,7 @@
 
 [CmdletBinding()]
 param(
-    [int]$Port = 8000,
+    [int]$Port = 8011,
     [switch]$Background
 )
 
@@ -40,7 +44,7 @@ if ($existing) {
 }
 
 Set-Location $backend
-$args = @("-m","uvicorn","app.main:app","--host","0.0.0.0","--port",$Port,"--log-level","info")
+$args = @("-m","uvicorn","app.main:app","--host","127.0.0.1","--port",$Port,"--log-level","info")
 
 if ($Background) {
     Write-Host "Starting backend in background; logs -> $logFile"

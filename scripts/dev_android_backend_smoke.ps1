@@ -1,7 +1,9 @@
 # End-to-end smoke: backend + emulator + APK install + launch + on-device
 # health probe. Does NOT depend on Android UI automation -- the on-device
 # probe uses adb shell -> /system/bin/curl (or 'wget') against
-# http://10.0.2.2:8000/health to prove emulator -> host wiring works.
+# http://10.0.2.2:8011/health to prove emulator -> host wiring works.
+#
+# Backend port defaults to 8011 (Rescue911 dedicated local port).
 #
 # Usage:
 #   powershell -ExecutionPolicy Bypass -File scripts\dev_android_backend_smoke.ps1
@@ -12,7 +14,7 @@
 param(
     [string]$Avd = "Rescue911_API_30_default",
     [string]$Pkg = "com.rescue911.osint",
-    [int]$BackendPort = 8000,
+    [int]$BackendPort = 8011,
     [int]$BootTimeoutSec = 240,
     [int]$SettleSec = 25,
     [switch]$StartBackend

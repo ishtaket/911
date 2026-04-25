@@ -20,7 +20,7 @@ Default ports:
 - Postgres `5432` (db `osint`, user `osint`, pass `osint`)
 - Redis `6379`
 - MinIO `9000` (S3 API), `9001` (console; `minio` / `minio123`)
-- Backend `8000` (when `--profile full`)
+- Backend `8011` (when `--profile full`) — Rescue911 dedicated local port; 8000 is reserved on this machine
 - OpenSearch `9200` (when `--profile search`)
 - Qdrant `6333` (when `--profile vector`)
 

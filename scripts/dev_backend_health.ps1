@@ -1,12 +1,15 @@
 # Probe the Rescue911 backend for liveness.
 #
+# Default port is 8011 (Rescue911 dedicated local port — 8000 is taken on
+# this machine by another service we must not touch).
+#
 # Usage:
 #   powershell -ExecutionPolicy Bypass -File scripts\dev_backend_health.ps1
-#   powershell -ExecutionPolicy Bypass -File scripts\dev_backend_health.ps1 -BaseUrl http://127.0.0.1:8000
+#   powershell -ExecutionPolicy Bypass -File scripts\dev_backend_health.ps1 -BaseUrl http://127.0.0.1:8011
 
 [CmdletBinding()]
 param(
-    [string]$BaseUrl = "http://127.0.0.1:8000"
+    [string]$BaseUrl = "http://127.0.0.1:8011"
 )
 
 function Probe([string]$path) {

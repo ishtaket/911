@@ -30,6 +30,6 @@ class AppPreferences @Inject constructor(
     suspend fun setMockMode(value: Boolean) = context.dataStore.edit { it[keyMockMode] = value }
 
     companion object {
-        const val DEFAULT_API_BASE = "http://10.0.2.2:8000/" // Android emulator → host loopback
+        const val DEFAULT_API_BASE = "http://10.0.2.2:8011/" // Android emulator → host loopback (Rescue911 dedicated port)
     }
 }

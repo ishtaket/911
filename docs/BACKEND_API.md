@@ -24,7 +24,7 @@ FastAPI app at `backend/app/main.py`. All routes under `/v1`.
 | `POST` | `/v1/review/{evidence_id}` | Level-3 human action |
 | `GET` | `/v1/audit` | Audit log (RBAC TODO) |
 
-OpenAPI/Swagger UI: `http://localhost:8000/docs`.
+OpenAPI/Swagger UI: `http://localhost:8011/docs` (Rescue911 dedicated local port).
 
 ## Schemas
 

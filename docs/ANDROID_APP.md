@@ -83,7 +83,7 @@ Dark operational palette: emergency red `#E63946`, deep navy `#0B1A2A`, gold `#F
 
 ## API client
 
-`Rescue911Api` (Retrofit) talks to the backend only. Base URL is read from DataStore (`AppPreferences.apiBaseUrl`, default `http://10.0.2.2:8000/` for emulator). API keys never live on the device.
+`Rescue911Api` (Retrofit) talks to the backend only. Base URL is read from DataStore (`AppPreferences.apiBaseUrl`, default `http://10.0.2.2:8011/` for emulator — Rescue911 dedicated local port). API keys never live on the device.
 
 ## Local cache (Room/DataStore — milestone 2)
 

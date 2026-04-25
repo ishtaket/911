@@ -40,7 +40,7 @@ def create_app() -> FastAPI:
     )
 
     app.include_router(routes_health.router, prefix="/v1", tags=["health"])
-    # Top-level /health alias for plain `curl http://host:8000/health`.
+    # Top-level /health alias for plain `curl http://host:8011/health`.
     app.include_router(routes_health.router, prefix="", tags=["health"])
     app.include_router(routes_cases.router, prefix="/v1/cases", tags=["cases"])
     app.include_router(routes_media.router, prefix="/v1/media", tags=["media"])

@@ -40,7 +40,7 @@ The backend is the secure OSINT/GeoINT brain and storage.
 
 # 3. Run backend in dev mode:
 .\scripts\dev_backend.ps1
-# → http://localhost:8000/v1/health
+# → http://localhost:8011/v1/health  (Rescue911 dedicated local port; 8000 is reserved)
 
 # 4. Run backend tests:
 .\scripts\dev_backend_test.ps1

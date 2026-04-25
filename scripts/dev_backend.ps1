@@ -12,5 +12,5 @@ if (-not (Test-Path ".venv")) {
 & ".venv\Scripts\python.exe" -m pip install --upgrade pip | Out-Null
 & ".venv\Scripts\python.exe" -m pip install -r requirements.txt | Out-Null
 
-Write-Host "Starting backend on http://0.0.0.0:8000 ..."
-& ".venv\Scripts\python.exe" -m uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+Write-Host "Starting backend on http://127.0.0.1:8011 ..."
+& ".venv\Scripts\python.exe" -m uvicorn app.main:app --host 127.0.0.1 --port 8011 --reload

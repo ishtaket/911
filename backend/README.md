@@ -9,13 +9,17 @@ cd backend
 python -m venv .venv
 . .venv/Scripts/activate     # Windows: .venv\Scripts\Activate.ps1
 pip install -r requirements.txt
-uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+uvicorn app.main:app --reload --host 127.0.0.1 --port 8011
 ```
 
+> Rescue911 uses port **8011** as its dedicated local-dev port. Port 8000 is
+> reserved on this machine by another service we must not touch. The Android
+> emulator reaches the host backend via `http://10.0.2.2:8011/`.
+
 Then:
-- `GET http://localhost:8000/` → metadata
-- `GET http://localhost:8000/v1/health` → health
-- `GET http://localhost:8000/docs` → OpenAPI UI
+- `GET http://localhost:8011/` → metadata
+- `GET http://localhost:8011/v1/health` → health
+- `GET http://localhost:8011/docs` → OpenAPI UI
 
 ## Tests
 
