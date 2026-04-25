@@ -39,14 +39,19 @@ from app.providers.web_search.mock import MockWebSearchProvider
 
 
 def get_web_search_providers(settings: Settings | None = None) -> list[WebSearchProvider]:
+    """Strict mode: when MOCK_PROVIDERS=false the mock is NOT included as a
+    silent fallback. Real providers may raise ProviderNotConfigured / errors
+    which the orchestrator audit-logs per provider."""
     s = settings or get_settings()
     if s.mock_providers and not s.brave_search_api_key:
         return [MockWebSearchProvider()]
-    return [
+    real: list[WebSearchProvider] = [
         BraveWebSearchProvider(api_key=s.brave_search_api_key),
         GoogleCseWebSearchProvider(api_key=s.google_maps_api_key),
-        MockWebSearchProvider(),
     ]
+    if s.mock_providers:
+        real.append(MockWebSearchProvider())
+    return real
 
 
 def get_social_search_providers(settings: Settings | None = None) -> list[SocialSearchProvider]:

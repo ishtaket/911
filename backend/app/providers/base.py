@@ -1,8 +1,16 @@
 """Provider base interfaces.
 
-Every external API sits behind a typed provider interface with a mock fallback.
-If a key is missing, the corresponding mock provider runs and the response
-normalizes into the same `ProviderResult` schema.
+Every external API sits behind a typed provider interface and normalizes
+into the same `ProviderResult` schema.
+
+Behavior on misconfiguration / quota:
+  - Missing key  → raise `ProviderNotConfigured`
+  - OAuth needed → raise `ProviderAuthRequired`
+  - 429          → raise `RateLimitError`
+The orchestrator (`search_service._search_*`) catches and audit-logs each
+provider failure separately, so one mis-configured provider never poisons
+the rest of the channel. Mock providers are only included in the registry
+when `MOCK_PROVIDERS=true`.
 """
 from __future__ import annotations
 
@@ -10,6 +18,18 @@ from abc import ABC, abstractmethod
 
 from app.schemas.geoint import GeoIntAnalyzeRequest, GeoIntResult
 from app.schemas.provider_result import ProviderResult
+
+
+class ProviderNotConfigured(RuntimeError):
+    """Raised when a provider is invoked without its required credential."""
+
+
+class ProviderAuthRequired(RuntimeError):
+    """Raised when a provider needs an OAuth flow that has not completed."""
+
+
+class RateLimitError(RuntimeError):
+    """Raised on 429 / quota-exceeded from the upstream provider."""
 
 
 class WebSearchProvider(ABC):
