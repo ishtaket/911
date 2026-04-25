@@ -11,6 +11,7 @@ import com.rescue911.osint.data.remote.dto.HypothesisDto
 import com.rescue911.osint.data.remote.dto.ProviderListResponseDto
 import com.rescue911.osint.data.remote.dto.ProviderStatusResponseDto
 import com.rescue911.osint.data.remote.dto.ReviewBodyDto
+import com.rescue911.osint.data.remote.dto.WebSocialStartResponseDto
 import retrofit2.http.Body
 import retrofit2.http.GET
 import retrofit2.http.POST
@@ -57,11 +58,21 @@ interface Rescue911Api {
     @POST("v1/search/start/{caseId}")
     suspend fun startSearch(@Path("caseId") caseId: String): List<EvidenceDto>
 
+    /**
+     * Web-search dispatch.
+     *
+     * Returns a structured response (state, per-provider info, items_returned,
+     * items_deduped, message, evidence) so the operator UI can distinguish
+     * `no_results` from `not_configured` from `deduplicated`. Replaces the
+     * previous bare `List<EvidenceDto>` shape; the old shape made the screen
+     * appear broken when results were silently filtered as duplicates.
+     */
     @POST("v1/search/web/start/{caseId}")
-    suspend fun startWebSearch(@Path("caseId") caseId: String): List<EvidenceDto>
+    suspend fun startWebSearch(@Path("caseId") caseId: String): WebSocialStartResponseDto
 
+    /** Social-search dispatch — same structured shape as [startWebSearch]. */
     @POST("v1/search/social/start/{caseId}")
-    suspend fun startSocialSearch(@Path("caseId") caseId: String): List<EvidenceDto>
+    suspend fun startSocialSearch(@Path("caseId") caseId: String): WebSocialStartResponseDto
 
     @POST("v1/search/archive/start/{caseId}")
     suspend fun startArchiveSearch(@Path("caseId") caseId: String): ArchiveStartResponseDto

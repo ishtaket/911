@@ -29,13 +29,22 @@ def _dedup_check(pr: ProviderResult) -> bool:
     return not any(e.content_hash == pr.content_hash for e in store.evidence.values())
 
 
-def normalize_and_store(case_id: UUID, results: list[ProviderResult]) -> list[Evidence]:
+def normalize_and_store_with_stats(
+    case_id: UUID, results: list[ProviderResult]
+) -> tuple[list[Evidence], int]:
+    """Same as :func:`normalize_and_store`, but also returns how many
+    incoming items were skipped because their content hash already exists
+    in the store. Used by the per-channel orchestrator so the dispatch
+    response can tell the operator *why* the call returned 0 — silent
+    dedupe used to look identical to "no_results"."""
     out: list[Evidence] = []
+    deduped = 0
     store = get_store()
     for pr in results:
         l1 = _level1(pr)
         if not l1.duplicate_check_passed:
-            continue  # silently dedupe
+            deduped += 1
+            continue
         evidence = Evidence(
             case_id=case_id,
             source_type=pr.source_type,
@@ -52,7 +61,12 @@ def normalize_and_store(case_id: UUID, results: list[ProviderResult]) -> list[Ev
             next_action=_next_action_for(pr.source_type),
         )
         out.append(store.add_evidence(evidence))
-    return out
+    return out, deduped
+
+
+def normalize_and_store(case_id: UUID, results: list[ProviderResult]) -> list[Evidence]:
+    stored, _ = normalize_and_store_with_stats(case_id, results)
+    return stored
 
 
 def _next_action_for(source_type: SourceType) -> str:

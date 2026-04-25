@@ -1,8 +1,12 @@
-"""Instagram public provider (placeholder — public profiles/hashtags only)."""
+"""Instagram public provider (placeholder — public profiles/hashtags only).
+
+Strict mode: missing credentials raises ProviderAuthRequired so the
+operator UI shows "auth_required" instead of fabricating fake results
+via a silent mock fallback.
+"""
 from __future__ import annotations
 
-from app.providers.base import SocialSearchProvider
-from app.providers.social.mock import MockSocialSearchProvider
+from app.providers.base import ProviderAuthRequired, SocialSearchProvider
 from app.schemas.provider_result import ProviderResult
 
 
@@ -12,8 +16,10 @@ class InstagramPublicProvider(SocialSearchProvider):
 
     def __init__(self, api_key: str | None = None) -> None:
         self.api_key = api_key
-        self._fallback = MockSocialSearchProvider(network="instagram")
 
     async def search(self, query: str, language: str = "en", limit: int = 10) -> list[ProviderResult]:
-        # TODO: implement official IG Graph API for public business/creator accounts.
-        return await self._fallback.search(query, language=language, limit=limit)
+        # IG public search uses Meta OAuth + Graph API for business/creator accounts.
+        raise ProviderAuthRequired(
+            "Instagram public search requires Meta Graph API OAuth; not "
+            "configured. Treating as auth_required rather than silently mocking."
+        )

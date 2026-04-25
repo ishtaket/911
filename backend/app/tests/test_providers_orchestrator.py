@@ -53,20 +53,73 @@ def test_providers_check_endpoint_unknown_id():
     assert r.status_code == 404
 
 
-def test_per_channel_web_dispatch_returns_evidence_list():
+def test_per_channel_web_dispatch_returns_structured_response():
+    """Web dispatch now returns WebSocialStartResponse (not bare list) so
+    the operator UI can distinguish 'no_results' from 'not_configured'
+    from 'deduplicated'. See search_orchestrator.WebSocialStartResponse."""
     case_id = _seed_case_id()
     r = client.post(f"/v1/search/web/start/{case_id}")
     assert r.status_code == 200
-    items = r.json()
-    assert isinstance(items, list)
-    # Mock providers always return at least one item per query variant.
-    assert all("source_type" in it for it in items)
+    body = r.json()
+    assert body["channel"] == "web"
+    assert body["case_id"] == case_id
+    # In MOCK_PROVIDERS=true (test mode), only mocks run → state == "mock"
+    # the very first dispatch; on a re-run everything dedupes.
+    assert body["state"] in {"mock", "deduplicated", "no_results", "completed"}
+    assert isinstance(body["evidence"], list)
+    if body["state"] in {"mock", "completed"}:
+        assert all("source_type" in it for it in body["evidence"])
+    assert isinstance(body["providers"], list)
+    assert body["providers_attempted"] >= 1
+    # message and items_deduped must always be present so UI can render them
+    assert isinstance(body["message"], str) and body["message"]
+    assert "items_deduped" in body
 
 
-def test_per_channel_social_dispatch_returns_evidence_list():
-    r = client.post(f"/v1/search/social/start/{_seed_case_id()}")
+def test_per_channel_social_dispatch_returns_structured_response():
+    case_id = _seed_case_id()
+    r = client.post(f"/v1/search/social/start/{case_id}")
     assert r.status_code == 200
-    assert isinstance(r.json(), list)
+    body = r.json()
+    assert body["channel"] == "social"
+    assert body["case_id"] == case_id
+    assert body["state"] in {"mock", "deduplicated", "no_results", "completed"}
+    assert isinstance(body["providers"], list)
+    assert body["providers_attempted"] >= 1
+    assert isinstance(body["evidence"], list)
+
+
+def test_web_dispatch_state_not_configured_when_strict_no_keys(monkeypatch):
+    """When MOCK_PROVIDERS=false and no real keys, every web provider
+    raises ProviderNotConfigured — the dispatch must report that exactly,
+    not return a silent empty list."""
+    from app.providers import registry as registry_mod
+    from app.config import get_settings
+
+    real_get_web = registry_mod.get_web_search_providers
+    s = get_settings().model_copy(update={
+        "mock_providers": False,
+        "brave_search_api_key": None,
+        "google_kg_api_key": None,
+        "google_maps_api_key": None,
+    })
+    monkeypatch.setattr(
+        registry_mod, "get_web_search_providers", lambda settings=None: real_get_web(s)
+    )
+    # The orchestrator imports registry symbols at module load — patch
+    # those direct references too.
+    from app.services import search_orchestrator as orch
+    monkeypatch.setattr(orch, "get_web_search_providers", lambda settings=None: real_get_web(s))
+
+    case_id = _seed_case_id()
+    r = client.post(f"/v1/search/web/start/{case_id}")
+    assert r.status_code == 200
+    body = r.json()
+    assert body["state"] == "not_configured", body
+    assert body["evidence"] == []
+    assert body["items_returned"] == 0
+    # every provider entry must report not_configured
+    assert all(p["state"] == "not_configured" for p in body["providers"]), body["providers"]
 
 
 def test_per_channel_archive_dispatch_returns_structured_response():

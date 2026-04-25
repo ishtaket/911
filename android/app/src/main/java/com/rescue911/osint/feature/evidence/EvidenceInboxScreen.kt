@@ -28,7 +28,6 @@ import androidx.lifecycle.viewModelScope
 import androidx.navigation.NavHostController
 import com.rescue911.osint.R
 import com.rescue911.osint.data.remote.Rescue911Api
-import com.rescue911.osint.data.remote.mapper.toDomain
 import com.rescue911.osint.data.repository.Rescue911Repository
 import com.rescue911.osint.domain.model.Evidence
 import com.rescue911.osint.domain.model.SourceType
@@ -88,17 +87,22 @@ class EvidenceInboxViewModel @Inject constructor(
      *  ARCHIVE  : structured ArchiveStartResponse → no_targets / no_results
      *             / completed banner.
      *  GEOINT   : structured GeoIntStartResponse → no_media_uploaded etc.
-     *  WEB/SOC. : if 0 evidence returned, also fetch /v1/providers and
-     *             surface the per-provider state for that channel
-     *             (connected / mock / not_configured / error / rate_limited)
-     *             so the operator knows *why* it was empty.
+     *  WEB/SOC. : structured WebSocialStartResponse with state, per-provider
+     *             info, items_returned, items_deduped, message → banner is
+     *             driven by the backend `state` so the operator sees the
+     *             exact reason (no_results / not_configured / auth_required
+     *             / rate_limited / deduplicated / provider_error / mock /
+     *             completed) and never a silent empty screen.
      */
     fun dispatchSearch(caseId: String, kind: SearchKind) {
         viewModelScope.launch {
-            val result = runCatching {
+            runCatching {
                 when (kind) {
-                    SearchKind.WEB -> api.startWebSearch(caseId).map { it.toDomain() }
-                    SearchKind.SOCIAL -> api.startSocialSearch(caseId).map { it.toDomain() }
+                    SearchKind.WEB, SearchKind.SOCIAL -> {
+                        val r = if (kind == SearchKind.WEB) api.startWebSearch(caseId)
+                            else api.startSocialSearch(caseId)
+                        _banner.value = formatWebSocialBanner(r)
+                    }
                     SearchKind.ARCHIVE -> {
                         val r = api.startArchiveSearch(caseId)
                         val k = when (r.state) {
@@ -108,56 +112,48 @@ class EvidenceInboxViewModel @Inject constructor(
                             else -> BannerKind.INFO
                         }
                         _banner.value = (r.message + " (state=${r.state}, targets_attempted=${r.targetsAttempted})") to k
-                        r.evidence.map { it.toDomain() }
                     }
                     SearchKind.GEOINT -> {
                         val r = api.startGeoint(caseId)
                         _banner.value = (r.message + " (state=${r.state})") to
                             (if (r.state == "no_media_uploaded") BannerKind.WARNING else BannerKind.SUCCESS)
-                        emptyList()
                     }
-                    SearchKind.ALL -> api.startSearch(caseId).map { it.toDomain() }
+                    SearchKind.ALL -> {
+                        val items = api.startSearch(caseId)
+                        _banner.value = "Dispatched all channels: ${items.size} item(s) returned." to
+                            (if (items.isEmpty()) BannerKind.WARNING else BannerKind.SUCCESS)
+                    }
                 }
+            }.onFailure {
+                _banner.value = "Dispatch failed: ${it.javaClass.simpleName}: ${it.message ?: "no detail"}" to BannerKind.ERROR
             }
-            if (kind == SearchKind.ARCHIVE || kind == SearchKind.GEOINT) {
-                load(caseId)
-                return@launch
-            }
-            result.fold(
-                onSuccess = { fresh ->
-                    val mineCount = if (kind.sources.isEmpty()) fresh.size
-                        else fresh.count { it.sourceType in kind.sources }
-                    if (fresh.isEmpty()) {
-                        // Empty results: pull provider states so the operator
-                        // sees WHY (mock / not_configured / etc.).
-                        val diag = runCatching { providerDiag(kind) }.getOrDefault("diagnostics unavailable")
-                        _banner.value = "Dispatched ${kind.name.lowercase()}: 0 item(s) returned. $diag" to BannerKind.WARNING
-                    } else {
-                        _banner.value = "Dispatched ${kind.name.lowercase()}: ${fresh.size} item(s) returned, $mineCount matched." to BannerKind.SUCCESS
-                    }
-                    load(caseId)
-                },
-                onFailure = {
-                    _banner.value = "Dispatch failed: ${it.javaClass.simpleName}: ${it.message ?: "no detail"}" to BannerKind.ERROR
-                },
-            )
+            // Refresh the evidence list from the canonical store after every
+            // dispatch — the structured response only carries items stored
+            // in this call, but the full evidence list lives in /v1/evidence.
+            load(caseId)
         }
     }
 
-    private suspend fun providerDiag(kind: SearchKind): String {
-        // Map each SearchKind to the relevant provider IDs in /v1/providers.
-        val ids = when (kind) {
-            SearchKind.WEB -> setOf("brave_web_search", "google_cse", "google_kg_search", "serpapi")
-            SearchKind.SOCIAL -> setOf(
-                "youtube_data_api", "telegram_public", "reddit_public", "meta_public_pages",
-                "x_public", "vk_public", "tiktok_public", "instagram_public", "linkedin_public",
-            )
-            else -> emptySet()
+    private fun formatWebSocialBanner(
+        r: com.rescue911.osint.data.remote.dto.WebSocialStartResponseDto,
+    ): Pair<String, BannerKind> {
+        val kind = when (r.state) {
+            "completed" -> BannerKind.SUCCESS
+            "mock" -> BannerKind.INFO
+            "deduplicated", "no_results" -> BannerKind.WARNING
+            "not_configured", "auth_required", "rate_limited" -> BannerKind.WARNING
+            "provider_error" -> BannerKind.ERROR
+            else -> BannerKind.INFO
         }
-        val list = api.listProviders().providers.filter { it.providerId in ids }
-        if (list.isEmpty()) return ""
-        val summary = list.joinToString(", ") { "${it.providerId}=${it.state.name.lowercase()}" }
-        return "Providers: $summary."
+        // Per-provider one-line summary. Truncated so the banner doesn't
+        // overflow the screen on the social channel (9 providers).
+        val provs = r.providers.take(6)
+            .joinToString(", ") { "${it.provider}=${it.state}(${it.items})" }
+        val more = if (r.providers.size > 6) " +${r.providers.size - 6} more" else ""
+        val msg = "Dispatched ${r.channel}: state=${r.state}, " +
+            "items_returned=${r.itemsReturned}, items_stored=${r.evidence.size}, " +
+            "items_deduped=${r.itemsDeduped}. Providers: [$provs]$more."
+        return msg to kind
     }
 }
 

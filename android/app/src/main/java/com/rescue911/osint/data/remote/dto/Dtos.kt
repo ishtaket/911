@@ -279,3 +279,51 @@ data class ArchiveStartResponseDto(
     val message: String,
     val evidence: List<EvidenceDto> = emptyList(),
 )
+
+// ----- web/social dispatch -----
+
+/**
+ * Per-provider outcome inside a [WebSocialStartResponseDto].
+ * Mirrors backend `app.services.search_orchestrator.ProviderRunInfo`.
+ */
+@Serializable
+data class ProviderRunInfoDto(
+    val provider: String,
+    /**
+     * One of: "ok", "not_configured", "auth_required", "rate_limited", "error".
+     * Kept as String (not enum) so a backend addition never crashes the app.
+     */
+    val state: String,
+    val items: Int = 0,
+    val detail: String? = null,
+)
+
+/**
+ * Structured response for `POST /v1/search/web/start/{caseId}` and
+ * `POST /v1/search/social/start/{caseId}`.
+ *
+ * `state` is one of:
+ *   - "completed"        — at least one provider returned items, ≥1 stored
+ *   - "deduplicated"     — items returned but ALL filtered as duplicates
+ *   - "mock"             — only mock providers ran (MOCK_PROVIDERS=true)
+ *   - "no_results"       — providers ran without errors but returned 0
+ *   - "not_configured"   — every provider raised ProviderNotConfigured
+ *   - "auth_required"    — every provider needs OAuth
+ *   - "rate_limited"     — every provider was 429'd
+ *   - "provider_error"   — ≥1 provider errored AND 0 stored items
+ *
+ * Kept as String (not enum) so a backend addition never crashes the app.
+ */
+@Serializable
+data class WebSocialStartResponseDto(
+    val state: String,
+    @SerialName("case_id") val caseId: String,
+    val channel: String,
+    @SerialName("providers_attempted") val providersAttempted: Int,
+    @SerialName("providers_with_items") val providersWithItems: Int,
+    @SerialName("items_returned") val itemsReturned: Int,
+    @SerialName("items_deduped") val itemsDeduped: Int,
+    val message: String,
+    val providers: List<ProviderRunInfoDto> = emptyList(),
+    val evidence: List<EvidenceDto> = emptyList(),
+)
