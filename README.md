@@ -1,66 +1,97 @@
-# SearchAid (911)
+# Rescue911 OSINT — Israel Missing-Person Search Platform
 
-Android-first system for early missing-person response and digitally assisted search for vulnerable people who may leave home without a phone.
+A lawful, evidence-based, multilingual platform for missing-person cases inside Israel, built **Android-first, server-ready**.
 
-## What it does
-Helps families and volunteers quickly activate a structured search when a vulnerable person (Alzheimer's, dementia, elderly) goes missing. Collects digital leads from open sources, builds a probability-based search map, and coordinates search actions.
-
-## Status
-Phase 1 + Phase 2 complete. 12 screens functional, 364 tests passing (L1 unit + L2 integration + L3 UI), release build with R8 minification and signing verified.
-
-## Docs
-- [Product definition](docs/PRODUCT.md)
-
-## Key design principles
-- **Offline-first** — works without internet in the field
-- **Speed** — max 60 seconds from case activation to first usable search screen
-- **Legal and ethical** — only open and permitted sources
-- **Operator control** — no hidden automatic activity
-- **Full audit trail** — all actions are logged
-
-## Getting started
-```bash
-cd android && ./gradlew assembleDebug
 ```
-Or open `android/` in Android Studio.
-
-### API keys (optional)
-Web and social search features require Google Custom Search API credentials. Add to `android/local.properties`:
-```properties
-GOOGLE_CSE_API_KEY=your_api_key
-GOOGLE_CSE_CX=your_search_engine_id
-```
-The app works without these keys — search features gracefully return empty results.
-
-### Testing
-```bash
-cd android && ./gradlew testDebugUnitTest  # 364 tests
-cd android && ./gradlew lint               # lint check
-cd android && ./gradlew assembleRelease    # signed release APK
+Android operator UI  →  FastAPI backend  →  Public OSINT / GeoINT providers
+                              ↓
+                  Postgres+PostGIS / Redis / S3 / OpenSearch / Qdrant
 ```
 
-## Tech stack
-- Kotlin + Jetpack Compose + Material 3
-- Hilt DI
-- Room (offline-first, 9 entities, versioned migrations)
-- Retrofit + OkHttp (Google CSE API, Wayback Machine CDX API)
-- Coil (image loading)
-- Google Maps SDK
-- Firebase (Auth, Firestore, FCM — abstracted with offline stubs)
-- WorkManager
-- Clean Architecture (domain/data/ui)
+The Android app is the primary operator UI (volunteers, analysts).
+The backend is the secure OSINT/GeoINT brain and storage.
 
-## Modules
-- **Profile** — person profiles with historical places
-- **Missing Case** — case lifecycle management
-- **Search Lead** — lead tracking (manual + promoted from search)
-- **Witness Report** — field reports with verify/reject workflow
-- **Audit Log** — full action tracking
-- **Search Zone** — probability-scored search areas
-- **Social Source** — social account management per person
-- **Outreach** — message sending and status tracking
-- **Search Map** — Google Maps with zones, leads, witness reports, Signal Engine
-- **Web Search** — Google CSE text + image search, Wayback Machine archives
-- **Social Search** — Facebook, Instagram, TikTok profile search via Google CSE
-- **Identity Engine** — name normalization, identity pack building, query generation
-- **Signal Engine** — signal scoring, clustering, auto zone generation
+## Status (milestone 1)
+
+- ✅ Android Kotlin/Compose scaffold (`com.rescue911.osint`) — 16 screens, theme, navigation, mock data, EN/HE/RU strings, JUnit + Compose UI tests.
+- ✅ FastAPI backend with health, cases, search, geoint, evidence, hypotheses, review, audit endpoints — 19 tests pass.
+- ✅ Provider interfaces + mock providers for web (Brave/CSE/SerpAPI), social (FB/IG/TT/YT/TG/Reddit/X/VK/LinkedIn), archive (Wayback/CommonCrawl/snippet/mirror), GeoINT (EXIF/OCR/Vision/GeoSeer/Picarta/OpenAI), maps (Google/LocationIQ/OSM/Sentinel).
+- ✅ Three-level validation engine (L1 automated → L2 cross-source → L3 human).
+- ✅ Audit log on every external provider call and L3 review.
+- ✅ `infra/docker-compose.local.yml` (Postgres+PostGIS, Redis, MinIO, optional OpenSearch / Qdrant; backend container).
+- ✅ PowerShell scripts for env check, Docker, backend, Android build/install/smoke, scaffold verification.
+- ✅ GitHub Actions CI (backend pytest; Android lint check).
+
+## Hard safety boundaries
+
+- Public, lawful, permissioned, or API-accessible data only.
+- No hacking, login bypass, leaked data, rate-limit evasion, fake identity, or automated contact.
+- Sensitive personal data is minimized, protected, access-controlled, audit-logged.
+- No "found" without **Level 3 human confirmation**.
+
+## Quick start (Windows)
+
+```powershell
+# 1. Verify your machine has the prerequisites:
+.\scripts\check_local_environment.ps1
+
+# 2. Bring up infra (Postgres+PostGIS, Redis, MinIO):
+.\scripts\dev_docker_up.ps1
+
+# 3. Run backend in dev mode:
+.\scripts\dev_backend.ps1
+# → http://localhost:8000/v1/health
+
+# 4. Run backend tests:
+.\scripts\dev_backend_test.ps1
+
+# 5. Build the Android app (requires JDK 17 + Android SDK):
+.\scripts\dev_android_build.ps1
+.\scripts\dev_android_smoke.ps1   # installs + launches + checks logcat
+```
+
+## Repository layout
+
+```
+.
+├── android/              # Kotlin/Compose app (com.rescue911.osint)
+├── backend/              # FastAPI backend
+├── infra/                # Docker compose + nginx skeleton
+├── scripts/              # PowerShell scripts for Windows local dev
+├── docs/                 # Specs, runbooks, legal/privacy/security
+├── .claude/              # Claude Code agents, skills, prompts, ROUTER
+├── .github/workflows/    # CI
+├── CLAUDE.md             # Project operating system for Claude Code
+├── .env.example          # Backend config template (no secrets)
+└── README.md
+```
+
+## Languages
+
+- **English** (default)
+- **Hebrew** with full RTL layout (`values-iw/`)
+- **Russian** (`values-ru/`)
+- Arabic place-name variants are used in backend query generation only.
+
+## Documentation
+
+- [`docs/PROJECT_SPEC.md`](docs/PROJECT_SPEC.md)
+- [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md)
+- [`docs/ANDROID_APP.md`](docs/ANDROID_APP.md)
+- [`docs/BACKEND_API.md`](docs/BACKEND_API.md)
+- [`docs/GEOINT_PIPELINE.md`](docs/GEOINT_PIPELINE.md)
+- [`docs/SOCIAL_SEARCH.md`](docs/SOCIAL_SEARCH.md)
+- [`docs/ARCHIVE_SEARCH.md`](docs/ARCHIVE_SEARCH.md)
+- [`docs/LEGAL_BOUNDARIES.md`](docs/LEGAL_BOUNDARIES.md)
+- [`docs/PRIVACY.md`](docs/PRIVACY.md)
+- [`docs/SECURITY.md`](docs/SECURITY.md)
+- [`docs/TESTING.md`](docs/TESTING.md)
+- [`docs/RUNBOOK.md`](docs/RUNBOOK.md)
+- [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md)
+- [`docs/API_KEYS.md`](docs/API_KEYS.md)
+- [`docs/LOCAL_ENVIRONMENT.md`](docs/LOCAL_ENVIRONMENT.md)
+- [`docs/FINAL_REPORT.md`](docs/FINAL_REPORT.md) — what's built, what's mocked, what's blocked.
+
+## Contributing
+
+This is a sensitive domain. Read `CLAUDE.md`, `docs/LEGAL_BOUNDARIES.md`, and `docs/PRIVACY.md` before opening a PR. Every milestone must include unit tests, mocked-provider integration tests, smoke / E2E checks, doc updates, and a security/legal review note.

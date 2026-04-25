@@ -14,5 +14,5 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "SearchAid"
+rootProject.name = "Rescue911"
 include(":app")

@@ -4,27 +4,11 @@
     android:height="108dp"
     android:viewportWidth="108"
     android:viewportHeight="108">
-    <!-- Search magnifying glass with person silhouette -->
-    <!-- Glass circle -->
+    <!-- Stylised rescue chevron — emergency red over deep navy -->
     <path
-        android:fillColor="#FFFFFF"
-        android:pathData="M46,32 A16,16 0 1,1 46,64 A16,16 0 1,1 46,32Z"
-        android:strokeWidth="3"
-        android:strokeColor="#FFFFFF" />
+        android:fillColor="#E63946"
+        android:pathData="M54,28 L78,68 L66,68 L54,48 L42,68 L30,68 Z" />
     <path
-        android:fillColor="#D84315"
-        android:pathData="M46,35 A13,13 0 1,1 46,61 A13,13 0 1,1 46,35Z" />
-    <!-- Glass handle -->
-    <path
-        android:fillColor="#FFFFFF"
-        android:pathData="M57,57 L68,68 L65,71 L54,60Z" />
-    <!-- Person silhouette inside glass -->
-    <!-- Head -->
-    <path
-        android:fillColor="#FFFFFF"
-        android:pathData="M46,40 A3.5,3.5 0 1,1 46,47 A3.5,3.5 0 1,1 46,40Z" />
-    <!-- Body -->
-    <path
-        android:fillColor="#FFFFFF"
-        android:pathData="M40,57 Q40,49 46,49 Q52,49 52,57Z" />
+        android:fillColor="#F1B24A"
+        android:pathData="M48,72 L60,72 L60,80 L48,80 Z" />
 </vector>

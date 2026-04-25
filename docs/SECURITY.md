@@ -1,65 +1,43 @@
-# Security Notes
+# Security
 
-## API Key Protection
+## Threat model (milestone 1)
 
-Google CSE API keys are embedded in BuildConfig and passed as query parameters.
-This is a known limitation of client-only architecture.
+- **Operator account compromise** — single biggest risk; mitigated by RBAC + audit logs (TODO: SSO + 2FA).
+- **Provider key leakage** — keys never on Android; backend-only via env / vault.
+- **Injection / XSS / SSRF** — input validated at every API boundary; `httpx` calls go to known endpoints only.
+- **Database tampering** — append-only audit log; immutable artifact storage with content hash.
+- **Mobile device theft** — limited cache; SQLCipher TODO; remote logout TODO.
 
-### Current mitigations
-- Keys default to empty string — app works without them (graceful degradation)
-- HTTP logging disabled in release builds
-- R8 minification and obfuscation enabled
-- Network security config enforces HTTPS only
+## Auth
 
-### Required before production
-1. **Restrict API keys in Google Cloud Console**:
-   - Set Android app restriction (package name + SHA-256 fingerprint)
-   - Set API restriction to Custom Search API only
-   - Set daily quota limits
-2. **Long-term**: Implement a backend proxy that holds the API key server-side.
-   Client authenticates to the proxy, proxy calls Google CSE.
+- Backend auth skeleton TODO (Bearer token + role claims). RBAC roles planned: `viewer`, `analyst`, `coordinator`, `admin`.
+- Android stores a session token in `EncryptedSharedPreferences` (TODO; current build uses DataStore for non-secrets only).
 
-## Database Encryption
+## Secrets
 
-Room database is encrypted via SQLCipher (`net.zetetic:android-database-sqlcipher:4.5.4`).
-- 256-bit AES encryption of the entire database file
-- Encryption passphrase generated via `SecureRandom` (32 bytes)
-- Passphrase encrypted with AES-GCM using Android Keystore hardware-backed key
-- Encrypted passphrase stored in app-private file (`db_passphrase.enc`)
-- Key manager: `core/security/DatabaseKeyManager.kt`
+- `.env.example` contains placeholders only.
+- Real secrets must come from a vault (AWS Secrets Manager / GCP Secret Manager / HashiCorp Vault).
+- CI must reject any commit that adds a `.env` file with real values.
 
-## Authentication
+## Network
 
-Current implementation uses `OfflineAuthRepository` (local-only stub).
-`FirebaseAuthRepository` is implemented and ready to swap.
+- Android → backend over HTTPS only in staging/prod.
+- Backend → external providers over HTTPS.
+- Reverse proxy (nginx) terminates TLS in staging; production should add WAF.
 
-To enable Firebase Auth:
-1. Create Firebase project at console.firebase.google.com
-2. Enable Authentication (Anonymous + Email/Password)
-3. Download `google-services.json` to `android/app/`
-4. In `RepositoryModule.kt`, change:
-   ```kotlin
-   // FROM:
-   abstract fun bindAuthRepository(impl: OfflineAuthRepository): AuthRepository
-   // TO:
-   abstract fun bindAuthRepository(impl: FirebaseAuthRepository): AuthRepository
-   ```
-5. Build and test
+## Audit
 
-## Audit Checklist (MASVS L2)
+- Every external provider call is audit-logged (`provider_call`, `provider_error`).
+- Every Level-3 review action is audit-logged with reviewer ID, timestamp, and note.
+- Audit log should ship to an immutable store (object lock, write-once) in production.
 
-- [x] allowBackup disabled
-- [x] Network security config with cleartext disabled
-- [x] HTTP logging disabled in release
-- [x] Error messages sanitized (no stack traces to UI)
-- [x] No hardcoded secrets in source code
-- [x] Keystore and local.properties in .gitignore
-- [x] R8 minification enabled
-- [x] All dependencies at current versions
-- [x] No WebView, clipboard, or file storage exposure
-- [x] Parameterized Room queries (no SQL injection)
-- [x] API key restricted in Google Cloud Console (Android app + Custom Search API only)
-- [x] SQLCipher database encryption (AES-256, Android Keystore)
-- [x] Certificate pinning for API domains (GTS Root R1 + GlobalSign)
-- [x] Firebase Auth implemented (ready for DI swap — needs google-services.json)
-- [ ] Role-based access control (post-launch)
+## Dependencies
+
+- Backend pinned in `requirements.txt`; renovate / dependabot recommended.
+- Android pinned in `gradle/libs.versions.toml`.
+
+## Future
+
+- SBOMs for backend + Android.
+- Penetration test before staging → production cut-over.
+- Annual privacy/security review.

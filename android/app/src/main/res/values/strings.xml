@@ -1,4 +1,79 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">SearchAid</string>
+    <string name="app_name">Rescue911 OSINT</string>
+
+    <!-- nav -->
+    <string name="nav_cases">Cases</string>
+    <string name="nav_review">Review</string>
+    <string name="nav_map">Map</string>
+    <string name="nav_audit">Audit</string>
+    <string name="nav_settings">Settings</string>
+    <string name="nav_evidence">Evidence</string>
+    <string name="nav_hypotheses">Hypotheses</string>
+    <string name="nav_geoint">GeoINT</string>
+    <string name="nav_timeline">Timeline</string>
+    <string name="nav_social">Social</string>
+    <string name="nav_archive">Archive</string>
+    <string name="nav_providers">Providers</string>
+
+    <!-- common -->
+    <string name="action_create">Create</string>
+    <string name="action_run_search">Run search</string>
+    <string name="action_upload_media">Upload media</string>
+    <string name="next_action">Next action</string>
+    <string name="next_checks">Next checks</string>
+
+    <!-- cases -->
+    <string name="case_create">New case</string>
+    <string name="case_title">Case title</string>
+    <string name="case_status">Status</string>
+    <string name="case_last_seen">Last seen location</string>
+
+    <!-- person -->
+    <string name="person_full_name">Full name</string>
+    <string name="person_profile">Person profile</string>
+    <string name="person_age_label">Age</string>
+    <string name="person_social_handles">Social handles</string>
+
+    <!-- upload -->
+    <string name="upload_pick_source">Choose a source</string>
+    <string name="upload_explainer">EXIF / OCR / Vision will run on the backend after upload.</string>
+    <string name="upload_take_photo">Take photo</string>
+    <string name="upload_pick_from_gallery">Pick from gallery</string>
+
+    <!-- search -->
+    <string name="search_dashboard">Search dashboard</string>
+    <string name="search_web">Web search</string>
+    <string name="search_web_explainer">Brave / Google CSE / SerpAPI fan-out, EN/HE/RU/AR variants.</string>
+    <string name="search_social">Public social search</string>
+    <string name="search_social_explainer">FB / IG / TT / YT / TG / Reddit / X / VK / LinkedIn — public only.</string>
+    <string name="search_archive">Archive search</string>
+    <string name="search_archive_explainer">Wayback / Common Crawl / public mirrors.</string>
+    <string name="search_geoint">GeoINT pipeline</string>
+    <string name="search_geoint_explainer">EXIF → OCR → Vision → GeoSeer / Picarta → POI validate.</string>
+
+    <!-- map / geoint -->
+    <string name="map_placeholder">Map view (MapLibre integration TODO)</string>
+
+    <!-- timeline / social -->
+    <string name="timeline_placeholder_title">Timeline (placeholder)</string>
+    <string name="timeline_placeholder_body">Sightings + evidence on a chronological axis.</string>
+    <string name="social_graph_placeholder_title">Social graph (placeholder)</string>
+    <string name="social_graph_placeholder_body">Public connections inferred from public posts only.</string>
+
+    <!-- archive -->
+    <string name="archive_empty_title">No archived findings yet</string>
+    <string name="archive_empty_body">Run a search to query Wayback / Common Crawl / public mirrors.</string>
+
+    <!-- review -->
+    <string name="review_confirm">Confirm</string>
+    <string name="review_reject">Reject</string>
+    <string name="review_needs_more">Needs more checks</string>
+    <string name="review_escalate">Escalate to authorities</string>
+
+    <!-- settings -->
+    <string name="settings_api_base">Backend base URL</string>
+    <string name="settings_language">Language</string>
+    <string name="settings_mock_mode">Mock mode (use safe stub providers)</string>
+    <string name="settings_open_providers">Provider status</string>
 </resources>
