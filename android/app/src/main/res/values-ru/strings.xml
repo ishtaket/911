@@ -83,4 +83,13 @@
     <string name="state_empty_evidence">Свидетельств для этого дела пока нет.</string>
     <string name="state_empty_hypotheses">Гипотез для этого дела пока нет.</string>
     <string name="state_empty_audit">Журнал аудита пуст.</string>
+    <string name="state_empty_review">Очередь проверки пуста.</string>
+    <string name="state_empty_person">Человек не найден.</string>
+
+    <string name="search_dispatch_note">Поиск выполняется на бэкенде; результаты появляются в ящике свидетельств.</string>
+    <string name="search_pick_case_first">Откройте дело, чтобы запустить поиск.</string>
+    <string name="search_opening">Открываю ящик свидетельств для поиска %1$s</string>
+
+    <string name="upload_not_implemented">загрузка медиа ещё не подключена к бэкенду.</string>
+    <string name="create_case_not_implemented">Создание дела через POST /v1/cases ещё не подключено.</string>
 </resources>

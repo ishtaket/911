@@ -56,6 +56,7 @@ fun CaseDetailScreen(
             InfoCard(
                 title = c.person.fullName,
                 body = "${c.lastSeenLocation ?: "Unknown"} • ${c.languages.joinToString()}",
+                onClick = { navController.navigate(Routes.person(c.person.id)) },
             )
             InfoCard(
                 title = stringResource(R.string.case_status),

@@ -54,6 +54,13 @@ enum class L3ActionDto {
     @SerialName("contact_manually") CONTACT_MANUALLY,
 }
 
+@Serializable
+data class ReviewBodyDto(
+    val action: L3ActionDto,
+    @SerialName("reviewer_id") val reviewerId: String? = null,
+    val note: String? = null,
+)
+
 // ----- validation -----
 
 @Serializable

@@ -83,4 +83,13 @@
     <string name="state_empty_evidence">אין ראיות עדיין לתיק זה.</string>
     <string name="state_empty_hypotheses">אין השערות עדיין לתיק זה.</string>
     <string name="state_empty_audit">יומן הביקורת ריק.</string>
+    <string name="state_empty_review">תור הבדיקה ריק.</string>
+    <string name="state_empty_person">לא נמצא אדם.</string>
+
+    <string name="search_dispatch_note">החיפוש מופעל בשרת; התוצאות מופיעות בארגז הראיות.</string>
+    <string name="search_pick_case_first">פתח תיק תחילה כדי להפעיל חיפוש.</string>
+    <string name="search_opening">פותח ארגז ראיות עבור חיפוש %1$s</string>
+
+    <string name="upload_not_implemented">העלאת מדיה עדיין לא מחוברת לשרת.</string>
+    <string name="create_case_not_implemented">יצירת תיק דרך POST /v1/cases עדיין לא מחוברת.</string>
 </resources>

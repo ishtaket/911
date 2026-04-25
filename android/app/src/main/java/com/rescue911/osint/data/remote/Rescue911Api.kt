@@ -6,7 +6,10 @@ import com.rescue911.osint.data.remote.dto.EvidenceDto
 import com.rescue911.osint.data.remote.dto.HealthDto
 import com.rescue911.osint.data.remote.dto.HypothesisDto
 import com.rescue911.osint.data.remote.dto.ProviderStatusResponseDto
+import com.rescue911.osint.data.remote.dto.ReviewBodyDto
+import retrofit2.http.Body
 import retrofit2.http.GET
+import retrofit2.http.POST
 import retrofit2.http.Path
 import retrofit2.http.Query
 
@@ -36,4 +39,10 @@ interface Rescue911Api {
 
     @GET("v1/audit")
     suspend fun listAudit(@Query("limit") limit: Int = 200): List<AuditEntryDto>
+
+    @POST("v1/review/{id}")
+    suspend fun reviewEvidence(
+        @Path("id") evidenceId: String,
+        @Body body: ReviewBodyDto,
+    ): EvidenceDto
 }

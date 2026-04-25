@@ -96,4 +96,15 @@
     <string name="state_empty_evidence">No evidence yet for this case.</string>
     <string name="state_empty_hypotheses">No hypotheses yet for this case.</string>
     <string name="state_empty_audit">Audit log is empty.</string>
+    <string name="state_empty_review">Review queue is empty.</string>
+    <string name="state_empty_person">Person not found.</string>
+
+    <!-- search dashboard -->
+    <string name="search_dispatch_note">Search runs on the backend; results appear in the Evidence inbox.</string>
+    <string name="search_pick_case_first">Open a case first to run a search.</string>
+    <string name="search_opening">Opening evidence inbox for %1$s search</string>
+
+    <!-- upload / create-case placeholders -->
+    <string name="upload_not_implemented">media upload is not yet wired to the backend.</string>
+    <string name="create_case_not_implemented">Case creation via backend POST /v1/cases is not wired yet.</string>
 </resources>

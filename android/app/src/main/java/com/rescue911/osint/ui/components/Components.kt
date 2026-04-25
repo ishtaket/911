@@ -236,6 +236,47 @@ fun DataSourceBadge(source: DataSource, modifier: Modifier = Modifier) {
     }
 }
 
+enum class BannerKind { INFO, SUCCESS, WARNING, ERROR }
+
+@Composable
+fun ActionResultBanner(
+    message: String,
+    kind: BannerKind = BannerKind.INFO,
+    modifier: Modifier = Modifier,
+) {
+    val color = when (kind) {
+        BannerKind.INFO -> Gold
+        BannerKind.SUCCESS -> Success
+        BannerKind.WARNING -> Gold
+        BannerKind.ERROR -> Critical
+    }
+    Surface(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 6.dp)
+            .clip(RoundedCornerShape(12.dp))
+            .semantics { contentDescription = "Action result: $message" },
+        color = color.copy(alpha = 0.15f),
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(8.dp)
+                    .background(color, RoundedCornerShape(50))
+            )
+            Spacer(Modifier.width(8.dp))
+            Text(
+                message,
+                style = MaterialTheme.typography.bodyMedium,
+                color = color,
+            )
+        }
+    }
+}
+
 @Composable
 fun EmptyState(message: String, modifier: Modifier = Modifier) {
     Box(

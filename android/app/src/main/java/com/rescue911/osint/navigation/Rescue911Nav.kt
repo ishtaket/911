@@ -95,7 +95,7 @@ fun Rescue911Nav(
     val items = listOf(
         BottomItem(Routes.CASES, com.rescue911.osint.R.string.nav_cases, Icons.Filled.Cases),
         BottomItem(Routes.REVIEW_QUEUE, com.rescue911.osint.R.string.nav_review, Icons.Filled.Inbox),
-        BottomItem("geoint?caseId=case-1", com.rescue911.osint.R.string.nav_map, Icons.Filled.Map),
+        BottomItem("geoint?caseId=", com.rescue911.osint.R.string.nav_map, Icons.Filled.Map),
         BottomItem(Routes.AUDIT, com.rescue911.osint.R.string.nav_audit, Icons.Filled.AdminPanelSettings),
         BottomItem(Routes.SETTINGS, com.rescue911.osint.R.string.nav_settings, Icons.Filled.Settings),
     )
