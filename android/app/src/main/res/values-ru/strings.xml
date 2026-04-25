@@ -108,6 +108,17 @@
     <string name="evidence_empty_archive">Архивных находок пока нет. Нажмите Запустить поиск для запроса Wayback / Common Crawl.</string>
     <string name="evidence_empty_geoint">Свидетельств GeoINT пока нет. Сначала загрузите медиа; бэкенд запустит EXIF/OCR/Vision.</string>
 
-    <string name="evidence_geoint_dispatch_hint">GeoINT нельзя запустить отсюда — он выполняется автоматически после загрузки медиа в дело.</string>
-    <string name="evidence_dispatch_now">Запустить поиск %1$s (POST /v1/search/start)</string>
+    <string name="evidence_geoint_dispatch_hint">GeoINT работает только по загруженным медиа. Проба вернёт no_media_uploaded, пока не подключён POST /v1/media.</string>
+    <string name="evidence_dispatch_now">Запустить поиск %1$s</string>
+    <string name="evidence_probe_geoint">Проверить конвейер %1$s</string>
+
+    <string name="providers_empty">Бэкенд не сообщил о провайдерах.</string>
+    <string name="provider_state_connected">Подключено</string>
+    <string name="provider_state_mock">Заглушка</string>
+    <string name="provider_state_not_configured">Не настроено</string>
+    <string name="provider_state_auth_required">Требуется авторизация</string>
+    <string name="provider_state_rate_limited">Лимит превышен</string>
+    <string name="provider_state_error">Ошибка</string>
+    <string name="provider_state_disabled">Отключено</string>
+    <string name="provider_action_connect">Открыть страницу подключения</string>
 </resources>

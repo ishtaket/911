@@ -3,8 +3,10 @@ package com.rescue911.osint.data.remote
 import com.rescue911.osint.data.remote.dto.AuditEntryDto
 import com.rescue911.osint.data.remote.dto.CaseDto
 import com.rescue911.osint.data.remote.dto.EvidenceDto
+import com.rescue911.osint.data.remote.dto.GeoIntStartResponseDto
 import com.rescue911.osint.data.remote.dto.HealthDto
 import com.rescue911.osint.data.remote.dto.HypothesisDto
+import com.rescue911.osint.data.remote.dto.ProviderListResponseDto
 import com.rescue911.osint.data.remote.dto.ProviderStatusResponseDto
 import com.rescue911.osint.data.remote.dto.ReviewBodyDto
 import retrofit2.http.Body
@@ -46,8 +48,23 @@ interface Rescue911Api {
         @Body body: ReviewBodyDto,
     ): EvidenceDto
 
-    /** Dispatches the case's full query plan across web/social/archive providers
-     *  and returns the resulting evidence (mixed source types — caller filters). */
+    /** Compatibility: dispatches all channels (web + social + archive). */
     @POST("v1/search/start/{caseId}")
     suspend fun startSearch(@Path("caseId") caseId: String): List<EvidenceDto>
+
+    @POST("v1/search/web/start/{caseId}")
+    suspend fun startWebSearch(@Path("caseId") caseId: String): List<EvidenceDto>
+
+    @POST("v1/search/social/start/{caseId}")
+    suspend fun startSocialSearch(@Path("caseId") caseId: String): List<EvidenceDto>
+
+    @POST("v1/search/archive/start/{caseId}")
+    suspend fun startArchiveSearch(@Path("caseId") caseId: String): List<EvidenceDto>
+
+    @POST("v1/geoint/start/{caseId}")
+    suspend fun startGeoint(@Path("caseId") caseId: String): GeoIntStartResponseDto
+
+    /** New rich provider registry. Replaces /v1/provider-status in the UI. */
+    @GET("v1/providers")
+    suspend fun listProviders(): ProviderListResponseDto
 }

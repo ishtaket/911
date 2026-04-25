@@ -13,6 +13,7 @@ from app.api import (
     routes_hypotheses,
     routes_media,
     routes_provider_status,
+    routes_providers,
     routes_review,
     routes_search,
 )
@@ -51,6 +52,7 @@ def create_app() -> FastAPI:
     app.include_router(routes_review.router, prefix="/v1/review", tags=["review"])
     app.include_router(routes_audit.router, prefix="/v1/audit", tags=["audit"])
     app.include_router(routes_provider_status.router, prefix="/v1/provider-status", tags=["providers"])
+    app.include_router(routes_providers.router, prefix="/v1/providers", tags=["providers"])
 
     @app.on_event("startup")
     def _seed() -> None:

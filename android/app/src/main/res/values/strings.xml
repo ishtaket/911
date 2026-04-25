@@ -124,6 +124,18 @@
     <string name="evidence_empty_archive">No archive findings yet for this case. Tap Dispatch search now to query Wayback / Common Crawl.</string>
     <string name="evidence_empty_geoint">No GeoINT evidence yet. Upload media first; the backend will then run EXIF/OCR/Vision.</string>
 
-    <string name="evidence_geoint_dispatch_hint">GeoINT cannot be dispatched here — it runs automatically after media is uploaded for this case.</string>
-    <string name="evidence_dispatch_now">Dispatch %1$s search now (POST /v1/search/start)</string>
+    <string name="evidence_geoint_dispatch_hint">GeoINT only runs on uploaded media. Probe will return no_media_uploaded until POST /v1/media is wired.</string>
+    <string name="evidence_dispatch_now">Dispatch %1$s search now</string>
+    <string name="evidence_probe_geoint">Probe %1$s pipeline</string>
+
+    <!-- providers screen -->
+    <string name="providers_empty">No providers reported by backend.</string>
+    <string name="provider_state_connected">Connected</string>
+    <string name="provider_state_mock">Mock</string>
+    <string name="provider_state_not_configured">Not configured</string>
+    <string name="provider_state_auth_required">Auth required</string>
+    <string name="provider_state_rate_limited">Rate limited</string>
+    <string name="provider_state_error">Error</string>
+    <string name="provider_state_disabled">Disabled</string>
+    <string name="provider_action_connect">Open connect page</string>
 </resources>

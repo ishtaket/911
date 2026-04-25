@@ -80,22 +80,40 @@ class EvidenceInboxViewModel @Inject constructor(
             .getOrDefault(emptyList())
     }
 
-    /** Calls POST /v1/search/start/{caseId} which dispatches the case's full
-     *  query plan across web/social/archive providers (mock in this milestone)
-     *  and returns the resulting evidence. We then reload via the repository
-     *  so the visible list reflects what the backend stored. */
+    /** Dispatch via the channel-specific backend endpoint. GeoINT is special:
+     *  it has no Dispatch button in the UI, but if called we hit
+     *  /v1/geoint/start which returns a structured 'no_media_uploaded' state
+     *  that we surface as a warning banner (not a failure). */
     fun dispatchSearch(caseId: String, kind: SearchKind) {
         viewModelScope.launch {
-            val result = runCatching { api.startSearch(caseId).map { it.toDomain() } }
+            val result = runCatching {
+                when (kind) {
+                    SearchKind.WEB -> api.startWebSearch(caseId).map { it.toDomain() }
+                    SearchKind.SOCIAL -> api.startSocialSearch(caseId).map { it.toDomain() }
+                    SearchKind.ARCHIVE -> api.startArchiveSearch(caseId).map { it.toDomain() }
+                    SearchKind.GEOINT -> {
+                        val r = api.startGeoint(caseId)
+                        // signal no-media via banner; no evidence to add
+                        _banner.value = (r.message + " (state=${r.state})") to
+                            (if (r.state == "no_media_uploaded") BannerKind.WARNING else BannerKind.SUCCESS)
+                        emptyList()
+                    }
+                    SearchKind.ALL -> api.startSearch(caseId).map { it.toDomain() }
+                }
+            }
+            if (kind == SearchKind.GEOINT) {
+                load(caseId)
+                return@launch
+            }
             result.fold(
                 onSuccess = { fresh ->
                     val mineCount = if (kind.sources.isEmpty()) fresh.size
                         else fresh.count { it.sourceType in kind.sources }
-                    _banner.value = "Search dispatched. ${fresh.size} item(s) total, $mineCount for ${kind.name.lowercase()}." to BannerKind.SUCCESS
+                    _banner.value = "Dispatched ${kind.name.lowercase()}: ${fresh.size} item(s) returned, $mineCount matched." to BannerKind.SUCCESS
                     load(caseId)
                 },
                 onFailure = {
-                    _banner.value = "Search failed: ${it.javaClass.simpleName}: ${it.message ?: "no detail"}" to BannerKind.ERROR
+                    _banner.value = "Dispatch failed: ${it.javaClass.simpleName}: ${it.message ?: "no detail"}" to BannerKind.ERROR
                 },
             )
         }
@@ -150,21 +168,21 @@ fun EvidenceInboxScreen(
         }
         banner?.let { (msg, k) -> ActionResultBanner(message = msg, kind = k) }
 
-        // GeoINT cannot be dispatched without media — render a distinct hint.
         if (kind == SearchKind.GEOINT) {
             ActionResultBanner(
                 message = stringResource(R.string.evidence_geoint_dispatch_hint),
                 kind = BannerKind.WARNING,
             )
-        } else if (kind != SearchKind.ALL && caseId.isNotBlank()) {
-            Row(
-                Modifier.fillMaxWidth().padding(horizontal = 16.dp),
-            ) {
+        }
+        if (kind != SearchKind.ALL && caseId.isNotBlank()) {
+            val labelRes = if (kind == SearchKind.GEOINT)
+                R.string.evidence_probe_geoint else R.string.evidence_dispatch_now
+            Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
                 Button(
                     onClick = { vm.dispatchSearch(caseId, kind) },
                     modifier = Modifier.fillMaxWidth(),
                 ) {
-                    Text(stringResource(R.string.evidence_dispatch_now, kind.name.lowercase()))
+                    Text(stringResource(labelRes, kind.name.lowercase()))
                 }
             }
             Spacer(Modifier.height(4.dp))

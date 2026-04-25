@@ -198,3 +198,56 @@ data class ProviderStatusResponseDto(
     @SerialName("mock_providers") val mockProviders: Boolean,
     val providers: List<ProviderInfoDto> = emptyList(),
 )
+
+// ----- new rich provider registry -----
+
+@Serializable
+enum class ProviderStateDto {
+    @SerialName("disabled") DISABLED,
+    @SerialName("not_configured") NOT_CONFIGURED,
+    @SerialName("auth_required") AUTH_REQUIRED,
+    @SerialName("connected") CONNECTED,
+    @SerialName("rate_limited") RATE_LIMITED,
+    @SerialName("error") ERROR,
+    @SerialName("mock") MOCK,
+}
+
+@Serializable
+enum class ProviderAuthTypeDto {
+    @SerialName("none") NONE,
+    @SerialName("api_key") API_KEY,
+    @SerialName("oauth2") OAUTH2,
+    @SerialName("manual_token") MANUAL_TOKEN,
+    @SerialName("service_account") SERVICE_ACCOUNT,
+}
+
+@Serializable
+data class ProviderInfoV2Dto(
+    @SerialName("provider_id") val providerId: String,
+    val type: String,
+    @SerialName("display_name") val displayName: String,
+    val state: ProviderStateDto,
+    @SerialName("auth_type") val authType: ProviderAuthTypeDto,
+    val configured: Boolean,
+    @SerialName("requires_user_action") val requiresUserAction: Boolean = false,
+    @SerialName("connect_url") val connectUrl: String? = null,
+    @SerialName("safe_scope_description") val safeScopeDescription: String,
+    @SerialName("last_checked_at") val lastCheckedAt: String? = null,
+    @SerialName("last_error") val lastError: String? = null,
+    val note: String? = null,
+)
+
+@Serializable
+data class ProviderListResponseDto(
+    @SerialName("mock_providers") val mockProviders: Boolean,
+    val providers: List<ProviderInfoV2Dto> = emptyList(),
+)
+
+// ----- geoint dispatch -----
+
+@Serializable
+data class GeoIntStartResponseDto(
+    val state: String,
+    @SerialName("case_id") val caseId: String,
+    val message: String,
+)

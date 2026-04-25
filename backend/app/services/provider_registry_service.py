@@ -1,0 +1,197 @@
+"""Build the rich provider list from current Settings.
+
+Single source of truth for `GET /v1/providers` and
+`POST /v1/providers/{id}/check`.
+
+Rules:
+- never return secrets, only state metadata
+- if `MOCK_PROVIDERS=true` AND no key for a provider → state=mock
+- if `MOCK_PROVIDERS=false` AND no key   → state=not_configured (or auth_required for OAuth)
+- if `MOCK_PROVIDERS=false` AND key set  → state=connected (we don't ping the
+  upstream here; that happens in `check()` once a real client lands)
+- public-only providers (Wayback, OSM Nominatim, EXIF) without key needs
+  → state=connected, auth=none
+"""
+from __future__ import annotations
+
+from datetime import datetime, timezone
+
+from app.config import Settings, get_settings
+from app.schemas.provider_status import (
+    ProviderAuthType,
+    ProviderInfoV2,
+    ProviderListResponse,
+    ProviderState,
+    ProviderType,
+)
+
+
+def _state(has_key: bool, mock: bool, auth_type: ProviderAuthType) -> ProviderState:
+    if has_key:
+        return ProviderState.CONNECTED
+    if mock:
+        return ProviderState.MOCK
+    return (
+        ProviderState.AUTH_REQUIRED
+        if auth_type == ProviderAuthType.OAUTH2
+        else ProviderState.NOT_CONFIGURED
+    )
+
+
+def _row(
+    provider_id: str,
+    type: ProviderType,
+    display_name: str,
+    *,
+    has_key: bool,
+    mock: bool,
+    auth_type: ProviderAuthType,
+    safe_scope: str,
+    note: str | None = None,
+    connect_url: str | None = None,
+    public_no_auth: bool = False,
+) -> ProviderInfoV2:
+    if public_no_auth:
+        st = ProviderState.CONNECTED
+    else:
+        st = _state(has_key, mock, auth_type)
+    return ProviderInfoV2(
+        provider_id=provider_id,
+        type=type,
+        display_name=display_name,
+        state=st,
+        auth_type=auth_type if not public_no_auth else ProviderAuthType.NONE,
+        configured=has_key or public_no_auth,
+        requires_user_action=st in (ProviderState.AUTH_REQUIRED, ProviderState.NOT_CONFIGURED),
+        connect_url=connect_url if st == ProviderState.AUTH_REQUIRED else None,
+        safe_scope_description=safe_scope,
+        last_checked_at=datetime.now(timezone.utc),
+        last_error=None,
+        note=note,
+    )
+
+
+def list_providers(settings: Settings | None = None) -> ProviderListResponse:
+    s = settings or get_settings()
+    mock = s.mock_providers
+
+    rows: list[ProviderInfoV2] = [
+        # ---------- web search ----------
+        _row("brave_web_search", ProviderType.WEB_SEARCH, "Brave Search",
+             has_key=bool(s.brave_search_api_key), mock=mock,
+             auth_type=ProviderAuthType.API_KEY,
+             safe_scope="Public web index. No private data."),
+        _row("google_cse", ProviderType.WEB_SEARCH, "Google Programmable Search (CSE)",
+             has_key=bool(s.google_maps_api_key), mock=mock,
+             auth_type=ProviderAuthType.API_KEY,
+             safe_scope="Public web via Google CSE. Requires CSE engine ID + API key.",
+             note="Re-uses GOOGLE_MAPS_API_KEY in current wrapper"),
+        _row("serpapi", ProviderType.WEB_SEARCH, "SerpAPI",
+             has_key=False, mock=mock,
+             auth_type=ProviderAuthType.API_KEY,
+             safe_scope="Server-side scrape of Google SERPs. Public results only."),
+
+        # ---------- public social ----------
+        _row("youtube_data_v3", ProviderType.YOUTUBE, "YouTube Data API v3",
+             has_key=bool(s.youtube_api_key), mock=mock,
+             auth_type=ProviderAuthType.API_KEY,
+             safe_scope="Public videos and channel metadata only."),
+        _row("telegram_public", ProviderType.TELEGRAM_PUBLIC, "Telegram public channels",
+             has_key=bool(s.telegram_api_id and s.telegram_api_hash), mock=mock,
+             auth_type=ProviderAuthType.MANUAL_TOKEN,
+             safe_scope="Public channels and messages only. No private chats, no impersonation."),
+        _row("reddit_public", ProviderType.REDDIT_PUBLIC, "Reddit public",
+             has_key=bool(s.reddit_client_id and s.reddit_client_secret), mock=mock,
+             auth_type=ProviderAuthType.OAUTH2,
+             safe_scope="Public subreddits and posts via official API.",
+             connect_url="/v1/auth/reddit/start"),
+        _row("meta_public_pages", ProviderType.META_PUBLIC_PAGES, "Meta (FB/IG) public pages",
+             has_key=bool(s.meta_app_id and s.meta_app_secret), mock=mock,
+             auth_type=ProviderAuthType.OAUTH2,
+             safe_scope="Public Pages and permissioned business profiles only. App-review required for production.",
+             connect_url="/v1/auth/meta/start"),
+        _row("x_public", ProviderType.X_PUBLIC, "X (Twitter) public",
+             has_key=False, mock=mock,
+             auth_type=ProviderAuthType.OAUTH2,
+             safe_scope="Public tweets via official API only. No scraping.",
+             connect_url="/v1/auth/x/start"),
+        _row("vk_public", ProviderType.VK_PUBLIC, "VK public",
+             has_key=False, mock=mock,
+             auth_type=ProviderAuthType.OAUTH2,
+             safe_scope="Public profiles and groups via official API."),
+        _row("tiktok_public", ProviderType.PUBLIC_SOCIAL, "TikTok public",
+             has_key=False, mock=mock,
+             auth_type=ProviderAuthType.OAUTH2,
+             safe_scope="Public videos via official Display API."),
+        _row("instagram_public", ProviderType.PUBLIC_SOCIAL, "Instagram public",
+             has_key=False, mock=mock,
+             auth_type=ProviderAuthType.OAUTH2,
+             safe_scope="Public business profiles only. Personal accounts excluded."),
+        _row("linkedin_public", ProviderType.PUBLIC_SOCIAL, "LinkedIn public",
+             has_key=False, mock=mock,
+             auth_type=ProviderAuthType.OAUTH2,
+             safe_scope="Public organization pages via official Marketing API."),
+
+        # ---------- archive ----------
+        _row("wayback_cdx", ProviderType.ARCHIVE, "Wayback Machine (CDX)",
+             has_key=False, mock=False, public_no_auth=True,
+             auth_type=ProviderAuthType.NONE,
+             safe_scope="Public web archive. No key required."),
+        _row("common_crawl", ProviderType.ARCHIVE, "Common Crawl (CDXJ)",
+             has_key=False, mock=mock,
+             auth_type=ProviderAuthType.NONE,
+             safe_scope="Public crawl index. CDXJ ingestion not yet wired."),
+
+        # ---------- geoint / vision ----------
+        _row("exif_reader", ProviderType.GEOINT, "EXIF reader",
+             has_key=False, mock=False, public_no_auth=True,
+             auth_type=ProviderAuthType.NONE,
+             safe_scope="Local-only metadata extraction from uploaded media."),
+        _row("ocr_tesseract", ProviderType.VISION_OCR, "OCR (Tesseract / multi-script)",
+             has_key=False, mock=mock,
+             auth_type=ProviderAuthType.NONE,
+             safe_scope="Local OCR. Hebrew/Arabic/Cyrillic models not yet bundled."),
+        _row("google_vision", ProviderType.VISION_OCR, "Google Vision",
+             has_key=bool(s.google_application_credentials), mock=mock,
+             auth_type=ProviderAuthType.SERVICE_ACCOUNT,
+             safe_scope="Vision labels/OCR on operator-uploaded media."),
+        _row("azure_vision", ProviderType.VISION_OCR, "Azure Vision",
+             has_key=bool(s.azure_vision_endpoint and s.azure_vision_key), mock=mock,
+             auth_type=ProviderAuthType.API_KEY,
+             safe_scope="Vision/OCR on operator-uploaded media."),
+        _row("geoseer", ProviderType.GEOINT, "GeoSeer",
+             has_key=bool(s.geoseer_api_key), mock=mock,
+             auth_type=ProviderAuthType.API_KEY,
+             safe_scope="Image-to-location predictions on uploaded media."),
+        _row("picarta", ProviderType.GEOINT, "Picarta",
+             has_key=bool(s.picarta_api_key), mock=mock,
+             auth_type=ProviderAuthType.API_KEY,
+             safe_scope="Image-to-location predictions on uploaded media."),
+        _row("openai_vision", ProviderType.VISION_OCR, "OpenAI Vision reasoner",
+             has_key=bool(s.openai_api_key), mock=mock,
+             auth_type=ProviderAuthType.API_KEY,
+             safe_scope="LLM-assisted reasoning over operator-uploaded media."),
+
+        # ---------- maps / geocode ----------
+        _row("google_maps", ProviderType.MAPS_GEOCODE, "Google Maps / Places",
+             has_key=bool(s.google_maps_api_key), mock=mock,
+             auth_type=ProviderAuthType.API_KEY,
+             safe_scope="Public POI / geocoding."),
+        _row("locationiq", ProviderType.MAPS_GEOCODE, "LocationIQ",
+             has_key=bool(s.locationiq_api_key), mock=mock,
+             auth_type=ProviderAuthType.API_KEY,
+             safe_scope="Public POI / geocoding."),
+        _row("osm_nominatim", ProviderType.MAPS_GEOCODE, "OpenStreetMap Nominatim",
+             has_key=False, mock=False, public_no_auth=True,
+             auth_type=ProviderAuthType.NONE,
+             safe_scope="Public OSM geocoder. Respect rate limits."),
+    ]
+
+    return ProviderListResponse(mock_providers=mock, providers=rows)
+
+
+def get_provider(provider_id: str, settings: Settings | None = None) -> ProviderInfoV2 | None:
+    for p in list_providers(settings).providers:
+        if p.provider_id == provider_id:
+            return p
+    return None

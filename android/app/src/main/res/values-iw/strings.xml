@@ -108,6 +108,17 @@
     <string name="evidence_empty_archive">אין ממצאי ארכיון עדיין. הקש על שלח חיפוש לתשאל את Wayback / Common Crawl.</string>
     <string name="evidence_empty_geoint">אין ראיות GeoINT עדיין. העלה מדיה תחילה; השרת יריץ EXIF/OCR/Vision.</string>
 
-    <string name="evidence_geoint_dispatch_hint">לא ניתן לשלוח GeoINT מכאן — הוא רץ אוטומטית לאחר העלאת מדיה לתיק.</string>
-    <string name="evidence_dispatch_now">שלח חיפוש %1$s עכשיו (POST /v1/search/start)</string>
+    <string name="evidence_geoint_dispatch_hint">GeoINT רץ רק על מדיה שהועלתה. בדיקה תחזיר no_media_uploaded עד שיחובר POST /v1/media.</string>
+    <string name="evidence_dispatch_now">שלח חיפוש %1$s עכשיו</string>
+    <string name="evidence_probe_geoint">בדוק את צינור %1$s</string>
+
+    <string name="providers_empty">השרת לא דיווח על ספקים.</string>
+    <string name="provider_state_connected">מחובר</string>
+    <string name="provider_state_mock">דמה</string>
+    <string name="provider_state_not_configured">לא מוגדר</string>
+    <string name="provider_state_auth_required">נדרשת הרשאה</string>
+    <string name="provider_state_rate_limited">חרג ממגבלת קצב</string>
+    <string name="provider_state_error">שגיאה</string>
+    <string name="provider_state_disabled">מושבת</string>
+    <string name="provider_action_connect">פתח דף חיבור</string>
 </resources>
