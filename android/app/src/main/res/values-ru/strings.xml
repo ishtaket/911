@@ -21,7 +21,7 @@
     <string name="next_action">Следующее действие</string>
     <string name="next_checks">Следующие проверки</string>
 
-    <string name="case_create">Новое дело</string>
+    <string name="case_create">+ Новое дело</string>
     <string name="case_title">Название дела</string>
     <string name="case_status">Статус</string>
     <string name="case_last_seen">Последнее место</string>
@@ -92,6 +92,13 @@
 
     <string name="upload_not_implemented">загрузка медиа ещё не подключена к бэкенду.</string>
     <string name="create_case_not_implemented">Создание дела через POST /v1/cases ещё не подключено.</string>
+
+    <string name="create_case_language_label">Язык (en, he, ru)</string>
+    <string name="create_case_notes_label">Заметки</string>
+    <string name="create_case_submitting">Создаю дело на бэкенде…</string>
+    <string name="create_case_submitting_short">Создаю…</string>
+    <string name="create_case_failed">Создание не удалось: %1$s</string>
+    <string name="create_case_created">Дело создано: %1$s</string>
 
     <string name="evidence_results_web">Результаты веб-поиска</string>
     <string name="evidence_results_social">Результаты соц-поиска (только публичные)</string>

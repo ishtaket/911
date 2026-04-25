@@ -3,6 +3,7 @@ package com.rescue911.osint.data.remote
 import com.rescue911.osint.data.remote.dto.ArchiveStartResponseDto
 import com.rescue911.osint.data.remote.dto.AuditEntryDto
 import com.rescue911.osint.data.remote.dto.CaseDto
+import com.rescue911.osint.data.remote.dto.CreateCaseRequestDto
 import com.rescue911.osint.data.remote.dto.EvidenceDto
 import com.rescue911.osint.data.remote.dto.GeoIntStartResponseDto
 import com.rescue911.osint.data.remote.dto.HealthDto
@@ -30,6 +31,9 @@ interface Rescue911Api {
 
     @GET("v1/cases")
     suspend fun listCases(): List<CaseDto>
+
+    @POST("v1/cases")
+    suspend fun createCase(@Body body: CreateCaseRequestDto): CaseDto
 
     @GET("v1/cases/{id}")
     suspend fun getCase(@Path("id") id: String): CaseDto

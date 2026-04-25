@@ -82,13 +82,17 @@ class EvidenceInboxViewModel @Inject constructor(
 
     /** Dispatch via the channel-specific backend endpoint.
      *
-     *  ARCHIVE is special: backend returns a structured ArchiveStartResponse
-     *  with a `state` of no_targets / no_results / completed. We surface the
-     *  state-specific message verbatim so the operator knows whether to run
-     *  web/social search first.
+     *  All branches set a visible banner — never leave the screen empty
+     *  without explanation.
      *
-     *  GEOINT is special: backend returns a structured GeoIntStartResponse
-     *  with `state=no_media_uploaded` until POST /v1/media is wired. */
+     *  ARCHIVE  : structured ArchiveStartResponse → no_targets / no_results
+     *             / completed banner.
+     *  GEOINT   : structured GeoIntStartResponse → no_media_uploaded etc.
+     *  WEB/SOC. : if 0 evidence returned, also fetch /v1/providers and
+     *             surface the per-provider state for that channel
+     *             (connected / mock / not_configured / error / rate_limited)
+     *             so the operator knows *why* it was empty.
+     */
     fun dispatchSearch(caseId: String, kind: SearchKind) {
         viewModelScope.launch {
             val result = runCatching {
@@ -123,7 +127,14 @@ class EvidenceInboxViewModel @Inject constructor(
                 onSuccess = { fresh ->
                     val mineCount = if (kind.sources.isEmpty()) fresh.size
                         else fresh.count { it.sourceType in kind.sources }
-                    _banner.value = "Dispatched ${kind.name.lowercase()}: ${fresh.size} item(s) returned, $mineCount matched." to BannerKind.SUCCESS
+                    if (fresh.isEmpty()) {
+                        // Empty results: pull provider states so the operator
+                        // sees WHY (mock / not_configured / etc.).
+                        val diag = runCatching { providerDiag(kind) }.getOrDefault("diagnostics unavailable")
+                        _banner.value = "Dispatched ${kind.name.lowercase()}: 0 item(s) returned. $diag" to BannerKind.WARNING
+                    } else {
+                        _banner.value = "Dispatched ${kind.name.lowercase()}: ${fresh.size} item(s) returned, $mineCount matched." to BannerKind.SUCCESS
+                    }
                     load(caseId)
                 },
                 onFailure = {
@@ -131,6 +142,22 @@ class EvidenceInboxViewModel @Inject constructor(
                 },
             )
         }
+    }
+
+    private suspend fun providerDiag(kind: SearchKind): String {
+        // Map each SearchKind to the relevant provider IDs in /v1/providers.
+        val ids = when (kind) {
+            SearchKind.WEB -> setOf("brave_web_search", "google_cse", "google_kg_search", "serpapi")
+            SearchKind.SOCIAL -> setOf(
+                "youtube_data_api", "telegram_public", "reddit_public", "meta_public_pages",
+                "x_public", "vk_public", "tiktok_public", "instagram_public", "linkedin_public",
+            )
+            else -> emptySet()
+        }
+        val list = api.listProviders().providers.filter { it.providerId in ids }
+        if (list.isEmpty()) return ""
+        val summary = list.joinToString(", ") { "${it.providerId}=${it.state.name.lowercase()}" }
+        return "Providers: $summary."
     }
 }
 

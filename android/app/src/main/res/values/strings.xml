@@ -24,7 +24,7 @@
     <string name="next_checks">Next checks</string>
 
     <!-- cases -->
-    <string name="case_create">New case</string>
+    <string name="case_create">+ New case</string>
     <string name="case_title">Case title</string>
     <string name="case_status">Status</string>
     <string name="case_last_seen">Last seen location</string>
@@ -107,6 +107,14 @@
     <!-- upload / create-case placeholders -->
     <string name="upload_not_implemented">media upload is not yet wired to the backend.</string>
     <string name="create_case_not_implemented">Case creation via backend POST /v1/cases is not wired yet.</string>
+
+    <!-- create case (real flow) -->
+    <string name="create_case_language_label">Language (en, he, ru)</string>
+    <string name="create_case_notes_label">Notes</string>
+    <string name="create_case_submitting">Creating case on backend…</string>
+    <string name="create_case_submitting_short">Creating…</string>
+    <string name="create_case_failed">Create failed: %1$s</string>
+    <string name="create_case_created">Case created: %1$s</string>
 
     <!-- typed evidence views -->
     <string name="evidence_results_web">Web Search Results</string>

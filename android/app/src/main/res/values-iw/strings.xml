@@ -21,7 +21,7 @@
     <string name="next_action">פעולה הבאה</string>
     <string name="next_checks">בדיקות נוספות</string>
 
-    <string name="case_create">תיק חדש</string>
+    <string name="case_create">+ תיק חדש</string>
     <string name="case_title">כותרת התיק</string>
     <string name="case_status">סטטוס</string>
     <string name="case_last_seen">מקום נראה לאחרונה</string>
@@ -92,6 +92,13 @@
 
     <string name="upload_not_implemented">העלאת מדיה עדיין לא מחוברת לשרת.</string>
     <string name="create_case_not_implemented">יצירת תיק דרך POST /v1/cases עדיין לא מחוברת.</string>
+
+    <string name="create_case_language_label">שפה (en, he, ru)</string>
+    <string name="create_case_notes_label">הערות</string>
+    <string name="create_case_submitting">יוצר תיק בשרת…</string>
+    <string name="create_case_submitting_short">יוצר…</string>
+    <string name="create_case_failed">היצירה נכשלה: %1$s</string>
+    <string name="create_case_created">תיק נוצר: %1$s</string>
 
     <string name="evidence_results_web">תוצאות חיפוש רשת</string>
     <string name="evidence_results_social">תוצאות חיפוש חברתי (ציבורי בלבד)</string>

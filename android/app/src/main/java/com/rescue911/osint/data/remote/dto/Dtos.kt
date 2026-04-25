@@ -110,6 +110,23 @@ data class PersonDto(
 )
 
 @Serializable
+data class CreatePersonDto(
+    @SerialName("full_name") val fullName: String,
+    val description: String? = null,
+)
+
+@Serializable
+data class CreateCaseRequestDto(
+    val title: String,
+    val description: String? = null,
+    val person: CreatePersonDto,
+    @SerialName("last_seen_location") val lastSeenLocation: String? = null,
+    val languages: List<String> = listOf("en"),
+    @SerialName("risk_notes") val riskNotes: String? = null,
+    @SerialName("operator_id") val operatorId: String? = null,
+)
+
+@Serializable
 data class CaseDto(
     val id: String,
     val title: String,

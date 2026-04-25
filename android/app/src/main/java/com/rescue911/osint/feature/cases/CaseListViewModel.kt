@@ -18,7 +18,13 @@ class CaseListViewModel @Inject constructor(
     private val _cases = MutableStateFlow<List<MissingCase>?>(null)
     val cases: StateFlow<List<MissingCase>?> = _cases.asStateFlow()
 
-    init {
+    init { refresh() }
+
+    /** Re-fetch the list. The repository's cases() is a cold flow that
+     *  emits once; the screen re-invokes this on each re-entry so a case
+     *  created via POST /v1/cases shows up immediately when the user pops
+     *  back from CaseDetail. */
+    fun refresh() {
         viewModelScope.launch {
             repository.cases().collect { _cases.value = it }
         }
