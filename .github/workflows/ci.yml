@@ -1,46 +1,142 @@
-name: ci
+name: Rescue911 CI
+
+# Runs backend pytest, Android JVM unit tests, and repository safety checks.
+# Emulator / instrumented Android tests are intentionally NOT in CI yet — they
+# run locally against the stable Rescue911_API_30_default AVD. A future
+# workflow can add them via reactivecircus/android-emulator-runner if needed.
 
 on:
   push:
-    branches: [main]
   pull_request:
 
 jobs:
-  backend:
+  backend-tests:
+    name: Backend pytest
     runs-on: ubuntu-latest
     defaults:
       run:
         working-directory: backend
     steps:
       - uses: actions/checkout@v4
-      - name: Set up Python
+
+      - name: Set up Python 3.12
         uses: actions/setup-python@v5
         with:
           python-version: "3.12"
           cache: pip
-      - name: Install
+          cache-dependency-path: backend/requirements.txt
+
+      - name: Install backend requirements
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
-      - name: Pytest
-        run: pytest -q
 
-  android-lint:
+      # Run pytest from the backend directory so that root-level files like
+      # test_log.txt are never collected as tests (caused UnicodeDecodeError
+      # when invoked from repo root locally).
+      - name: Run pytest
+        run: python -m pytest -q
+
+  android-unit-tests:
+    name: Android :app:testDebugUnitTest
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: android
     steps:
       - uses: actions/checkout@v4
-      - name: Set up JDK 17
+
+      - name: Set up JDK 17 (Temurin)
         uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: "17"
-      - name: Validate gradle config
+
+      - name: Cache Gradle
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: gradle-${{ runner.os }}-${{ hashFiles('android/**/*.gradle*', 'android/gradle/wrapper/gradle-wrapper.properties') }}
+          restore-keys: |
+            gradle-${{ runner.os }}-
+
+      - name: Make gradlew executable
+        run: chmod +x android/gradlew
+
+      # JVM unit tests only — no emulator, no instrumentation.
+      - name: Run unit tests
+        working-directory: android
+        run: ./gradlew :app:testDebugUnitTest --console=plain --no-daemon --stacktrace
+
+      - name: Upload unit test report on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-unit-test-report
+          path: android/app/build/reports/tests/testDebugUnitTest/
+          if-no-files-found: ignore
+
+  repository-safety:
+    name: Repository safety checks
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # Fail if any forbidden artifact is tracked in git. Use `git ls-files`
+      # rather than a filesystem scan so we only flag committed files (the
+      # workflow itself is checked-out into the runner, which contains build
+      # outputs once Android jobs run — but this job runs in isolation).
+      - name: Check for forbidden tracked files
         run: |
-          ls -la
-          echo "Wrapper jar present? $(test -f gradle/wrapper/gradle-wrapper.jar && echo yes || echo no)"
-          echo "Gradle build files exist."
-          # Full gradle build is gated on having an Android SDK + the wrapper jar.
-          # CI will materialize them in a follow-up workflow.
+          set -e
+          echo "Scanning tracked files for forbidden artifacts..."
+
+          forbidden=$(git ls-files | grep -E '^(\.env(\..+)?|backend/\.venv/|logs/|android/app/build/|android/\.gradle/|android/local\.properties)$|\.(apk|aab|png|jpg|jpeg|webp)$' | grep -vE '^\.env\.example$' || true)
+
+          if [ -n "$forbidden" ]; then
+            echo "::error::Forbidden tracked files detected:"
+            echo "$forbidden"
+            exit 1
+          fi
+          echo "OK: no forbidden tracked files."
+
+      # Fail if obvious real-secret patterns appear in tracked source.
+      # Empty placeholders (KEY=, KEY=""), example values, and docs are allowed.
+      - name: Scan for committed secrets
+        run: |
+          set -e
+          echo "Scanning tracked files for secret patterns..."
+
+          # Use git ls-files to bound the scan to tracked files only.
+          tracked=$(git ls-files | grep -vE '\.(png|jpg|jpeg|webp|jar|zip|gz|ico)$' || true)
+          if [ -z "$tracked" ]; then
+            echo "No tracked text files to scan."
+            exit 0
+          fi
+
+          fail=0
+
+          check() {
+            local pattern="$1"
+            local label="$2"
+            # -n line numbers, -I skip binary, -H always show filename
+            local hits
+            hits=$(echo "$tracked" | xargs grep -nIH -E "$pattern" 2>/dev/null || true)
+            if [ -n "$hits" ]; then
+              echo "::error::$label found:"
+              echo "$hits"
+              fail=1
+            fi
+          }
+
+          # Real key shapes: only flag when the value looks real, not empty.
+          check 'OPENAI_API_KEY[[:space:]]*=[[:space:]]*sk-[A-Za-z0-9_-]{16,}'    'OpenAI key'
+          check 'GOOGLE_API_KEY[[:space:]]*=[[:space:]]*AIza[A-Za-z0-9_-]{20,}'   'Google API key'
+          check 'BRAVE_SEARCH_API_KEY[[:space:]]*=[[:space:]]*[A-Za-z0-9][A-Za-z0-9_-]{15,}' 'Brave Search key'
+          check 'GEOSEER_API_KEY[[:space:]]*=[[:space:]]*[A-Za-z0-9][A-Za-z0-9_-]{15,}'      'Geoseer key'
+          check 'PICARTA_API_KEY[[:space:]]*=[[:space:]]*[A-Za-z0-9][A-Za-z0-9_-]{15,}'      'Picarta key'
+          check 'AWS_SECRET_ACCESS_KEY[[:space:]]*=[[:space:]]*[A-Za-z0-9/+=]{30,}'          'AWS secret'
+
+          if [ "$fail" -ne 0 ]; then
+            exit 1
+          fi
+          echo "OK: no secret patterns found in tracked source."

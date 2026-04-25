@@ -16,6 +16,7 @@
 # Kotlin
 *.class
 *.jar
+!android/gradle/wrapper/gradle-wrapper.jar
 *.war
 *.nar
 *.ear
@@ -27,7 +28,7 @@
 /android/.gradle/
 /android/build/
 /android/app/build/
-/android/gradle/wrapper/gradle-wrapper.jar
+# gradle-wrapper.jar is intentionally tracked — required for CI and reproducible builds
 
 # IDE
 .idea/
