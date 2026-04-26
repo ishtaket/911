@@ -81,11 +81,18 @@ def list_providers(settings: Settings | None = None) -> ProviderListResponse:
              has_key=bool(s.brave_search_api_key), mock=mock,
              auth_type=ProviderAuthType.API_KEY,
              safe_scope="Public web index. No private data."),
-        _row("google_cse", ProviderType.WEB_SEARCH, "Google Programmable Search (CSE)",
-             has_key=bool(s.google_maps_api_key), mock=mock,
+        _row("google_cse", ProviderType.WEB_SEARCH, "Google Custom Search JSON API",
+             has_key=bool(s.google_cse_api_key and s.google_cse_engine_id), mock=mock,
              auth_type=ProviderAuthType.API_KEY,
-             safe_scope="Public web via Google CSE. Requires CSE engine ID + API key.",
-             note="Re-uses GOOGLE_MAPS_API_KEY in current wrapper"),
+             safe_scope=(
+                 "Official Google Programmable Search / Custom Search JSON "
+                 "API. Public web results only. Backend-side key only."
+             ),
+             note=(
+                 "Set GOOGLE_CSE_API_KEY and GOOGLE_CSE_ENGINE_ID. The "
+                 "Custom Search JSON API may be unavailable for new "
+                 "Google Cloud projects — a 403 surfaces as not_configured."
+             )),
         _row("serpapi", ProviderType.WEB_SEARCH, "SerpAPI",
              has_key=False, mock=mock,
              auth_type=ProviderAuthType.API_KEY,

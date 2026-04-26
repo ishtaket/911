@@ -45,15 +45,29 @@ def get_web_search_providers(settings: Settings | None = None) -> list[WebSearch
     silent fallback. Real providers may raise ProviderNotConfigured / errors
     which the orchestrator audit-logs per provider.
 
+    Order matters — providers are queried in list order and surfaced to the
+    operator in the same order:
+      1. Google Custom Search JSON API   (primary public-web search)
+      2. Google Knowledge Graph          (entity lookup; supplemental)
+      3. Brave Search                    (alternative public-web search)
+      4. SerpAPI                         (TODO; not yet implemented)
+      5. Mock                            (only when MOCK_PROVIDERS=true)
+
     Knowledge Graph is included alongside web-search providers so the case's
-    person name resolves to public entities (people / places / orgs)."""
+    person name resolves to public entities (people / places / orgs). It is
+    NOT a general web-search engine."""
     s = settings or get_settings()
-    if s.mock_providers and not (s.brave_search_api_key or s.google_kg_api_key):
+    has_any_real_key = bool(
+        s.google_cse_api_key or s.google_kg_api_key or s.brave_search_api_key
+    )
+    if s.mock_providers and not has_any_real_key:
         return [MockWebSearchProvider()]
     real: list[WebSearchProvider] = [
-        BraveWebSearchProvider(api_key=s.brave_search_api_key),
-        GoogleCseWebSearchProvider(api_key=s.google_maps_api_key),
+        GoogleCseWebSearchProvider(
+            api_key=s.google_cse_api_key, cse_id=s.google_cse_engine_id,
+        ),
         GoogleKnowledgeGraphProvider(api_key=s.google_kg_api_key),
+        BraveWebSearchProvider(api_key=s.brave_search_api_key),
     ]
     if s.mock_providers:
         real.append(MockWebSearchProvider())

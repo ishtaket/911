@@ -102,6 +102,8 @@ def test_web_dispatch_state_not_configured_when_strict_no_keys(monkeypatch):
         "brave_search_api_key": None,
         "google_kg_api_key": None,
         "google_maps_api_key": None,
+        "google_cse_api_key": None,
+        "google_cse_engine_id": None,
     })
     monkeypatch.setattr(
         registry_mod, "get_web_search_providers", lambda settings=None: real_get_web(s)

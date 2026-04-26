@@ -45,6 +45,11 @@ class Settings(BaseSettings):
     youtube_api_key: str | None = None
     google_vision_api_key: str | None = None
     google_kg_api_key: str | None = None
+    # Google Custom Search JSON API (Programmable Search). Both must be set
+    # for the provider to be "connected". Do NOT reuse google_maps_api_key
+    # for CSE — CSE billing/quota is tracked separately by key.
+    google_cse_api_key: str | None = None
+    google_cse_engine_id: str | None = None
     telegram_api_id: str | None = None
     telegram_api_hash: str | None = None
     meta_app_id: str | None = None
