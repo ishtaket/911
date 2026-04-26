@@ -1,17 +1,36 @@
-"""Search-engine snippet provider — surfaces indexed snippets that may persist after page deletion."""
+"""Search-engine snippet "archive" provider (placeholder).
+
+The intent of this provider is to surface indexed snippets that may
+persist after the underlying page is deleted — operators sometimes
+recover information from Bing / Google cache or Brave's indexed
+snippet that points to a dead URL.
+
+Strict mode: this provider has **no real implementation yet**. The
+previous version silently fell back to `MockArchiveProvider`, which
+leaked deterministic fake snapshots ("[mock archive] snapshot N for:
+…") into the operator's Archive Results screen *even when
+MOCK_PROVIDERS=false*. That violated the project rule "no fake
+evidence in Backend mode".
+
+Until a real snippet-extraction backend lands here (TODO), the
+provider raises `ProviderNotConfigured` so the orchestrator audit-logs
+it and the dispatch response surfaces the truth instead of fabricating
+results.
+"""
 from __future__ import annotations
 
-from app.providers.archive.mock import MockArchiveProvider
-from app.providers.base import ArchiveProvider
+from app.providers.base import ArchiveProvider, ProviderNotConfigured
 from app.schemas.provider_result import ProviderResult
 
 
 class SearchSnippetArchiveProvider(ArchiveProvider):
     name = "search_snippet"
 
-    def __init__(self) -> None:
-        self._fallback = MockArchiveProvider()
-
     async def lookup(self, url_or_query: str, limit: int = 10) -> list[ProviderResult]:
-        # TODO: extract snippets from Brave/Google CSE results that point to dead URLs.
-        return await self._fallback.lookup(url_or_query, limit=limit)
+        raise ProviderNotConfigured(
+            "Search-snippet archive provider has no real implementation "
+            "yet. It used to silently mock; in strict Backend mode it "
+            "now raises ProviderNotConfigured. Implement real snippet "
+            "extraction (Bing/Google cache, Brave snippet) before "
+            "re-enabling."
+        )

@@ -3,6 +3,7 @@ from __future__ import annotations
 
 from uuid import UUID
 
+from app.config import get_settings
 from app.schemas.evidence import Evidence, EvidenceStatus
 from app.schemas.provider_result import ProviderResult, SourceType
 from app.schemas.validation import ValidationLevel1, ValidationState
@@ -51,7 +52,17 @@ def normalize_and_store_with_stats(
     out: list[Evidence] = []
     deduped = 0
     store = get_store()
+    # Belt-and-suspenders: in strict Backend mode, refuse to store any
+    # ProviderResult whose provider name starts with "mock_". The
+    # registry already gates MockArchiveProvider/MockWebSearchProvider/
+    # MockSocialSearchProvider behind MOCK_PROVIDERS=true, but this
+    # guard prevents a future regression (e.g. a stub that silently
+    # falls back to a mock) from leaking fake evidence into the
+    # operator's case in real mode.
+    strict_mode = not get_settings().mock_providers
     for pr in results:
+        if strict_mode and (pr.provider or "").startswith("mock_"):
+            continue
         l1 = _level1(case_id, pr)
         if not l1.duplicate_check_passed:
             deduped += 1

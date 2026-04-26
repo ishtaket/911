@@ -374,6 +374,27 @@ async def run_archive(case: Case) -> ArchiveStartResponse:
         async with sem:
             try:
                 return await p.lookup(t.url_or_pattern, limit=5)
+            except ProviderNotConfigured as exc:
+                # Stub provider with no real implementation yet (e.g.
+                # search_snippet). Distinct audit action so the
+                # operator can tell it apart from upstream errors.
+                audit_service.log(
+                    AuditEntryCreate(
+                        action="provider_not_configured",
+                        target_type="archive",
+                        metadata={"provider": p.name, "detail": str(exc)},
+                    )
+                )
+                return []
+            except RateLimitError as exc:
+                audit_service.log(
+                    AuditEntryCreate(
+                        action="rate_limited",
+                        target_type="archive",
+                        metadata={"provider": p.name, "detail": str(exc)},
+                    )
+                )
+                return []
             except Exception as exc:  # noqa: BLE001
                 audit_service.log(
                     AuditEntryCreate(
