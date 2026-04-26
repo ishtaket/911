@@ -45,6 +45,18 @@ class ProviderState(StrEnum):
     RATE_LIMITED = "rate_limited"
     ERROR = "error"
     MOCK = "mock"                        # safe deterministic stand-in
+    # Operator can configure keys, but the upstream API is closed to
+    # this Google Cloud project. Distinct from `not_configured` — there
+    # is nothing the operator can change locally to reach `connected`.
+    # Switching auth mode (e.g., OAuth instead of API key) does NOT fix
+    # this; the project lacks API access at the Google org level.
+    UNAVAILABLE = "unavailable"
+    # Provider depends on a manual UI / browser-assisted flow (e.g.,
+    # Programmable Search Element rendered in a webview) and cannot be
+    # invoked headlessly. Surfaced so the operator UI can route the
+    # user to the right manual flow instead of attempting a backend
+    # call that will never succeed.
+    MANUAL_UI_REQUIRED = "manual_ui_required"
 
 
 class ProviderAuthType(StrEnum):
@@ -57,6 +69,14 @@ class ProviderAuthType(StrEnum):
 
 class ProviderType(StrEnum):
     WEB_SEARCH = "web_search"
+    # Google Programmable Search Element rendered in a webview / iframe.
+    # No JSON API; results are fetched & rendered by Google's JS in the
+    # browser, then the operator copies what they want into evidence.
+    WEB_SEARCH_UI_ASSISTED = "web_search_ui_assisted"
+    # Indexed-site search (e.g., Vertex AI Search / Discovery Engine).
+    # Returns results from a configured collection of allow-listed sites,
+    # not the open web. Useful for narrow, source-controlled OSINT.
+    SITE_SEARCH = "site_search"
     PUBLIC_SOCIAL = "public_social"
     ARCHIVE = "archive"
     GEOINT = "geoint"

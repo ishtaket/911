@@ -116,6 +116,8 @@ private fun ProviderRow(
         ProviderStateDto.RATE_LIMITED -> stringResource(R.string.provider_state_rate_limited)
         ProviderStateDto.ERROR -> stringResource(R.string.provider_state_error)
         ProviderStateDto.DISABLED -> stringResource(R.string.provider_state_disabled)
+        ProviderStateDto.UNAVAILABLE -> stringResource(R.string.provider_state_unavailable)
+        ProviderStateDto.MANUAL_UI_REQUIRED -> stringResource(R.string.provider_state_manual_ui_required)
     }
     InfoCard(
         title = "${p.displayName} — $stateLabel",

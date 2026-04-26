@@ -11,6 +11,7 @@ from pydantic import BaseModel
 from app.providers.base import (
     ProviderAuthRequired,
     ProviderNotConfigured,
+    ProviderUnavailable,
     RateLimitError,
     SocialSearchProvider,
     WebSearchProvider,
@@ -34,7 +35,11 @@ from app.services.store import get_store
 class ProviderRunInfo(BaseModel):
     """Per-provider outcome of a single dispatch."""
     provider: str
-    state: str  # "ok" | "not_configured" | "auth_required" | "rate_limited" | "error"
+    # One of: "ok", "not_configured", "auth_required", "unavailable",
+    # "rate_limited", "error". `unavailable` means the upstream API has
+    # denied this account/project at the org level — local config can't
+    # fix it (distinct from "not_configured" which IS operator-fixable).
+    state: str
     items: int = 0
     detail: str | None = None  # error message if state != ok
 
@@ -134,6 +139,19 @@ async def _run_channel(
                         metadata={"provider": p.name},
                     )
                 )
+            except ProviderUnavailable as exc:
+                # Upstream account-level denial — sticky on this provider
+                # for this dispatch. Don't downgrade to a lesser state on
+                # subsequent variants.
+                info[p.name].state = "unavailable"
+                info[p.name].detail = str(exc)
+                audit_service.log(
+                    AuditEntryCreate(
+                        action="provider_unavailable",
+                        target_type=target_type_audit,
+                        metadata={"provider": p.name},
+                    )
+                )
             except RateLimitError as exc:
                 if info[p.name].state in ("ok", "not_configured", "auth_required"):
                     info[p.name].state = "rate_limited"
@@ -216,6 +234,10 @@ def _summary_message(
                           "configure backend env or enable MOCK_PROVIDERS=true.",
         "auth_required":  " All providers for this channel require OAuth — "
                           "complete the connect flow in Settings.",
+        "unavailable":    " Provider(s) are CLOSED to this account/project at "
+                          "the upstream level (e.g., Google Custom Search "
+                          "JSON API denied). OAuth will NOT fix this — pick "
+                          "a different provider or request access.",
         "rate_limited":   " All providers were rate-limited; retry later.",
         "provider_error": " At least one provider returned an error; "
                           "see the providers field for detail.",

@@ -1,14 +1,20 @@
 """Google Custom Search JSON API (Programmable Search) provider.
 
 Strict mode (no silent fallback):
-  - Missing api_key OR cse_id → raises `ProviderNotConfigured`.
-  - HTTP 403                  → raises `ProviderNotConfigured` with a clear
-                                message: the Custom Search JSON API may not
-                                be enabled for this project, or Google has
-                                closed it to new customers. Either way, this
-                                is operator action — not a runtime retry.
-  - HTTP 429                  → raises `RateLimitError`.
-  - Other transport errors    → re-raised so the orchestrator audit-logs them.
+  - Missing api_key OR cse_id   → raises `ProviderNotConfigured`.
+  - 403 PERMISSION_DENIED with
+    "does not have the access" → raises `ProviderUnavailable`. This is
+                                  the project-level account denial Google
+                                  returns when Custom Search JSON API is
+                                  not granted to a Google Cloud project.
+                                  OAuth does NOT fix this — Custom Search
+                                  JSON API only accepts API-key auth, and
+                                  the denial is at the project level.
+  - Other 403                   → raises `ProviderNotConfigured` (treat as
+                                  operator-fixable: enable the API,
+                                  whitelist the key, etc.).
+  - HTTP 429                    → raises `RateLimitError`.
+  - Other transport errors      → re-raised so the orchestrator audit-logs them.
 
 Mock fallback for development is provided by `MockWebSearchProvider`, which
 the registry only includes when `MOCK_PROVIDERS=true`.
@@ -24,6 +30,7 @@ import httpx
 
 from app.providers.base import (
     ProviderNotConfigured,
+    ProviderUnavailable,
     RateLimitError,
     WebSearchProvider,
 )
@@ -63,6 +70,34 @@ class GoogleCseWebSearchProvider(WebSearchProvider):
         async with httpx.AsyncClient(timeout=CSE_TIMEOUT_SEC) as client:
             resp = await client.get(CSE_ENDPOINT, params=params)
             if resp.status_code == 403:
+                # Two distinct 403 shapes from Google:
+                #
+                # (a) Project-level denial — Google has closed Custom
+                #     Search JSON API to this project. Body looks like:
+                #       {"error":{"code":403,"status":"PERMISSION_DENIED",
+                #         "message":"... does not have the access to
+                #          Custom Search JSON API ..."}}
+                #     OAuth does NOT fix this; the operator must request
+                #     access or pick a different provider.
+                #
+                # (b) Operator-fixable 403 — API not enabled, key not
+                #     whitelisted, billing not active, etc.
+                err_text = (resp.text or "")
+                err_lower = err_text.lower()
+                permission_denied = (
+                    "permission_denied" in err_lower
+                    or "does not have the access" in err_lower
+                    or "does not have access" in err_lower
+                )
+                if permission_denied:
+                    raise ProviderUnavailable(
+                        "Google Custom Search JSON API is unavailable for "
+                        "this Google Cloud project. OAuth will not fix "
+                        "this — Custom Search JSON API only accepts API-"
+                        "key auth and the denial is at the project / "
+                        "account level. Either request access from "
+                        "Google or use a different web-search provider."
+                    )
                 raise ProviderNotConfigured(
                     "Google Custom Search API returned 403. This project "
                     "may not have access to the Custom Search JSON API "

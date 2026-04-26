@@ -32,6 +32,18 @@ class RateLimitError(RuntimeError):
     """Raised on 429 / quota-exceeded from the upstream provider."""
 
 
+class ProviderUnavailable(RuntimeError):
+    """Raised when the upstream API is closed to this account/project at
+    the org level — distinct from `ProviderNotConfigured`. Configuring
+    keys or switching to OAuth will NOT fix this; the operator must
+    request access from the upstream vendor or use a different provider.
+
+    Concrete trigger seen in production: Google Custom Search JSON API
+    returning 403 PERMISSION_DENIED with body
+        "This project does not have the access to Custom Search JSON API."
+    """
+
+
 class WebSearchProvider(ABC):
     name: str = "web_search"
 

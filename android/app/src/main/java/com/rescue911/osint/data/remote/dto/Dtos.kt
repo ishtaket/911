@@ -227,6 +227,17 @@ enum class ProviderStateDto {
     @SerialName("rate_limited") RATE_LIMITED,
     @SerialName("error") ERROR,
     @SerialName("mock") MOCK,
+    /**
+     * Operator can configure keys, but the upstream API is closed to
+     * this provider's Google/Cloud project. OAuth and other auth-mode
+     * changes do NOT fix this; it is an upstream account-level denial.
+     */
+    @SerialName("unavailable") UNAVAILABLE,
+    /**
+     * Provider depends on a manual UI / browser-assisted flow and
+     * cannot be invoked headlessly. Operator must use the dedicated UI.
+     */
+    @SerialName("manual_ui_required") MANUAL_UI_REQUIRED,
 }
 
 @Serializable

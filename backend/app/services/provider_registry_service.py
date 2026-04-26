@@ -50,8 +50,11 @@ def _row(
     note: str | None = None,
     connect_url: str | None = None,
     public_no_auth: bool = False,
+    forced_state: ProviderState | None = None,
 ) -> ProviderInfoV2:
-    if public_no_auth:
+    if forced_state is not None:
+        st = forced_state
+    elif public_no_auth:
         st = ProviderState.CONNECTED
     else:
         st = _state(has_key, mock, auth_type)
@@ -89,9 +92,48 @@ def list_providers(settings: Settings | None = None) -> ProviderListResponse:
                  "API. Public web results only. Backend-side key only."
              ),
              note=(
-                 "Set GOOGLE_CSE_API_KEY and GOOGLE_CSE_ENGINE_ID. The "
-                 "Custom Search JSON API may be unavailable for new "
-                 "Google Cloud projects — a 403 surfaces as not_configured."
+                 "Set GOOGLE_CSE_API_KEY and GOOGLE_CSE_ENGINE_ID. If the "
+                 "Custom Search JSON API is closed to this Google Cloud "
+                 "project, dispatch surfaces state=unavailable with a 403 "
+                 "PERMISSION_DENIED detail. OAuth does NOT fix that — the "
+                 "API only accepts API-key auth and the denial is at the "
+                 "project level."
+             )),
+        _row("google_programmable_search_element",
+             ProviderType.WEB_SEARCH_UI_ASSISTED,
+             "Google Programmable Search Element (UI-assisted)",
+             has_key=False, mock=False,
+             auth_type=ProviderAuthType.NONE,
+             safe_scope=(
+                 "Google's official Programmable Search rendered as a JS "
+                 "search element inside a webview / browser. Operator "
+                 "browses results in the embedded surface and copies "
+                 "promising hits into evidence; backend never queries "
+                 "Google directly. No JSON API, no scraping, no cookies."
+             ),
+             note=(
+                 "Manual UI flow only — backend will not invoke this "
+                 "provider headlessly. Recommended fallback when Custom "
+                 "Search JSON API is unavailable for the Google project."
+             ),
+             forced_state=ProviderState.MANUAL_UI_REQUIRED),
+        _row("vertex_ai_search",
+             ProviderType.SITE_SEARCH,
+             "Vertex AI Search (site search)",
+             has_key=False, mock=False,
+             auth_type=ProviderAuthType.SERVICE_ACCOUNT,
+             safe_scope=(
+                 "Google Cloud Vertex AI Search / Discovery Engine over an "
+                 "operator-curated allow-list of public sites. Returns "
+                 "indexed-site results, not the open web. Backend-side "
+                 "service-account credentials only; never ships to Android."
+             ),
+             note=(
+                 "Planned. Requires a Google Cloud project with Vertex AI "
+                 "Search enabled, a service account JSON key, and a "
+                 "data store of allow-listed public sites. Distinct from "
+                 "Custom Search JSON API and not subject to the same "
+                 "PERMISSION_DENIED gate."
              )),
         _row("serpapi", ProviderType.WEB_SEARCH, "SerpAPI",
              has_key=False, mock=mock,

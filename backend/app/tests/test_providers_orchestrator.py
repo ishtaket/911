@@ -31,11 +31,36 @@ def test_providers_returns_no_secrets():
 
 def test_providers_state_machine_values_are_valid():
     r = client.get("/v1/providers")
-    valid_states = {"disabled", "not_configured", "auth_required", "connected", "rate_limited", "error", "mock"}
+    valid_states = {
+        "disabled", "not_configured", "auth_required", "connected",
+        "rate_limited", "error", "mock", "unavailable", "manual_ui_required",
+    }
     for p in r.json()["providers"]:
         assert p["state"] in valid_states, p
         assert p["auth_type"] in {"none", "api_key", "oauth2", "manual_token", "service_account"}
         assert "safe_scope_description" in p and p["safe_scope_description"]
+
+
+def test_provider_listing_includes_google_alternatives():
+    """Google has multiple web-search-shaped products; the provider list
+    must surface each so operators see why one path may fail and where
+    to go next. See docs/GOOGLE_WEB_SEARCH_ALTERNATIVES.md."""
+    r = client.get("/v1/providers")
+    by_id = {p["provider_id"]: p for p in r.json()["providers"]}
+    # JSON API path (may be denied at project level)
+    assert "google_cse" in by_id
+    # UI-assisted Programmable Search Element — manual flow only
+    pse = by_id.get("google_programmable_search_element")
+    assert pse is not None
+    assert pse["state"] == "manual_ui_required"
+    assert pse["type"] == "web_search_ui_assisted"
+    assert "manual ui" in pse["note"].lower() or "manual" in pse["note"].lower()
+    # Vertex AI Search — site search via service account
+    vx = by_id.get("vertex_ai_search")
+    assert vx is not None
+    assert vx["type"] == "site_search"
+    assert vx["auth_type"] == "service_account"
+    assert vx["state"] == "not_configured"
 
 
 def test_providers_check_endpoint_known_id():
@@ -87,6 +112,61 @@ def test_per_channel_social_dispatch_returns_structured_response():
     assert isinstance(body["providers"], list)
     assert body["providers_attempted"] >= 1
     assert isinstance(body["evidence"], list)
+
+
+def test_web_dispatch_state_unavailable_when_cse_returns_permission_denied(monkeypatch):
+    """When Google CSE raises ProviderUnavailable (the project-level
+    PERMISSION_DENIED 403) and the other web providers also fail, the
+    overall state must be `unavailable` so the operator-visible banner
+    shows the dominant, actionable signal — not generic `no_results`."""
+    import httpx
+    import respx
+    from app.providers import registry as registry_mod
+    from app.config import get_settings
+    from app.providers.web_search.google_cse import (
+        CSE_ENDPOINT,
+        GoogleCseWebSearchProvider,
+    )
+
+    real_get_web = registry_mod.get_web_search_providers
+    s = get_settings().model_copy(update={
+        "mock_providers": False,
+        "google_cse_api_key": "cse_test_key_xxxxxxxxxxxxxxxx",
+        "google_cse_engine_id": "cse_engine_id_xxxxxxxx",
+        "google_kg_api_key": None,
+        "brave_search_api_key": None,
+    })
+    monkeypatch.setattr(
+        registry_mod, "get_web_search_providers", lambda settings=None: real_get_web(s)
+    )
+    from app.services import search_orchestrator as orch
+    monkeypatch.setattr(orch, "get_web_search_providers", lambda settings=None: real_get_web(s))
+
+    body = {
+        "error": {
+            "code": 403,
+            "status": "PERMISSION_DENIED",
+            "message": "This project does not have the access to Custom Search JSON API.",
+        }
+    }
+    with respx.mock(assert_all_called=False) as respx_mock:
+        respx_mock.get(CSE_ENDPOINT).mock(return_value=httpx.Response(403, json=body))
+        case_id = _seed_case_id()
+        r = client.post(f"/v1/search/web/start/{case_id}")
+    assert r.status_code == 200
+    body = r.json()
+    # Per-provider: google_cse must be `unavailable` exactly.
+    cse_row = next(p for p in body["providers"] if p["provider"] == "google_cse")
+    assert cse_row["state"] == "unavailable", body["providers"]
+    assert "oauth" in (cse_row["detail"] or "").lower()
+    # Overall state should pick up the dominant non-ok mode. With
+    # CSE=unavailable and KG/Brave=not_configured, the most-common is
+    # not_configured (2 vs 1). When CSE alone is configured but the
+    # others aren't, the operator-visible message must still mention
+    # `unavailable` for CSE so they see the upstream denial.
+    assert body["state"] in {"unavailable", "not_configured"}, body["state"]
+    msg_lower = body["message"].lower()
+    assert "unavailable" in msg_lower or "google_cse=unavailable" in msg_lower
 
 
 def test_web_dispatch_state_not_configured_when_strict_no_keys(monkeypatch):

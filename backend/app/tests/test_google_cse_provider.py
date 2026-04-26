@@ -20,7 +20,11 @@ from fastapi.testclient import TestClient
 
 from app.config import get_settings
 from app.main import create_app
-from app.providers.base import ProviderNotConfigured, RateLimitError
+from app.providers.base import (
+    ProviderNotConfigured,
+    ProviderUnavailable,
+    RateLimitError,
+)
 from app.providers.registry import get_web_search_providers
 from app.providers.web_search.google_cse import (
     CSE_ENDPOINT,
@@ -103,11 +107,9 @@ async def test_cse_normalizes_real_response():
 
 @pytest.mark.asyncio
 @respx.mock
-async def test_cse_403_raises_not_configured_with_clear_message():
-    """A 403 from Google CSE typically means the Custom Search JSON API is
-    not enabled for the project, or Google has closed it to new customers.
-    Surface this as ProviderNotConfigured with a clear message — never as a
-    silent empty list."""
+async def test_cse_403_generic_raises_not_configured_with_clear_message():
+    """Generic 403 (API not enabled, key not whitelisted, etc.) is
+    operator-fixable, so it surfaces as ProviderNotConfigured."""
     respx.get(CSE_ENDPOINT).mock(
         return_value=httpx.Response(403, json={"error": {"code": 403, "message": "Forbidden"}})
     )
@@ -120,6 +122,34 @@ async def test_cse_403_raises_not_configured_with_clear_message():
     msg = str(exc.value).lower()
     assert "403" in msg
     assert "custom search" in msg
+
+
+@pytest.mark.asyncio
+@respx.mock
+async def test_cse_403_permission_denied_raises_unavailable():
+    """The specific Google project-level denial:
+        403 PERMISSION_DENIED
+        "This project does not have the access to Custom Search JSON API."
+    must surface as ProviderUnavailable (NOT ProviderNotConfigured),
+    because it is NOT operator-fixable via local config: OAuth and key
+    rotation cannot grant access at the project level."""
+    body = {
+        "error": {
+            "code": 403,
+            "status": "PERMISSION_DENIED",
+            "message": "This project does not have the access to Custom Search JSON API.",
+        }
+    }
+    respx.get(CSE_ENDPOINT).mock(return_value=httpx.Response(403, json=body))
+    p = GoogleCseWebSearchProvider(
+        api_key="cse_test_key_xxxxxxxxxxxxxxxx",
+        cse_id="cse_engine_id_xxxxxxxx",
+    )
+    with pytest.raises(ProviderUnavailable) as exc:
+        await p.search("anything")
+    msg = str(exc.value).lower()
+    assert "unavailable" in msg
+    assert "oauth" in msg, "operator must be told that OAuth does not fix this"
 
 
 @pytest.mark.asyncio

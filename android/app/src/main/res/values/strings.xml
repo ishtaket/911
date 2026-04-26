@@ -145,5 +145,7 @@
     <string name="provider_state_rate_limited">Rate limited</string>
     <string name="provider_state_error">Error</string>
     <string name="provider_state_disabled">Disabled</string>
+    <string name="provider_state_unavailable">Unavailable (upstream)</string>
+    <string name="provider_state_manual_ui_required">Manual UI required</string>
     <string name="provider_action_connect">Open connect page</string>
 </resources>
