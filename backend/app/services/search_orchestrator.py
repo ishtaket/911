@@ -6,6 +6,8 @@ provider registry, evidence normalizer, and audit logger.
 """
 from __future__ import annotations
 
+import asyncio
+
 from pydantic import BaseModel
 
 from app.providers.base import (
@@ -348,22 +350,30 @@ async def run_archive(case: Case) -> ArchiveStartResponse:
         )
 
     providers = get_archive_providers()
-    raw_results: list[ProviderResult] = []
-    for t in targets:
-        for p in providers:
-            audit_service.log(
-                AuditEntryCreate(
-                    action="provider_call",
-                    target_type="archive",
-                    metadata={
-                        "provider": p.name,
-                        "target": t.url_or_pattern,
-                        "priority": t.priority,
-                    },
-                )
+
+    # Fan out (target × provider) calls concurrently with bounded
+    # concurrency. Wayback / Common Crawl per-call timeouts are
+    # already set inside each provider; we cap how many we keep in
+    # flight at once so the operator's dispatch returns in seconds,
+    # not minutes, even when Vertex produced ~5 unique anchor URLs
+    # (which expand to ~10-15 P1+P3 targets × 4 providers).
+    sem = asyncio.Semaphore(8)
+
+    async def _one(t, p) -> list[ProviderResult]:
+        audit_service.log(
+            AuditEntryCreate(
+                action="provider_call",
+                target_type="archive",
+                metadata={
+                    "provider": p.name,
+                    "target": t.url_or_pattern,
+                    "priority": t.priority,
+                },
             )
+        )
+        async with sem:
             try:
-                raw_results.extend(await p.lookup(t.url_or_pattern, limit=5))
+                return await p.lookup(t.url_or_pattern, limit=5)
             except Exception as exc:  # noqa: BLE001
                 audit_service.log(
                     AuditEntryCreate(
@@ -372,6 +382,11 @@ async def run_archive(case: Case) -> ArchiveStartResponse:
                         metadata={"provider": p.name, "error": str(exc)},
                     )
                 )
+                return []
+
+    tasks = [_one(t, p) for t in targets for p in providers]
+    batches = await asyncio.gather(*tasks, return_exceptions=False)
+    raw_results: list[ProviderResult] = [r for batch in batches for r in batch]
 
     stored = evidence_service.normalize_and_store(case.id, raw_results)
     if not stored:

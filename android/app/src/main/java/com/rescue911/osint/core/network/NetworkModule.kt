@@ -33,11 +33,20 @@ object NetworkModule {
     fun provideOkHttpClient(
         rewrite: HostRewriteInterceptor,
     ): OkHttpClient {
+        // Dispatch endpoints fan out to multiple upstream APIs (Vertex AI
+        // Search across query variants, then Wayback/Common Crawl across
+        // every URL anchor). End-to-end latency for a fresh archive
+        // dispatch is regularly ~60-120s. The previous 15s read-timeout
+        // surfaced as `Dispatch failed: SocketTimeoutException` in the
+        // Web/Archive inboxes — a UX regression with no upside, since
+        // the operator just retried until it worked. Bumped to 180s to
+        // cover the slowest legitimate dispatch we've measured.
         val builder = OkHttpClient.Builder()
             .addInterceptor(rewrite)
-            .connectTimeout(5, TimeUnit.SECONDS)
-            .readTimeout(15, TimeUnit.SECONDS)
-            .writeTimeout(15, TimeUnit.SECONDS)
+            .connectTimeout(10, TimeUnit.SECONDS)
+            .readTimeout(180, TimeUnit.SECONDS)
+            .writeTimeout(60, TimeUnit.SECONDS)
+            .callTimeout(200, TimeUnit.SECONDS)
         if (BuildConfig.DEBUG) {
             val logging = HttpLoggingInterceptor().apply {
                 level = HttpLoggingInterceptor.Level.BASIC

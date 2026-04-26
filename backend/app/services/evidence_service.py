@@ -9,7 +9,7 @@ from app.schemas.validation import ValidationLevel1, ValidationState
 from app.services.store import get_store
 
 
-def _level1(pr: ProviderResult) -> ValidationLevel1:
+def _level1(case_id: UUID, pr: ProviderResult) -> ValidationLevel1:
     """Run automated L1 checks against a provider result."""
     return ValidationLevel1(
         schema_valid=True,  # Pydantic validated already
@@ -17,16 +17,27 @@ def _level1(pr: ProviderResult) -> ValidationLevel1:
         timestamp_valid=pr.fetched_at is not None,
         provider_response_valid=True,
         content_hash_stored=bool(pr.content_hash),
-        duplicate_check_passed=_dedup_check(pr),
+        duplicate_check_passed=_dedup_check(case_id, pr),
         legal_source=pr.is_legal_source,
     )
 
 
-def _dedup_check(pr: ProviderResult) -> bool:
+def _dedup_check(case_id: UUID, pr: ProviderResult) -> bool:
+    """Per-case content-hash dedup.
+
+    Two cases that issue the same query against the same provider will
+    legitimately see the same URL — that's not a "duplicate" from the
+    operator's point of view, it's "this URL is relevant to my case
+    too". Scope dedup to *this* case so each case has its own evidence
+    inventory and isn't silently starved by an earlier case's results.
+    """
     if not pr.content_hash:
         return True
     store = get_store()
-    return not any(e.content_hash == pr.content_hash for e in store.evidence.values())
+    return not any(
+        e.content_hash == pr.content_hash and e.case_id == case_id
+        for e in store.evidence.values()
+    )
 
 
 def normalize_and_store_with_stats(
@@ -41,7 +52,7 @@ def normalize_and_store_with_stats(
     deduped = 0
     store = get_store()
     for pr in results:
-        l1 = _level1(pr)
+        l1 = _level1(case_id, pr)
         if not l1.duplicate_check_passed:
             deduped += 1
             continue
