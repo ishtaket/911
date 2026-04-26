@@ -1,0 +1,56 @@
+# Backend-only Docker Compose for local Windows operator dev.
+#
+# This file deliberately does NOT bring up Postgres/Redis/MinIO — the
+# Rescue911 backend currently uses an in-memory store and only needs
+# its own port and the operator's provider keys (Vertex AI Search,
+# Brave, etc.). The full multi-service stack lives in
+# infra/docker-compose.local.yml under the "full" profile and is
+# untouched by this file.
+#
+# Start:  scripts\docker_backend_start.ps1
+# Stop:   scripts\docker_backend_stop.ps1
+# Logs:   scripts\docker_backend_logs.ps1
+# Check:  scripts\docker_backend_check.ps1
+# Test:   scripts\docker_backend_test.ps1
+#
+# Host  -> http://127.0.0.1:8011
+# Emul. -> http://10.0.2.2:8011 (Android emulator alias for host)
+
+name: rescue911-backend
+
+services:
+  rescue911-backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: rescue911-backend
+    # Operator's real .env stays on the host and is injected at runtime.
+    # The .env file is in backend/.dockerignore so it is never baked
+    # into the image. Compose reads the file from the host and exports
+    # each KEY=VALUE into the container's process environment, where
+    # Pydantic Settings picks it up. Keys never appear in `docker
+    # inspect` history, build cache, or any committed file.
+    env_file:
+      - ./backend/.env
+    environment:
+      # Hard defaults that override anything stale in .env. Keep
+      # MOCK_PROVIDERS=false so Backend mode stays strict and the
+      # archive snippet provider doesn't leak "[mock archive]" cards
+      # (see docs/FINAL_REPORT_ARCHIVE_STRICT_MODE.md).
+      PYTHONUNBUFFERED: "1"
+      MOCK_PROVIDERS: "false"
+    ports:
+      # Publish 8011 unchanged so:
+      #   - host PowerShell: http://127.0.0.1:8011
+      #   - Android emulator: http://10.0.2.2:8011
+      # Port 8000 is reserved on this host for another service and is
+      # explicitly NOT touched.
+      - "8011:8011"
+    healthcheck:
+      test: ["CMD-SHELL",
+             "python -c \"import httpx, sys; sys.exit(0 if httpx.get('http://127.0.0.1:8011/v1/health').status_code == 200 else 1)\""]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+    restart: unless-stopped

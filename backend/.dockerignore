@@ -1,10 +1,40 @@
+# Build context = ./backend, so paths here are backend-relative.
+
+# --- Python build / cache artifacts ---
 __pycache__
 *.pyc
+*.pyo
+*.pyd
 .pytest_cache
+.coverage
+htmlcov
+.mypy_cache
+.ruff_cache
+
+# --- Virtualenvs (never bake into image) ---
 .venv
 venv
+env
+
+# --- Secrets & dotenv (DO NOT bake into image; injected via env_file) ---
 .env
 .env.*
 !.env.example
-htmlcov
-.coverage
+
+# --- Logs / databases / dumps ---
+logs
+*.log
+*.sqlite*
+*.db
+*.dump
+
+# --- Local build outputs ---
+dist
+build
+*.egg-info
+
+# --- IDE / OS ---
+.vscode
+.idea
+.DS_Store
+Thumbs.db
