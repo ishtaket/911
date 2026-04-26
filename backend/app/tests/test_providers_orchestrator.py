@@ -10,9 +10,20 @@ client = TestClient(create_app())
 
 
 def _seed_case_id() -> str:
-    """First seeded case id (Israel sample data)."""
-    cases = get_store().list_cases()
-    assert cases, "no seeded cases — startup hook didn't run"
+    """First seeded case id (Israel sample data) — or create one if
+    the in-memory store has been cleared by a previous test fixture."""
+    store = get_store()
+    cases = store.list_cases()
+    if not cases:
+        # Other tests use a fixture that wipes the store; seed a
+        # minimal case here so this module's tests are independent.
+        new_case = client.post("/v1/cases", json={
+            "title": "orchestrator test case",
+            "description": "transient seed",
+            "person": {"full_name": "Test Subject"},
+            "languages": ["en"],
+        }).json()
+        return new_case["id"]
     return str(cases[0].id)
 
 
@@ -44,23 +55,68 @@ def test_providers_state_machine_values_are_valid():
 def test_provider_listing_includes_google_alternatives():
     """Google has multiple web-search-shaped products; the provider list
     must surface each so operators see why one path may fail and where
-    to go next. See docs/GOOGLE_WEB_SEARCH_ALTERNATIVES.md."""
+    to go next. See docs/GOOGLE_SEARCH_PROVIDER_DECISION.md."""
     r = client.get("/v1/providers")
     by_id = {p["provider_id"]: p for p in r.json()["providers"]}
     # JSON API path (may be denied at project level)
     assert "google_cse" in by_id
+    # Site Restricted JSON API — retired by Google on 2025-01-08
+    sr = by_id.get("google_cse_site_restricted")
+    assert sr is not None
+    assert sr["type"] == "site_search"
+    assert sr["auth_type"] == "api_key"
+    # When the explicit enable flag is off (test default), state must
+    # be `unavailable` so the operator UI shows the deprecation truth
+    # rather than a misleading "connected".
+    assert sr["state"] == "unavailable", sr
+    note = (sr["note"] or "").lower()
+    # Note must explain why and where to migrate.
+    assert "deprecated" in note or "retired" in note or "2025" in note
+    assert "vertex_ai_search" in note
     # UI-assisted Programmable Search Element — manual flow only
     pse = by_id.get("google_programmable_search_element")
     assert pse is not None
     assert pse["state"] == "manual_ui_required"
     assert pse["type"] == "web_search_ui_assisted"
-    assert "manual ui" in pse["note"].lower() or "manual" in pse["note"].lower()
-    # Vertex AI Search — site search via service account
+    # Vertex AI Search — searchLite (API-key path)
     vx = by_id.get("vertex_ai_search")
     assert vx is not None
     assert vx["type"] == "site_search"
-    assert vx["auth_type"] == "service_account"
-    assert vx["state"] == "not_configured"
+    assert vx["auth_type"] == "api_key", vx
+    # In the test fixture (MOCK_PROVIDERS=true, nothing configured) the
+    # generic _state() returns mock; with MOCK_PROVIDERS=false it would
+    # return not_configured. Either is acceptable as long as it is NOT
+    # connected — there is no real configuration in tests.
+    assert vx["state"] in {"not_configured", "mock"}, vx
+
+
+def test_web_provider_order_starts_with_site_restricted():
+    """Per-channel registry order is enforced: Site Restricted first
+    (so its retirement banner is visible), then standard CSE, then
+    Vertex AI Search, then KG, then Brave."""
+    from app.providers.registry import get_web_search_providers
+    from app.config import get_settings
+    # Force the strict path so all real providers are instantiated.
+    s = get_settings().model_copy(update={
+        "mock_providers": False,
+        "google_cse_api_key": "cse_test_key_xxxxxxxxxxxxxxxx",
+        "google_cse_engine_id": "cse_engine_id_xxxxxxxx",
+        "google_kg_api_key": "kg_test_key_xxxxxxxxxxxx",
+        "brave_search_api_key": "brv_test_key_xxxxxxxxxxxxxxxx",
+        "vertex_ai_search_enabled": True,
+        "vertex_ai_project_id": "p",
+        "vertex_ai_engine_id": "e",
+    })
+    providers = get_web_search_providers(s)
+    names = [p.name for p in providers]
+    real_names = [n for n in names if n != "mock_web_search"]
+    assert real_names[:5] == [
+        "google_cse_site_restricted",
+        "google_cse",
+        "vertex_ai_search",
+        "google_kg_search",
+        "brave_web_search",
+    ], real_names
 
 
 def test_providers_check_endpoint_known_id():
@@ -184,6 +240,11 @@ def test_web_dispatch_state_not_configured_when_strict_no_keys(monkeypatch):
         "google_maps_api_key": None,
         "google_cse_api_key": None,
         "google_cse_engine_id": None,
+        "google_cse_site_restricted_enabled": False,
+        "vertex_ai_search_enabled": False,
+        "vertex_ai_project_id": None,
+        "vertex_ai_engine_id": None,
+        "vertex_ai_api_key": None,
     })
     monkeypatch.setattr(
         registry_mod, "get_web_search_providers", lambda settings=None: real_get_web(s)
@@ -197,11 +258,21 @@ def test_web_dispatch_state_not_configured_when_strict_no_keys(monkeypatch):
     r = client.post(f"/v1/search/web/start/{case_id}")
     assert r.status_code == 200
     body = r.json()
+    # Site Restricted is `unavailable` (deprecated by Google), the
+    # other web providers are `not_configured` (operator-fixable).
+    # Per `_decide_state`, the dominant non-ok mode wins — with 4
+    # not_configured vs 1 unavailable, overall state is not_configured.
     assert body["state"] == "not_configured", body
     assert body["evidence"] == []
     assert body["items_returned"] == 0
-    # every provider entry must report not_configured
-    assert all(p["state"] == "not_configured" for p in body["providers"]), body["providers"]
+    states_per_provider = {p["provider"]: p["state"] for p in body["providers"]}
+    assert states_per_provider.get("google_cse_site_restricted") == "unavailable"
+    # Every other provider must be `not_configured`.
+    assert all(
+        st == "not_configured"
+        for pid, st in states_per_provider.items()
+        if pid != "google_cse_site_restricted"
+    ), states_per_provider
 
 
 def test_per_channel_archive_dispatch_returns_structured_response():

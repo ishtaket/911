@@ -18,6 +18,8 @@ os.environ["MOCK_PROVIDERS"] = "true"
 for _k in (
     "BRAVE_SEARCH_API_KEY", "GOOGLE_MAPS_API_KEY", "GOOGLE_KG_API_KEY",
     "GOOGLE_CSE_API_KEY", "GOOGLE_CSE_ENGINE_ID",
+    "VERTEX_AI_PROJECT_ID", "VERTEX_AI_ENGINE_ID",
+    "VERTEX_AI_API_KEY",
     "GOOGLE_VISION_API_KEY", "GOOGLE_APPLICATION_CREDENTIALS",
     "YOUTUBE_API_KEY",
     "TELEGRAM_API_ID", "TELEGRAM_API_HASH", "TELEGRAM_BOT_TOKEN",
@@ -30,6 +32,18 @@ for _k in (
     "SERPAPI_API_KEY", "DATAFORSEO_LOGIN", "DATAFORSEO_PASSWORD",
 ):
     os.environ[_k] = ""
+
+# Boolean toggles must be parseable strings (Pydantic rejects "" for bool).
+for _b in (
+    "GOOGLE_CSE_SITE_RESTRICTED_ENABLED",
+    "VERTEX_AI_SEARCH_ENABLED",
+):
+    os.environ[_b] = "false"
+
+# Defaults that ARE strings but must not be empty.
+os.environ.setdefault("VERTEX_AI_LOCATION", "global")
+os.environ.setdefault("VERTEX_AI_SERVING_CONFIG", "default_search")
+os.environ.setdefault("VERTEX_AI_COLLECTION", "default_collection")
 
 from collections.abc import Iterator  # noqa: E402
 

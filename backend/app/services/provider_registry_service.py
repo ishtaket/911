@@ -84,6 +84,30 @@ def list_providers(settings: Settings | None = None) -> ProviderListResponse:
              has_key=bool(s.brave_search_api_key), mock=mock,
              auth_type=ProviderAuthType.API_KEY,
              safe_scope="Public web index. No private data."),
+        _row("google_cse_site_restricted",
+             ProviderType.SITE_SEARCH,
+             "Google CSE Site Restricted JSON API (retired 2025-01-08)",
+             has_key=bool(s.google_cse_api_key and s.google_cse_engine_id),
+             mock=False,
+             auth_type=ProviderAuthType.API_KEY,
+             safe_scope=(
+                 "Official Google Site Restricted Custom Search JSON API "
+                 "over <=10 configured public sites. Endpoint retired by "
+                 "Google on 2025-01-08; migrate to Vertex AI Search."
+             ),
+             note=(
+                 "Endpoint deprecated by Google "
+                 "(developers.google.com/custom-search/v1/site_restricted_api). "
+                 "Provider raises ProviderUnavailable unless "
+                 "GOOGLE_CSE_SITE_RESTRICTED_ENABLED=true and Google has "
+                 "restored access for your Cloud project. Use "
+                 "vertex_ai_search instead."
+             ),
+             forced_state=(
+                 ProviderState.UNAVAILABLE
+                 if not s.google_cse_site_restricted_enabled
+                 else None
+             )),
         _row("google_cse", ProviderType.WEB_SEARCH, "Google Custom Search JSON API",
              has_key=bool(s.google_cse_api_key and s.google_cse_engine_id), mock=mock,
              auth_type=ProviderAuthType.API_KEY,
@@ -119,21 +143,30 @@ def list_providers(settings: Settings | None = None) -> ProviderListResponse:
              forced_state=ProviderState.MANUAL_UI_REQUIRED),
         _row("vertex_ai_search",
              ProviderType.SITE_SEARCH,
-             "Vertex AI Search (site search)",
-             has_key=False, mock=False,
-             auth_type=ProviderAuthType.SERVICE_ACCOUNT,
+             "Vertex AI Search (searchLite, public website data store)",
+             has_key=bool(
+                 s.vertex_ai_search_enabled
+                 and s.vertex_ai_project_id
+                 and s.vertex_ai_engine_id
+                 and (s.vertex_ai_api_key or s.google_cse_api_key)
+             ),
+             mock=False,
+             auth_type=ProviderAuthType.API_KEY,
              safe_scope=(
-                 "Google Cloud Vertex AI Search / Discovery Engine over an "
-                 "operator-curated allow-list of public sites. Returns "
-                 "indexed-site results, not the open web. Backend-side "
-                 "service-account credentials only; never ships to Android."
+                 "Google Cloud Vertex AI Search (Discovery Engine) over "
+                 "an operator-curated public-website data store. Uses "
+                 "the searchLite API-key path — no service account "
+                 "needed for public-site search. Backend-side key only; "
+                 "never ships to Android."
              ),
              note=(
-                 "Planned. Requires a Google Cloud project with Vertex AI "
-                 "Search enabled, a service account JSON key, and a "
-                 "data store of allow-listed public sites. Distinct from "
-                 "Custom Search JSON API and not subject to the same "
-                 "PERMISSION_DENIED gate."
+                 "Official migration path for the retired Custom Search "
+                 "Site Restricted JSON API "
+                 "(cloud.google.com/.../migrate-from-cse). Requires: "
+                 "VERTEX_AI_SEARCH_ENABLED=true, VERTEX_AI_PROJECT_ID, "
+                 "VERTEX_AI_ENGINE_ID, and an API key (VERTEX_AI_API_KEY "
+                 "or fallback to GOOGLE_CSE_API_KEY). See "
+                 "docs/GOOGLE_SEARCH_PROVIDER_DECISION.md."
              )),
         _row("serpapi", ProviderType.WEB_SEARCH, "SerpAPI",
              has_key=False, mock=mock,

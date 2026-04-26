@@ -168,10 +168,11 @@ async def test_cse_429_raises_rate_limit():
 
 # ---------- registry ordering ----------
 
-def test_web_provider_order_starts_with_google_cse():
-    """When real keys are present, the registry must order providers
-    google_cse → google_kg_search → brave_web_search (operator-visible
-    priority for the web channel)."""
+def test_web_provider_order_includes_google_cse_first_among_jsonapi():
+    """When real keys are present, the standard CSE provider must
+    appear immediately after the (deprecated) Site Restricted entry —
+    operator-visible priority for the web channel:
+    site_restricted → cse → vertex → KG → brave."""
     s = get_settings().model_copy(update={
         "mock_providers": False,
         "google_cse_api_key": "cse_test_key_xxxxxxxxxxxxxxxx",
@@ -181,13 +182,18 @@ def test_web_provider_order_starts_with_google_cse():
     })
     providers = get_web_search_providers(s)
     names = [p.name for p in providers]
-    assert names[:3] == ["google_cse", "google_kg_search", "brave_web_search"], names
+    # google_cse appears at index 1, immediately after site_restricted.
+    assert names[0] == "google_cse_site_restricted"
+    assert names[1] == "google_cse"
+    assert "vertex_ai_search" in names
+    assert "google_kg_search" in names
+    assert "brave_web_search" in names
 
 
 def test_web_provider_order_holds_when_keys_missing():
     """Even when keys are missing the order must still start with
-    google_cse — the wrapped provider will raise ProviderNotConfigured at
-    call-time, not at registration time."""
+    google_cse_site_restricted — wrapped providers raise at call-time,
+    not at registration time."""
     s = get_settings().model_copy(update={
         "mock_providers": False,
         "google_cse_api_key": None,
@@ -197,7 +203,7 @@ def test_web_provider_order_holds_when_keys_missing():
     })
     providers = get_web_search_providers(s)
     names = [p.name for p in providers]
-    assert names[0] == "google_cse"
+    assert names[0] == "google_cse_site_restricted"
 
 
 # ---------- /v1/providers reflects CSE state honestly ----------

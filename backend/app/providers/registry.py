@@ -36,8 +36,12 @@ from app.providers.social.vk import VkPublicProvider
 from app.providers.social.youtube import YouTubePublicProvider
 from app.providers.web_search.brave import BraveWebSearchProvider
 from app.providers.web_search.google_cse import GoogleCseWebSearchProvider
+from app.providers.web_search.google_cse_site_restricted import (
+    GoogleCseSiteRestrictedProvider,
+)
 from app.providers.web_search.google_kg import GoogleKnowledgeGraphProvider
 from app.providers.web_search.mock import MockWebSearchProvider
+from app.providers.web_search.vertex_ai_search import VertexAiSearchProvider
 
 
 def get_web_search_providers(settings: Settings | None = None) -> list[WebSearchProvider]:
@@ -45,26 +49,55 @@ def get_web_search_providers(settings: Settings | None = None) -> list[WebSearch
     silent fallback. Real providers may raise ProviderNotConfigured / errors
     which the orchestrator audit-logs per provider.
 
-    Order matters — providers are queried in list order and surfaced to the
-    operator in the same order:
-      1. Google Custom Search JSON API   (primary public-web search)
-      2. Google Knowledge Graph          (entity lookup; supplemental)
-      3. Brave Search                    (alternative public-web search)
-      4. SerpAPI                         (TODO; not yet implemented)
-      5. Mock                            (only when MOCK_PROVIDERS=true)
+    Order matters — providers are queried in list order and surfaced to
+    the operator in the same order:
+      1. Google CSE Site Restricted JSON API   (RETIRED 2025-01-08;
+                                                 surfaces as unavailable)
+      2. Google Custom Search JSON API         (closed to new customers;
+                                                 may surface unavailable)
+      3. Vertex AI Search (`searchLite`)       (Google's official
+                                                 migration path; works
+                                                 with API key + a
+                                                 public-website data
+                                                 store)
+      4. Google Knowledge Graph                (entity lookup; supplemental)
+      5. Brave Search                          (independent index fallback)
+      6. SerpAPI                               (TODO; not yet implemented)
+      7. Mock                                  (only when MOCK_PROVIDERS=true)
 
-    Knowledge Graph is included alongside web-search providers so the case's
-    person name resolves to public entities (people / places / orgs). It is
-    NOT a general web-search engine."""
+    Knowledge Graph is NOT a general web-search engine — included only
+    so the case's person name resolves to public entities (people /
+    places / orgs)."""
     s = settings or get_settings()
     has_any_real_key = bool(
-        s.google_cse_api_key or s.google_kg_api_key or s.brave_search_api_key
+        s.google_cse_api_key
+        or s.google_kg_api_key
+        or s.brave_search_api_key
+        or s.vertex_ai_api_key
+        or s.vertex_ai_search_enabled
+        or s.google_cse_site_restricted_enabled
     )
     if s.mock_providers and not has_any_real_key:
         return [MockWebSearchProvider()]
+    # Vertex AI Search may reuse the CSE key — same Google Cloud project.
+    vx_key = s.vertex_ai_api_key or s.google_cse_api_key
     real: list[WebSearchProvider] = [
+        GoogleCseSiteRestrictedProvider(
+            api_key=s.google_cse_api_key,
+            cse_id=s.google_cse_engine_id,
+            enabled=s.google_cse_site_restricted_enabled,
+        ),
         GoogleCseWebSearchProvider(
             api_key=s.google_cse_api_key, cse_id=s.google_cse_engine_id,
+        ),
+        VertexAiSearchProvider(
+            enabled=s.vertex_ai_search_enabled,
+            project_id=s.vertex_ai_project_id,
+            location=s.vertex_ai_location,
+            collection=s.vertex_ai_collection,
+            engine_id=s.vertex_ai_engine_id,
+            serving_config=s.vertex_ai_serving_config,
+            api_key=vx_key,
         ),
         GoogleKnowledgeGraphProvider(api_key=s.google_kg_api_key),
         BraveWebSearchProvider(api_key=s.brave_search_api_key),

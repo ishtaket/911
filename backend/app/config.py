@@ -50,6 +50,32 @@ class Settings(BaseSettings):
     # for CSE — CSE billing/quota is tracked separately by key.
     google_cse_api_key: str | None = None
     google_cse_engine_id: str | None = None
+
+    # Custom Search Site Restricted JSON API. Per Google's official docs,
+    # this endpoint was retired on 2025-01-08. We keep the provider in
+    # the registry for visibility / migration messaging, gated by an
+    # explicit enable flag so it never silently calls a dead endpoint.
+    google_cse_site_restricted_enabled: bool = False
+
+    # Vertex AI Search (a.k.a. Discovery Engine / "Agent Search").
+    # Official Google migration path for the retired Site Restricted
+    # JSON API. The `searchLite` method is API-key-authenticated and
+    # is restricted to public-website data stores — exactly the
+    # workload the Site Restricted JSON API used to handle.
+    #
+    # Required for `connected`:
+    #   - vertex_ai_search_enabled = True
+    #   - vertex_ai_project_id, vertex_ai_engine_id all set
+    #   - vertex_ai_api_key set (defaults to reusing google_cse_api_key
+    #     if a separate key is not provided, since searchLite + the
+    #     existing key share a Google Cloud project)
+    vertex_ai_search_enabled: bool = False
+    vertex_ai_project_id: str | None = None
+    vertex_ai_location: str = "global"
+    vertex_ai_engine_id: str | None = None
+    vertex_ai_serving_config: str = "default_search"
+    vertex_ai_api_key: str | None = None
+    vertex_ai_collection: str = "default_collection"
     telegram_api_id: str | None = None
     telegram_api_hash: str | None = None
     meta_app_id: str | None = None
