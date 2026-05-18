@@ -13,8 +13,13 @@ private val DarkColors = darkColorScheme(
     primary = Color(0xFFFFD166),
     secondary = Color(0xFF9AB8FF),
     tertiary = Color(0xFFE07A5F),
-    background = Color(0xFF0B0F14),
-    surface = Color(0xFF111720),
+    // B-35: spec §7.4 — OLED battery savings. On AMOLED (S21 Ultra)
+    // pure-black pixels are physically off; the previous dark-navy was
+    // a few percent on every pixel for the entire app surface.
+    background = Color(0xFF000000),
+    // Cards / surfaces stay slightly elevated so the eye can distinguish
+    // them from the background — still very dark, still mostly off.
+    surface = Color(0xFF0C1014),
     onPrimary = Color(0xFF1A1300),
     onBackground = Color(0xFFE6ECF2),
     onSurface = Color(0xFFE6ECF2),
