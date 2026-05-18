@@ -1,10 +1,8 @@
 package com.pca.assistant.ui.theme
 
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Typography
 import androidx.compose.material3.darkColorScheme
-import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.TextStyle
@@ -22,13 +20,6 @@ private val DarkColors = darkColorScheme(
     onSurface = Color(0xFFE6ECF2),
 )
 
-private val LightColors = lightColorScheme(
-    primary = Color(0xFF705500),
-    secondary = Color(0xFF1F3A8A),
-    background = Color(0xFFF7F7F2),
-    surface = Color(0xFFFFFFFF),
-)
-
 private val Type = Typography(
     titleLarge = TextStyle(fontSize = 22.sp, fontWeight = FontWeight.SemiBold),
     titleMedium = TextStyle(fontSize = 18.sp, fontWeight = FontWeight.SemiBold),
@@ -39,9 +30,13 @@ private val Type = Typography(
 
 @Composable
 fun PcaTheme(content: @Composable () -> Unit) {
-    val dark = isSystemInDarkTheme()
+    // Spec §7.4 — "Dark theme by default (OLED battery savings)". Always
+    // dark; we don't follow the system-light setting because the spec is
+    // explicit about OLED savings on the target device (S21 Ultra has an
+    // AMOLED display). Light-theme support can be added later via a
+    // user-facing toggle in Settings if needed.
     MaterialTheme(
-        colorScheme = if (dark) DarkColors else LightColors,
+        colorScheme = DarkColors,
         typography = Type,
         content = content,
     )
