@@ -106,4 +106,59 @@ class WindowProcessorUrgencyClampTest {
         assertEquals(1, interventionDao.store.value.size)
         assertEquals(3, interventionDao.store.value.single().urgency)
     }
+
+    @Test fun `urgency 0 with intervene=true is logged to DB but NOT shown as notification (B-36)`() = runTest {
+        // Re-stub the bridge to return intervene=true, urgency=0 — spec §3.6
+        // calls this "silent log only" but the previous code dropped it
+        // entirely.
+        val bridge = io.mockk.mockk<com.pca.assistant.llm.HttpBridgeProvider>(relaxed = true)
+        every { bridge.id } returns "http-bridge"
+        io.mockk.coEvery { bridge.decide(any()) } returns com.pca.assistant.llm.contract.LlmDecision(
+            windowUnderstanding = "muted",
+            openThreadsUpdate = com.pca.assistant.llm.contract.OpenThreadsUpdate(),
+            intervene = true,
+            advice = "silently noted",
+            urgency = 0,
+            reason = "log only",
+            memoryNote = "n",
+        )
+        // Rebuild the processor with the new bridge.
+        val healthDao = com.pca.assistant.testing.FakeLlmHealthDao()
+        val tDao = com.pca.assistant.testing.FakeTranscriptDao()
+        val wDao = com.pca.assistant.testing.FakeWindowDao()
+        val intDao = com.pca.assistant.testing.FakeInterventionDao()
+        val oDao = com.pca.assistant.testing.FakeOpenThreadDao()
+        val ownerDao = com.pca.assistant.testing.FakeOwnerDao()
+        val hourDao = com.pca.assistant.testing.FakeHourSummaryDao()
+        kotlinx.coroutines.runBlocking {
+            tDao.insert(
+                com.pca.assistant.data.db.entity.TranscriptEntity(
+                    ts = 1000, text = "hi", textAnonymized = "hi",
+                    speakerId = "owner", speakerScore = 0.9f, isOwner = true,
+                    locationLat = null, locationLng = null, placeLabel = "home",
+                    confidence = 0.9f, language = "en",
+                )
+            )
+        }
+        val aggregator = WindowAggregator(tDao, wDao, hourDao, oDao, ownerDao, com.pca.assistant.anonymizer.Anonymizer())
+        val proc = WindowProcessor(
+            aggregator = aggregator,
+            router = com.pca.assistant.llm.ProviderRouter(com.pca.assistant.llm.MockLocalProvider(), bridge, healthDao, mockk { every { flow } returns fakeSettings.flow }),
+            interventionDao = intDao,
+            openThreadDao = oDao,
+            settings = mockk { every { flow } returns fakeSettings.flow },
+            notifier = notifier,
+            json = json,
+        )
+
+        proc.process(from = 0, to = 300_000)
+
+        // Logged...
+        assertEquals(1, intDao.store.value.size)
+        assertEquals(0, intDao.store.value.single().urgency)
+        // ...but NOT shown — spec §3.6 silent log only.
+        io.mockk.verify(exactly = 0) { notifier.show(any(), any(), any()) }
+        // shownAt must be null to reflect that no UI surface was used.
+        org.junit.Assert.assertNull(intDao.store.value.single().shownAt)
+    }
 }

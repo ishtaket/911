@@ -106,7 +106,11 @@ class WindowProcessor @Inject constructor(
         // misbehaving bridge could return 99, which would otherwise pass
         // through to NotificationCompat.PRIORITY_MAX or worse.
         val safeUrgency = decision.urgency.coerceIn(0, 3)
-        if (decision.intervene && !decision.advice.isNullOrBlank() && safeUrgency >= 1) {
+        // Spec §3.6: "urgency 0 — silent log only; 1 — regular; 2 — heads-up;
+        // 3 — sound + vibration". So urgency-0 interventions DO get logged
+        // into the DB (B-36 fix), they just don't fire a notification. The
+        // user can still see them via the history surface.
+        if (decision.intervene && !decision.advice.isNullOrBlank()) {
             val id = interventionDao.insert(
                 InterventionEntity(
                     windowId = windowId,
@@ -115,10 +119,10 @@ class WindowProcessor @Inject constructor(
                     urgency = safeUrgency,
                     reason = decision.reason,
                     userFeedback = null,
-                    shownAt = System.currentTimeMillis(),
+                    shownAt = if (safeUrgency >= 1) System.currentTimeMillis() else null,
                 )
             )
-            notifier.show(id, decision.advice, safeUrgency)
+            if (safeUrgency >= 1) notifier.show(id, decision.advice, safeUrgency)
         }
     }
 
