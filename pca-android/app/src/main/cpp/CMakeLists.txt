@@ -26,6 +26,15 @@ set(WHISPER_COREML         OFF CACHE BOOL "" FORCE)
 set(WHISPER_CUBLAS         OFF CACHE BOOL "" FORCE)
 set(WHISPER_HIPBLAS        OFF CACHE BOOL "" FORCE)
 
+# PCA-S-40: supply-chain hygiene. GIT_TAG is mutable — upstream could
+# force-push a different commit under the same tag name. For higher trust,
+# replace GIT_TAG with a full commit SHA (and drop GIT_SHALLOW since
+# fetching by SHA needs full history). The tag form below is the canonical
+# release pointer; the SHA form is a hardening option that locks our build
+# to a single audited commit.
+#
+#   GIT_TAG     <40-char-commit-sha>      # exact commit (recommended hardened)
+#   GIT_SHALLOW FALSE                     # full history needed to fetch by SHA
 FetchContent_Declare(
     whisper
     GIT_REPOSITORY https://github.com/ggerganov/whisper.cpp.git

@@ -54,12 +54,45 @@ import os
 import subprocess
 from typing import Any, Optional
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 
 log = logging.getLogger("pca-bridge")
 
 app = FastAPI(title="PCA bridge")
+
+# PCA-S-38: explicit CORS denial. A user running the bridge on
+# 127.0.0.1:8765 with a browser open could be CSRF'd by a malicious
+# website into POSTing /decide and burning their subscription quota.
+# FastAPI's strict Content-Type=application/json requirement is incidental
+# protection (browsers' "simple request" whitelist doesn't include
+# application/json), but we want an EXPLICIT policy of denying every
+# cross-origin request. allow_origins=[] means the middleware echoes back
+# no Access-Control-Allow-Origin → browsers reject the response.
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[],
+    allow_credentials=False,
+    allow_methods=[],
+    allow_headers=[],
+)
+
+
+# PCA-S-38 (defense in depth): the Android app sets no Origin header on
+# its requests; refuse any request that DOES carry an Origin header to
+# block a misconfigured browser fetch even if CORS preflight was bypassed
+# somehow.
+@app.middleware("http")
+async def reject_browser_origins(request: Request, call_next):
+    origin = request.headers.get("origin")
+    if origin:
+        return JSONResponse(
+            status_code=403,
+            content={"detail": f"cross-origin requests are not allowed (origin={origin})"},
+        )
+    return await call_next(request)
 
 
 class WindowPayload(BaseModel):
