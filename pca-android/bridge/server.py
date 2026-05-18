@@ -5,6 +5,15 @@ tiny FastAPI server fronts whichever CLI you have installed on a paired
 machine (Termux, a home server, your laptop on the same Wi-Fi) and exposes a
 single endpoint that the app POSTs to.
 
+BILLING MODEL (spec §6.4): CLIs run under the user's SUBSCRIPTION, not via
+pay-per-token API keys.
+  - codex CLI  → ChatGPT Plus/Pro,   logged in via `codex login`
+  - claude CLI → Claude Pro/Max,     logged in via `/login` in REPL
+  - gemini CLI → Google AI/AI Studio, logged in via first-run OAuth
+This bridge invokes the CLI as a subprocess; the CLI handles its own auth
+state in its config dir (~/.codex/, ~/.claude/, ~/.gemini/). No API key
+ever appears in this file or in any env var.
+
 Wire contract (matches `com.pca.assistant.llm.contract.LlmRequest`):
 
   POST /decide
@@ -115,31 +124,93 @@ def build_prompt(req: LlmRequest) -> str:
     return "\n".join(parts)
 
 
+def _extract_json(stdout: str) -> dict:
+    """Pull the first {...} JSON object out of arbitrary CLI stdout.
+
+    Subscription CLIs may wrap the model's reply with their own pretty-printed
+    framing (banner, model name, timing). We instruct the model in the system
+    prompt to "Return ONLY the strict JSON object" but tolerate noise around
+    it by extracting the first balanced JSON block.
+    """
+    text = stdout.strip()
+    if not text:
+        raise HTTPException(status_code=502, detail="empty stdout")
+    # Fast path: whole stdout is JSON.
+    try:
+        return json.loads(text)
+    except json.JSONDecodeError:
+        pass
+    # Slow path: scan for the first balanced {...}.
+    start = text.find("{")
+    if start < 0:
+        raise HTTPException(status_code=502, detail=f"no JSON in stdout: {text[:300]}")
+    depth = 0
+    end = -1
+    in_str = False
+    esc = False
+    for i in range(start, len(text)):
+        c = text[i]
+        if in_str:
+            if esc:
+                esc = False
+            elif c == "\\":
+                esc = True
+            elif c == '"':
+                in_str = False
+        else:
+            if c == '"':
+                in_str = True
+            elif c == "{":
+                depth += 1
+            elif c == "}":
+                depth -= 1
+                if depth == 0:
+                    end = i + 1
+                    break
+    if end < 0:
+        raise HTTPException(status_code=502, detail=f"unbalanced JSON: {text[start:start+300]}")
+    return json.loads(text[start:end])
+
+
 def run_codex(prompt: str) -> dict:
-    """Invoke `codex` CLI in non-interactive mode."""
-    cmd = ["codex", "exec", "--json"]
+    """Invoke `codex` CLI (subscription, ChatGPT Plus/Pro).
+
+    The exact flag set varies by @openai/codex version. We feed the prompt
+    on stdin via `exec` mode and parse whatever JSON the model emits.
+    Customise the command list if your installed CLI uses different flags.
+    """
+    cmd = ["codex", "exec", "-"]
     res = subprocess.run(
         cmd, input=prompt, capture_output=True, text=True, encoding="utf-8",
         timeout=120, check=False,
     )
     if res.returncode != 0:
         raise HTTPException(status_code=502, detail=f"codex exit={res.returncode}: {res.stderr[:500]}")
-    try:
-        return json.loads(res.stdout)
-    except json.JSONDecodeError as e:
-        raise HTTPException(status_code=502, detail=f"codex non-JSON: {e}\n{res.stdout[:500]}") from e
+    return _extract_json(res.stdout)
+
+
+def run_claude(prompt: str) -> dict:
+    """Invoke `claude` CLI (subscription, Claude Pro/Max via @anthropic-ai/claude-code)."""
+    cmd = ["claude", "-p", prompt, "--output-format", "text"]
+    res = subprocess.run(
+        cmd, capture_output=True, text=True, encoding="utf-8",
+        timeout=120, check=False,
+    )
+    if res.returncode != 0:
+        raise HTTPException(status_code=502, detail=f"claude exit={res.returncode}: {res.stderr[:500]}")
+    return _extract_json(res.stdout)
 
 
 def run_gemini(prompt: str) -> dict:
-    """Invoke `gemini` CLI."""
-    cmd = ["gemini", "-y", "-q", prompt]
+    """Invoke `gemini` CLI (subscription, Google AI/AI Studio)."""
+    cmd = ["gemini", "-p", prompt]
     res = subprocess.run(
         cmd, capture_output=True, text=True, encoding="utf-8",
         timeout=120, check=False,
     )
     if res.returncode != 0:
         raise HTTPException(status_code=502, detail=f"gemini exit={res.returncode}: {res.stderr[:500]}")
-    return json.loads(res.stdout)
+    return _extract_json(res.stdout)
 
 
 PROVIDER = os.environ.get("PCA_BRIDGE_PROVIDER", "codex").lower()
@@ -152,6 +223,8 @@ def decide(req: LlmRequest) -> dict:
     try:
         if PROVIDER == "codex":
             return run_codex(prompt)
+        if PROVIDER == "claude":
+            return run_claude(prompt)
         if PROVIDER == "gemini":
             return run_gemini(prompt)
         raise HTTPException(status_code=500, detail=f"unknown provider {PROVIDER}")
@@ -168,7 +241,11 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--host", default="0.0.0.0")
     parser.add_argument("--port", default=8765, type=int)
-    parser.add_argument("--provider", default=PROVIDER, choices=["codex", "gemini"])
+    parser.add_argument(
+        "--provider", default=PROVIDER, choices=["codex", "claude", "gemini"],
+        help="Which subscription CLI to invoke. All authenticate via their own "
+             "login flow (no API keys needed in this process).",
+    )
     args = parser.parse_args()
 
     os.environ["PCA_BRIDGE_PROVIDER"] = args.provider

@@ -111,6 +111,22 @@ bridge не задан в Settings, каждое окно автоматичес
 `MockLocalProvider` (deep fallback per §3.4 health-check) — никаких подсказок
 от настоящего LLM не будет.
 
+### Биллинг-модель: подписка, не API
+
+**Bridge использует CLI через подписку пользователя**, как написано в
+спецификации §6.4 («codex CLI», «Gemini CLI»). Это:
+
+- **Codex CLI** (`@openai/codex`) — авторизуется через **ChatGPT Plus / Pro**
+  командой `codex login`. Запросы идут в счёт ежемесячного лимита подписки.
+- **Claude Code** (`@anthropic-ai/claude-code`) — через **Claude Pro / Max**
+  командой `/login` внутри REPL. Запросы в счёт подписки.
+- **Gemini CLI** (`@google/gemini-cli`) — через **Google AI / AI Studio**
+  подписку, OAuth-flow при первом запуске.
+
+**Никаких API-ключей pay-per-token в проекте нет.** Bridge просто шеллит
+CLI как subprocess; учётка живёт в `~/.codex/` / `~/.claude/` / `~/.gemini/`
+в файлах самих CLI после успешного логина.
+
 Спецификация §6.4 явно перечисляет три варианта развёртывания bridge.
 Выбирай любой:
 
@@ -120,6 +136,11 @@ bridge не задан в Settings, каждое окно автоматичес
 телефон ходит к нему по Wi-Fi:
 
 ```bash
+# Поставить CLI и залогиниться по подписке (один раз)
+npm install -g @openai/codex
+codex login   # откроется браузер для ChatGPT Plus/Pro OAuth
+
+# Поставить bridge
 cd bridge
 python -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
@@ -149,12 +170,26 @@ python server.py --provider codex --port 8765
    Скрипт:
    - поставит `python`, `nodejs-lts`, `git`, `termux-api`
    - создаст venv с FastAPI + Uvicorn в `~/pca-bridge/`
-   - `npm install -g @anthropic-ai/claude-code @google/gemini-cli` —
-     это сам Claude Code CLI (исторически назывался `codex`) и Gemini CLI
-   - спросит API-ключи и положит их в `~/pca-bridge/.env` (chmod 600)
+   - `npm install -g @openai/codex @anthropic-ai/claude-code @google/gemini-cli` —
+     три CLI на выбор; bridge говорит с тем, что укажешь в `--provider`
    - создаст launcher `~/run-pca-bridge.sh`
+   - **никаких API-ключей не запросит** — учётка лежит у самих CLI
 
-4. Запусти bridge:
+4. **Залогинься в нужный CLI по подписке** (один раз):
+
+   ```bash
+   codex login              # ChatGPT Plus/Pro
+   # или
+   claude                   # Claude Pro/Max — внутри REPL пиши: /login
+   # или
+   gemini                   # Google AI/AI Studio — first-run OAuth
+   ```
+
+   Каждый откроет браузер с OAuth flow; учётка сохранится в `~/.codex/` /
+   `~/.claude/` / `~/.gemini/` соответственно. **Запросы идут в счёт
+   ежемесячной подписки, не оплачиваются токенами через API.**
+
+5. Запусти bridge:
 
    ```bash
    ~/run-pca-bridge.sh
@@ -164,14 +199,14 @@ python server.py --provider codex --port 8765
    с твоим bridge поговорить не сможет. Команда вызывает
    `termux-wake-lock` чтобы Android не убил процесс при засыпании экрана.
 
-5. В приложении PCA: `Настройки → LLM provider → HTTP bridge` → URL:
+6. В приложении PCA: `Настройки → LLM provider → HTTP bridge` → URL:
 
    ```
    http://127.0.0.1:8765
    ```
 
    Жёлтое предупреждение «Bridge URL не задан» исчезнет; следующее
-   5-мин окно пойдёт в codex/Gemini.
+   5-мин окно пойдёт в codex/Gemini через твою подписку.
 
 #### Чтобы выживало ребуты
 
@@ -197,12 +232,13 @@ python server.py --provider codex --port 8765
 - Батарея: в основном простой; типичная нагрузка на S21 Ultra
   должна добавить 3-5% за 8 часов поверх самого PCA
 
-#### Если хочешь без API-ключей
+#### Если нет ни одной подписки
 
 `MockLocalProvider` в самом приложении остаётся доступен — в Settings
-выбери chip «Local mock». Тогда никакой Termux не нужен, но и подсказки
-будут детерминированно-простыми (детектит явные триггеры и обещания
-по regex, см. §3.4 «Offline mode»).
+выбери chip «Local mock». Никакого Termux не нужно, ни одной копейки за
+LLM. Подсказки будут детерминированно-простыми (детектит явные триггеры
+и обещания по regex, см. §3.4 «Offline mode»). Это сознательный
+spec-документированный fallback, а не bug.
 
 ### Вариант 3 — собственный сервер-обёртка (для продакшна)
 

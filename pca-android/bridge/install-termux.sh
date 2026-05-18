@@ -2,6 +2,11 @@
 #
 # install-termux.sh — поднимает PCA bridge целиком на телефоне через Termux.
 #
+# Модель работы (per spec §6.4): codex / Gemini CLI используются через
+# подписку пользователя, НЕ через API-ключи pay-per-token. CLI хранят свои
+# учётки в ~/.config (своих директориях) после интерактивного `codex login`
+# или `gemini auth`. Bridge просто шеллит их как subprocess.
+#
 # Запуск:
 #   pkg install -y curl
 #   curl -fsSL https://raw.githubusercontent.com/ishtaket/911/claude/build-samsung-app-YaU0S/pca-android/bridge/install-termux.sh | bash
@@ -13,7 +18,7 @@
 #   1. Ставит Termux-пакеты (python, nodejs, git, etc.)
 #   2. Создаёт venv с FastAPI + Uvicorn
 #   3. Ставит codex CLI и Gemini CLI через npm
-#   4. Просит ключи API (или скипает если уже есть в окружении)
+#   4. Печатает инструкцию по логину (по подписке, без API-ключей)
 #   5. Создаёт launcher-скрипт ~/run-pca-bridge.sh
 
 set -euo pipefail
@@ -22,7 +27,7 @@ echo "== PCA bridge installer for Termux =="
 echo
 
 # --- 1. Termux packages ----------------------------------------------------
-echo "[1/5] Installing Termux packages..."
+echo "[1/4] Installing Termux packages..."
 pkg update -y
 pkg install -y python python-pip git nodejs-lts curl termux-api
 
@@ -31,13 +36,13 @@ PCA_HOME="${HOME}/pca-bridge"
 mkdir -p "${PCA_HOME}"
 
 if [[ ! -f "${PCA_HOME}/server.py" ]]; then
-    echo "[2/5] Fetching server.py..."
+    echo "[2/4] Fetching server.py..."
     curl -fsSL -o "${PCA_HOME}/server.py" \
         "https://raw.githubusercontent.com/ishtaket/911/claude/build-samsung-app-YaU0S/pca-android/bridge/server.py"
 fi
 
 if [[ ! -d "${PCA_HOME}/.venv" ]]; then
-    echo "[2/5] Creating venv..."
+    echo "[2/4] Creating venv..."
     python -m venv "${PCA_HOME}/.venv"
 fi
 
@@ -47,51 +52,37 @@ pip install --quiet --upgrade pip
 pip install --quiet fastapi 'uvicorn[standard]' pydantic
 
 # --- 3. CLI tools via npm --------------------------------------------------
-echo "[3/5] Installing codex + gemini CLIs (npm)..."
-# Anthropic Claude Code CLI (`codex` historical name; the modern package is
-# @anthropic-ai/claude-code which still exposes a `codex`-compatible entry
-# via the `cc` alias). The bridge calls whichever binary you pick; edit
-# server.py if your CLI is named differently.
+echo "[3/4] Installing codex + Gemini CLIs (npm)..."
+echo "        These are the subscription-authenticated CLIs from spec §6.4."
+
+# OpenAI Codex CLI (modern revived version, npm @openai/codex).
+# Authenticates against your ChatGPT Plus / Pro subscription via `codex login`.
+npm install -g @openai/codex 2>/dev/null || \
+    echo "  ! @openai/codex install failed — try manually: npm install -g @openai/codex"
+
+# Anthropic Claude Code CLI (npm @anthropic-ai/claude-code).
+# Authenticates against your Claude Pro / Max subscription via `claude /login`.
+# Useful as an alternative primary if you have a Claude subscription instead.
 npm install -g @anthropic-ai/claude-code 2>/dev/null || \
-    echo "  ! claude-code install failed — try manually: npm install -g @anthropic-ai/claude-code"
+    echo "  ! @anthropic-ai/claude-code install failed — try manually: npm install -g @anthropic-ai/claude-code"
 
-# Google Gemini CLI
+# Google Gemini CLI (npm @google/gemini-cli).
+# Authenticates against your Google AI / AI Studio subscription via `gemini`
+# command (first run opens a browser flow).
 npm install -g @google/gemini-cli 2>/dev/null || \
-    echo "  ! gemini-cli install failed — try manually: npm install -g @google/gemini-cli"
+    echo "  ! @google/gemini-cli install failed — try manually: npm install -g @google/gemini-cli"
 
-# --- 4. API keys -----------------------------------------------------------
-echo
-echo "[4/5] API keys"
-ENV_FILE="${PCA_HOME}/.env"
-touch "${ENV_FILE}"
-chmod 600 "${ENV_FILE}"
-
-if ! grep -q '^ANTHROPIC_API_KEY=' "${ENV_FILE}" 2>/dev/null; then
-    read -r -p "Anthropic API key (для codex / Claude; Enter чтобы пропустить): " ANTHROPIC_KEY || true
-    if [[ -n "${ANTHROPIC_KEY:-}" ]]; then
-        echo "ANTHROPIC_API_KEY=${ANTHROPIC_KEY}" >> "${ENV_FILE}"
-    fi
-fi
-
-if ! grep -q '^GEMINI_API_KEY=' "${ENV_FILE}" 2>/dev/null; then
-    read -r -p "Google Gemini API key (для fallback; Enter чтобы пропустить): " GEMINI_KEY || true
-    if [[ -n "${GEMINI_KEY:-}" ]]; then
-        echo "GEMINI_API_KEY=${GEMINI_KEY}" >> "${ENV_FILE}"
-    fi
-fi
-
-# --- 5. Launcher ----------------------------------------------------------
-echo "[5/5] Writing launcher to ~/run-pca-bridge.sh"
+# --- 4. Launcher -----------------------------------------------------------
+echo "[4/4] Writing launcher to ~/run-pca-bridge.sh"
 cat > "${HOME}/run-pca-bridge.sh" <<'LAUNCHER'
 #!/data/data/com.termux/files/usr/bin/bash
 # Запуск PCA bridge.  Loopback only — никаких внешних коннектов на телефон.
+# CLI должны быть уже залогинены: `codex login` и/или `gemini` интерактивно.
 set -e
 PCA_HOME="${HOME}/pca-bridge"
 cd "${PCA_HOME}"
 # shellcheck disable=SC1091
 source .venv/bin/activate
-# Подтягиваем ключи API (если файл есть)
-if [[ -f .env ]]; then set -a; . ./.env; set +a; fi
 # Termux wake-lock — иначе Android прибьёт процесс при засыпании экрана
 termux-wake-lock 2>/dev/null || true
 # По умолчанию primary=codex.  Поменяй на --provider gemini если нужен Gemini.
@@ -100,9 +91,31 @@ LAUNCHER
 chmod +x "${HOME}/run-pca-bridge.sh"
 
 echo
-echo "== Готово! =="
+echo "===================================================================="
+echo "== УСТАНОВКА ЗАВЕРШЕНА.  ОСТАЛОСЬ ЗАЛОГИНИТЬСЯ ПО ПОДПИСКЕ.       =="
+echo "===================================================================="
 echo
-echo "Запустить bridge:"
+echo "PCA bridge использует CLI по подписке (per spec §6.4), а не через"
+echo "API-ключи pay-per-token. Залогинься в тот CLI, чьей подпиской хочешь"
+echo "пользоваться:"
+echo
+echo "  Codex CLI (ChatGPT Plus / Pro):"
+echo "      codex login"
+echo
+echo "  Claude Code (Claude Pro / Max):"
+echo "      claude"
+echo "      # внутри REPL:  /login"
+echo
+echo "  Gemini CLI (Google AI / AI Studio):"
+echo "      gemini"
+echo "      # при первом запуске откроется браузерный flow"
+echo
+echo "Каждый из них откроет вкладку в браузере для OAuth — учётка"
+echo "сохранится в ~/.codex/, ~/.claude/, ~/.gemini/ соответственно."
+echo "PCA bridge просто шеллит CLI как subprocess; никакой API key не"
+echo "хранится в Termux."
+echo
+echo "После логина запусти bridge:"
 echo "  ~/run-pca-bridge.sh"
 echo
 echo "В приложении PCA: Настройки → LLM provider → HTTP bridge → URL:"
