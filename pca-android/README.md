@@ -111,9 +111,13 @@ bridge не задан в Settings, каждое окно автоматичес
 `MockLocalProvider` (deep fallback per §3.4 health-check) — никаких подсказок
 от настоящего LLM не будет.
 
-Чтобы подключить настоящий codex / Gemini CLI, поднимите референс-мост на
-любой машине (ноутбук в той же Wi-Fi, домашний сервер, Termux на самом
-телефоне):
+Спецификация §6.4 явно перечисляет три варианта развёртывания bridge.
+Выбирай любой:
+
+### Вариант 1 — на ноутбуке / домашнем сервере (рекомендую если есть)
+
+Самый стабильный путь — bridge запущен на машине с зарядом и нормальным CPU,
+телефон ходит к нему по Wi-Fi:
 
 ```bash
 cd bridge
@@ -122,8 +126,91 @@ pip install -r requirements.txt
 python server.py --provider codex --port 8765
 ```
 
-Затем в приложении: `Настройки → LLM provider → HTTP bridge` и URL вида
-`http://192.168.x.x:8765`.
+В приложении: `Настройки → LLM provider → HTTP bridge`, URL вида
+`http://192.168.x.x:8765` (IP машины в твоей домашней сети).
+
+### Вариант 2 — Termux на самом телефоне (целиком на устройстве)
+
+Если не хочешь зависеть от внешней машины. Bridge крутится локально,
+приложение ходит на `127.0.0.1`. **Никакого LAN-трафика вообще** —
+вся обработка на устройстве.
+
+1. Поставь **Termux из F-Droid** (не из Google Play — там устаревшая
+   версия): https://f-droid.org/packages/com.termux/
+2. (опционально) Поставь **Termux:Boot** оттуда же — позволит bridge
+   стартовать после ребута.
+3. Открой Termux и одной командой развернёшь всё:
+
+   ```bash
+   pkg install -y curl
+   curl -fsSL https://raw.githubusercontent.com/ishtaket/911/claude/build-samsung-app-YaU0S/pca-android/bridge/install-termux.sh | bash
+   ```
+
+   Скрипт:
+   - поставит `python`, `nodejs-lts`, `git`, `termux-api`
+   - создаст venv с FastAPI + Uvicorn в `~/pca-bridge/`
+   - `npm install -g @anthropic-ai/claude-code @google/gemini-cli` —
+     это сам Claude Code CLI (исторически назывался `codex`) и Gemini CLI
+   - спросит API-ключи и положит их в `~/pca-bridge/.env` (chmod 600)
+   - создаст launcher `~/run-pca-bridge.sh`
+
+4. Запусти bridge:
+
+   ```bash
+   ~/run-pca-bridge.sh
+   ```
+
+   Loopback only: `--host 127.0.0.1 --port 8765`. Никто из внешней сети
+   с твоим bridge поговорить не сможет. Команда вызывает
+   `termux-wake-lock` чтобы Android не убил процесс при засыпании экрана.
+
+5. В приложении PCA: `Настройки → LLM provider → HTTP bridge` → URL:
+
+   ```
+   http://127.0.0.1:8765
+   ```
+
+   Жёлтое предупреждение «Bridge URL не задан» исчезнет; следующее
+   5-мин окно пойдёт в codex/Gemini.
+
+#### Чтобы выживало ребуты
+
+- Установи **Termux:Boot** из F-Droid (та же страница `com.termux`).
+- Создай `~/.termux/boot/start-pca`:
+  ```bash
+  mkdir -p ~/.termux/boot
+  cat > ~/.termux/boot/start-pca <<'EOF'
+  #!/data/data/com.termux/files/usr/bin/sh
+  ~/run-pca-bridge.sh > ~/pca-bridge.log 2>&1 &
+  EOF
+  chmod +x ~/.termux/boot/start-pca
+  ```
+- После ребута Termux:Boot его дёрнет в фоне.
+
+#### Что Termux ест
+
+На S21 Ultra (Exynos 2100):
+- Node + Python в памяти: ~150-200 МБ RSS
+- При LLM-запросе (раз в 5 мин) — пиковый CPU на 1-3 сек, затем idle
+- Сетевой трафик — только от bridge'а к API провайдеру (Anthropic /
+  Google), сам bridge ↔ приложение не идёт через интернет (loopback)
+- Батарея: в основном простой; типичная нагрузка на S21 Ultra
+  должна добавить 3-5% за 8 часов поверх самого PCA
+
+#### Если хочешь без API-ключей
+
+`MockLocalProvider` в самом приложении остаётся доступен — в Settings
+выбери chip «Local mock». Тогда никакой Termux не нужен, но и подсказки
+будут детерминированно-простыми (детектит явные триггеры и обещания
+по regex, см. §3.4 «Offline mode»).
+
+### Вариант 3 — собственный сервер-обёртка (для продакшна)
+
+Если у тебя своя инфраструктура и не хочешь зависеть от npm-пакетов
+ни Anthropic ни Google — реализуй `POST /decide` с тем же JSON-контрактом
+который описан в `bridge/server.py` (схема `LlmRequest` → `LlmDecision`,
+один-в-один со спецификацией §5). Какой именно LLM за этим эндпоинтом —
+приложению всё равно.
 
 ## Самый важный безопасность / приватность чек-лист (§7.2)
 
