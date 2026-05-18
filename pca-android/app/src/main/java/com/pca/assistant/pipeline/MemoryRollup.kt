@@ -67,7 +67,10 @@ object MemoryRollup {
                 ListSerializer(String.serializer()),
                 memoryNotes,
             ),
-            locationsJson = places.joinToString(prefix = "[", postfix = "]") { "\"${jsonEscape(it)}\"" },
+            locationsJson = json.encodeToString(
+                ListSerializer(String.serializer()),
+                places,
+            ),
             peopleJson = "[]",
         )
     }
@@ -91,9 +94,6 @@ object MemoryRollup {
         SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.ROOT)
             .apply { timeZone = TimeZone.getDefault() }
             .format(Date(ts))
-
-    private fun jsonEscape(s: String): String =
-        s.replace("\\", "\\\\").replace("\"", "\\\"").replace("\n", "\\n")
 
     private val DEFAULT_JSON = Json {
         ignoreUnknownKeys = true

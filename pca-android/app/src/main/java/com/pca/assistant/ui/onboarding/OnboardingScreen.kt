@@ -64,7 +64,7 @@ fun OnboardingScreen(vm: OnboardingViewModel, onDone: () -> Unit) {
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             LinearProgressIndicator(
-                progress = { (s.step.ordinal + 1) / OnbStep.entries.size.toFloat() },
+                progress = (s.step.ordinal + 1) / OnbStep.entries.size.toFloat(),
                 modifier = Modifier.fillMaxWidth()
             )
             when (s.step) {

@@ -70,6 +70,8 @@ class FakeWindowDao : WindowDao {
     override suspend fun byId(id: Long): WindowEntity? = store.value.firstOrNull { it.id == id }
     override fun observeRecent(limit: Int): Flow<List<WindowEntity>> =
         store.map { it.sortedByDescending { e -> e.startTs }.take(limit) }
+    override suspend fun between(fromTs: Long, toTs: Long): List<WindowEntity> =
+        store.value.filter { it.startTs in fromTs until toTs }.sortedBy { it.startTs }
     override fun countSince(sinceTs: Long): Flow<Int> =
         store.map { it.count { e -> e.startTs >= sinceTs } }
     override suspend fun lastSent(): WindowEntity? =

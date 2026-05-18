@@ -1,10 +1,15 @@
 package com.pca.assistant.ui.notification
 
+import android.Manifest
 import android.app.NotificationManager
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
+import android.os.Build
+import android.util.Log
 import androidx.core.app.NotificationCompat
+import androidx.core.content.ContextCompat
 import com.pca.assistant.R
 import com.pca.assistant.service.ListeningService
 import com.pca.assistant.ui.MainActivity
@@ -21,6 +26,14 @@ class AdviceNotifier @Inject constructor(
 ) {
 
     fun show(interventionId: Long, advice: String, urgency: Int) {
+        // Android 13+ requires POST_NOTIFICATIONS to be granted at runtime;
+        // without it, NotificationManager.notify silently no-ops and the
+        // advice is lost without trace. Log a single warning per posted
+        // notification so the issue is visible in adb logcat (B-10).
+        if (!notificationPermissionGranted()) {
+            Log.w(TAG, "POST_NOTIFICATIONS not granted — advice id=$interventionId dropped: ${advice.take(80)}")
+            return
+        }
         ListeningService.ensureChannels(context)
         val pri = when (urgency) {
             3 -> NotificationCompat.PRIORITY_MAX
@@ -79,7 +92,17 @@ class AdviceNotifier @Inject constructor(
         )
     }
 
+    private fun notificationPermissionGranted(): Boolean {
+        // POST_NOTIFICATIONS only exists on API 33+; older Android grants
+        // notification access implicitly.
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) return true
+        return ContextCompat.checkSelfPermission(
+            context, Manifest.permission.POST_NOTIFICATIONS
+        ) == PackageManager.PERMISSION_GRANTED
+    }
+
     companion object {
         const val NOTIF_ID_BASE = 5000
+        private const val TAG = "AdviceNotifier"
     }
 }

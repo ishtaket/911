@@ -1,14 +1,18 @@
 package com.pca.assistant.settings
 
 import android.content.Context
+import android.util.Log
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.emptyPreferences
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.map
+import java.io.IOException
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -38,20 +42,35 @@ class AppSettings @Inject constructor(
     private val context: Context,
 ) {
 
-    val flow: Flow<Settings> = context.dataStore.data.map { p ->
-        // Safe-parse enums: a stale or hand-edited value from a downgrade
-        // shouldn't crash the settings flow (and through it the whole UI).
-        Settings(
-            providerMode = parseEnum(p[K_PROVIDER], ProviderMode.MOCK),
-            bridgeUrl = p[K_BRIDGE_URL].orEmpty(),
-            windowMinutes = (p[K_WINDOW_MIN] ?: 5).coerceIn(1, 30),
-            language = parseEnum(p[K_LANG], LanguageChoice.SYSTEM),
-            sttModel = parseEnum(p[K_STT_MODEL], SttModelChoice.ANDROID_BUILT_IN),
-            geofencePause = p[K_GEOFENCE_PAUSE] == true,
-            onboardingDone = p[K_ONBOARDING] == true,
-            listeningEnabled = p[K_LISTENING] != false,
-        )
-    }
+    val flow: Flow<Settings> = context.dataStore.data
+        // B-11: DataStore documents that any IOException during read must
+        // be caught at the flow-collection boundary, otherwise it propagates
+        // up to every collector and crashes the UI. The recovery is to emit
+        // a blank preferences instance — the next field-access path below
+        // falls through to defaults, so the user sees first-run state until
+        // their next setting change re-creates the file.
+        .catch { e ->
+            if (e is IOException) {
+                Log.w(TAG, "DataStore read failed (using defaults): ${e.message}")
+                emit(emptyPreferences())
+            } else {
+                throw e
+            }
+        }
+        .map { p ->
+            // Safe-parse enums: a stale or hand-edited value from a downgrade
+            // shouldn't crash the settings flow (and through it the whole UI).
+            Settings(
+                providerMode = parseEnum(p[K_PROVIDER], ProviderMode.MOCK),
+                bridgeUrl = p[K_BRIDGE_URL].orEmpty(),
+                windowMinutes = (p[K_WINDOW_MIN] ?: 5).coerceIn(1, 30),
+                language = parseEnum(p[K_LANG], LanguageChoice.SYSTEM),
+                sttModel = parseEnum(p[K_STT_MODEL], SttModelChoice.ANDROID_BUILT_IN),
+                geofencePause = p[K_GEOFENCE_PAUSE] == true,
+                onboardingDone = p[K_ONBOARDING] == true,
+                listeningEnabled = p[K_LISTENING] != false,
+            )
+        }
 
     private inline fun <reified E : Enum<E>> parseEnum(stored: String?, default: E): E {
         if (stored.isNullOrBlank()) return default
@@ -89,6 +108,7 @@ class AppSettings @Inject constructor(
     suspend fun wipe() = context.dataStore.edit { it.clear() }
 
     private companion object Keys {
+        const val TAG = "AppSettings"
         val K_PROVIDER: Preferences.Key<String> = stringPreferencesKey("provider")
         val K_BRIDGE_URL: Preferences.Key<String> = stringPreferencesKey("bridge_url")
         val K_WINDOW_MIN: Preferences.Key<Int> = intPreferencesKey("window_min")

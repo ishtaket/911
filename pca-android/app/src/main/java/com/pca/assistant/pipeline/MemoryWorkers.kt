@@ -56,12 +56,10 @@ class HourRollupWorker @AssistedInject constructor(
         val (hourStart, hourEnd) = lastClosedHour(now)
 
         val transcripts = transcriptDao.between(hourStart, hourEnd)
-        // Pull windows that overlap the hour to harvest LLM memory_notes
-        // (spec §3.3, fix B-4). Drop skipped windows — they never reached the LLM.
-        val allRecent = windowDao.observeRecent(200).first()
-        val windowsInHour = allRecent.filter {
-            it.startTs >= hourStart && it.startTs < hourEnd && it.sentToLlm
-        }
+        // Pull windows in the closed hour directly via the range query
+        // (B-8 fix) — `observeRecent(200).first()` could miss the target
+        // hour entirely on a busy day.
+        val windowsInHour = windowDao.between(hourStart, hourEnd).filter { it.sentToLlm }
 
         val summary = MemoryRollup.aggregateHour(
             hourStart = hourStart,

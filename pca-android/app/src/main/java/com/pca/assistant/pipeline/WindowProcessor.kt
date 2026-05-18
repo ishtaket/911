@@ -103,19 +103,23 @@ class WindowProcessor @Inject constructor(
             )
         }
 
-        if (decision.intervene && !decision.advice.isNullOrBlank() && decision.urgency >= 1) {
+        // Spec §3.6 defines urgency 0..3. Defensively clamp here (B-7) — a
+        // misbehaving bridge could return 99, which would otherwise pass
+        // through to NotificationCompat.PRIORITY_MAX or worse.
+        val safeUrgency = decision.urgency.coerceIn(0, 3)
+        if (decision.intervene && !decision.advice.isNullOrBlank() && safeUrgency >= 1) {
             val id = interventionDao.insert(
                 InterventionEntity(
                     windowId = windowId,
                     ts = System.currentTimeMillis(),
                     advice = decision.advice,
-                    urgency = decision.urgency,
+                    urgency = safeUrgency,
                     reason = decision.reason,
                     userFeedback = null,
                     shownAt = System.currentTimeMillis(),
                 )
             )
-            notifier.show(id, decision.advice, decision.urgency)
+            notifier.show(id, decision.advice, safeUrgency)
         }
     }
 

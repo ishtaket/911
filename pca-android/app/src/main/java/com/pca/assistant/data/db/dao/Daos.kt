@@ -63,6 +63,15 @@ interface WindowDao {
     @Query("SELECT * FROM windows ORDER BY startTs DESC LIMIT :limit")
     fun observeRecent(limit: Int = 50): Flow<List<WindowEntity>>
 
+    /**
+     * Half-open window slice `[fromTs, toTs)` ordered chronologically. Used
+     * by [com.pca.assistant.pipeline.HourRollupWorker] to harvest
+     * memory_notes for a specific hour (B-8 fix — the previous
+     * `observeRecent(200).first()` could miss old hours on a busy day).
+     */
+    @Query("SELECT * FROM windows WHERE startTs >= :fromTs AND startTs < :toTs ORDER BY startTs ASC")
+    suspend fun between(fromTs: Long, toTs: Long): List<WindowEntity>
+
     @Query("SELECT COUNT(*) FROM windows WHERE startTs >= :sinceTs")
     fun countSince(sinceTs: Long): Flow<Int>
 

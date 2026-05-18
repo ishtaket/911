@@ -253,7 +253,7 @@ private fun ModelRow(
         if (status != null && !status.done && status.failed == null && status.percent >= 0) {
             Spacer(Modifier.height(4.dp))
             LinearProgressIndicator(
-                progress = { status.percent / 100f },
+                progress = (status.percent / 100f).coerceIn(0f, 1f),
                 modifier = Modifier.fillMaxWidth()
             )
         }

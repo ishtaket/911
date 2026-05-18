@@ -10,7 +10,6 @@ import androidx.lifecycle.lifecycleScope
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
-import com.pca.assistant.pipeline.MemoryScheduler
 import com.pca.assistant.service.ListeningService
 import com.pca.assistant.settings.AppSettings
 import com.pca.assistant.ui.dashboard.DashboardScreen
@@ -34,8 +33,8 @@ class MainActivity : FragmentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        ListeningService.ensureChannels(this)
-        MemoryScheduler.schedule(this)
+        // ensureChannels + MemoryScheduler.schedule moved to PcaApplication
+        // (B-9) so they run even when the user never opens the activity.
 
         // If onboarding is complete and listening was on, start service eagerly.
         lifecycleScope.launch {

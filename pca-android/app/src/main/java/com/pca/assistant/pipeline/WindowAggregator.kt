@@ -10,6 +10,9 @@ import com.pca.assistant.data.db.entity.WindowEntity
 import com.pca.assistant.llm.contract.LlmRequest
 import com.pca.assistant.llm.contract.OpenThreadDto
 import com.pca.assistant.llm.contract.WindowPayload
+import kotlinx.serialization.SerialName
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.Json
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -36,6 +39,21 @@ class WindowAggregator @Inject constructor(
     private val ownerDao: OwnerDao,
     private val anonymizer: Anonymizer,
 ) {
+
+    /**
+     * Schema for the per-window context blobs we persist into the `windows`
+     * table. Using kotlinx-serialization (B-6 fix) instead of hand-rolled
+     * string concatenation — the previous version mishandled control chars
+     * inside transcripts (tabs, embedded quotes near edges, etc.).
+     */
+    @Serializable
+    private data class ContextBlob(
+        val transcript: String,
+        val location: String?,
+        @SerialName("is_owner") val isOwner: Boolean,
+    )
+
+    private val blobJson = Json { encodeDefaults = true; explicitNulls = true }
 
     data class WindowSlice(
         val windowId: Long,
@@ -125,12 +143,20 @@ class WindowAggregator @Inject constructor(
     }
 
     suspend fun persistWindow(slice: WindowSlice, providerId: String?, sent: Boolean, latencyMs: Long?): Long {
+        val raw = blobJson.encodeToString(
+            ContextBlob.serializer(),
+            ContextBlob(slice.transcriptOriginal, slice.locationLabel, slice.isOwnerPresent)
+        )
+        val anon = blobJson.encodeToString(
+            ContextBlob.serializer(),
+            ContextBlob(slice.transcriptAnonymized, slice.locationLabel, slice.isOwnerPresent)
+        )
         return windowDao.insert(
             WindowEntity(
                 startTs = slice.startTs,
                 endTs = slice.endTs,
-                rawContextJson = """{"transcript":${jsonString(slice.transcriptOriginal)},"location":${jsonString(slice.locationLabel)},"is_owner":${slice.isOwnerPresent}}""",
-                anonymizedContextJson = """{"transcript":${jsonString(slice.transcriptAnonymized)},"location":${jsonString(slice.locationLabel)},"is_owner":${slice.isOwnerPresent}}""",
+                rawContextJson = raw,
+                anonymizedContextJson = anon,
                 sentToLlm = sent,
                 llmProvider = providerId,
                 llmResponseJson = null,
@@ -140,7 +166,4 @@ class WindowAggregator @Inject constructor(
             )
         )
     }
-
-    private fun jsonString(s: String?): String =
-        if (s == null) "null" else "\"" + s.replace("\\", "\\\\").replace("\"", "\\\"").replace("\n", "\\n") + "\""
 }
