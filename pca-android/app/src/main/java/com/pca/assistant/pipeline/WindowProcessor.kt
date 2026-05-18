@@ -2,7 +2,6 @@ package com.pca.assistant.pipeline
 
 import com.pca.assistant.data.db.dao.InterventionDao
 import com.pca.assistant.data.db.dao.OpenThreadDao
-import com.pca.assistant.data.db.dao.WindowDao
 import com.pca.assistant.data.db.entity.InterventionEntity
 import com.pca.assistant.data.db.entity.OpenThreadEntity
 import com.pca.assistant.llm.ProviderRouter
@@ -30,7 +29,6 @@ import javax.inject.Singleton
 class WindowProcessor @Inject constructor(
     private val aggregator: WindowAggregator,
     private val router: ProviderRouter,
-    private val windowDao: WindowDao,
     private val interventionDao: InterventionDao,
     private val openThreadDao: OpenThreadDao,
     private val settings: AppSettings,
@@ -64,20 +62,21 @@ class WindowProcessor @Inject constructor(
         val (providerId, decision) = routed
         val latency = System.currentTimeMillis() - start
 
-        val windowId = aggregator.persistWindow(slice, providerId = providerId, sent = true, latencyMs = latency)
-
-        // Persist the LLM response for transparent audit (spec §7.2).
-        val stored = windowDao.byId(windowId)
-        if (stored != null) {
-            windowDao.update(
-                stored.copy(
-                    llmResponseJson = json.encodeToString(
-                        com.pca.assistant.llm.contract.LlmDecision.serializer(),
-                        decision
-                    )
-                )
-            )
-        }
+        // B-22 fix: persist the LLM response in the SAME insert as the window
+        // row, instead of insert → byId → update. The previous sequence could
+        // lose the response on a racing delete and was a 2× DB write per
+        // window for no benefit. Spec §7.2 audit requirement is satisfied.
+        val responseJson = json.encodeToString(
+            com.pca.assistant.llm.contract.LlmDecision.serializer(),
+            decision,
+        )
+        val windowId = aggregator.persistWindow(
+            slice = slice,
+            providerId = providerId,
+            sent = true,
+            latencyMs = latency,
+            llmResponseJson = responseJson,
+        )
 
         // Threads bookkeeping.
         if (decision.openThreadsUpdate.closed.isNotEmpty()) {

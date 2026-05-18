@@ -87,7 +87,6 @@ class WindowProcessorUrgencyClampTest {
         processor = WindowProcessor(
             aggregator = aggregator,
             router = ProviderRouter(MockLocalProvider(), bridge, healthDao, settings),
-            windowDao = windowDao,
             interventionDao = interventionDao,
             openThreadDao = openThreadDao,
             settings = settings,

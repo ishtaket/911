@@ -71,7 +71,6 @@ class WindowProcessorTest {
         processor = WindowProcessor(
             aggregator = aggregator,
             router = router,
-            windowDao = windowDao,
             interventionDao = interventionDao,
             openThreadDao = openThreadDao,
             settings = settings,

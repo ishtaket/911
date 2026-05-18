@@ -146,7 +146,20 @@ class WindowAggregator @Inject constructor(
         )
     }
 
-    suspend fun persistWindow(slice: WindowSlice, providerId: String?, sent: Boolean, latencyMs: Long?): Long {
+    /**
+     * Persist a window row. [llmResponseJson] is optional — pass non-null
+     * for the speech path (we have the LLM decision in hand) and null for
+     * the skipped path. The single insert avoids the previous insert +
+     * `byId(...)` + update sequence which could lose the response JSON on
+     * a racing delete (B-22).
+     */
+    suspend fun persistWindow(
+        slice: WindowSlice,
+        providerId: String?,
+        sent: Boolean,
+        latencyMs: Long?,
+        llmResponseJson: String? = null,
+    ): Long {
         val raw = blobJson.encodeToString(
             ContextBlob.serializer(),
             ContextBlob(slice.transcriptOriginal, slice.locationLabel, slice.isOwnerPresent)
@@ -163,7 +176,7 @@ class WindowAggregator @Inject constructor(
                 anonymizedContextJson = anon,
                 sentToLlm = sent,
                 llmProvider = providerId,
-                llmResponseJson = null,
+                llmResponseJson = llmResponseJson,
                 latencyMs = latencyMs,
                 skipped = !slice.hadSpeech,
                 skipReason = if (slice.hadSpeech) null else "no_speech",
