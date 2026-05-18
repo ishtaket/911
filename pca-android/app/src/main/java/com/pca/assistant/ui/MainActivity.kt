@@ -36,11 +36,16 @@ class MainActivity : FragmentActivity() {
         // ensureChannels + MemoryScheduler.schedule moved to PcaApplication
         // (B-9) so they run even when the user never opens the activity.
 
-        // If onboarding is complete and listening was on, start service eagerly.
-        lifecycleScope.launch {
-            val cfg = settings.flow.first()
-            if (cfg.onboardingDone && cfg.listeningEnabled) {
-                ListeningService.start(this@MainActivity)
+        // If onboarding is complete and listening was on, start the service
+        // eagerly. B-29: only on a FRESH activity creation — a locale change
+        // would otherwise recreate the activity and re-resume a service that
+        // the user had explicitly paused via the notification toggle.
+        if (savedInstanceState == null) {
+            lifecycleScope.launch {
+                val cfg = settings.flow.first()
+                if (cfg.onboardingDone && cfg.listeningEnabled) {
+                    ListeningService.start(this@MainActivity)
+                }
             }
         }
 
