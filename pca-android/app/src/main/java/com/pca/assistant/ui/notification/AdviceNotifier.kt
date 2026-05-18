@@ -84,9 +84,21 @@ class AdviceNotifier @Inject constructor(
             putExtra(FeedbackReceiver.EXTRA_INTERVENTION_ID, interventionId)
             putExtra(FeedbackReceiver.EXTRA_KIND, kind)
         }
+        // B-25: use a stable small offset per kind instead of String.hashCode(),
+        // which (a) varies between JVM implementations and (b) is large enough
+        // that interventionId * 10 + hash overflows Int and collides across
+        // interventions. Android's PendingIntent equality uses request code +
+        // Intent.filterEquals (which IGNORES extras), so unique request codes
+        // are the only thing that disambiguate the three feedback actions.
+        val offset = when (kind) {
+            FeedbackReceiver.FEEDBACK_USEFUL -> 1
+            FeedbackReceiver.FEEDBACK_NOT_USEFUL -> 2
+            FeedbackReceiver.FEEDBACK_NOT_NOW -> 3
+            else -> 0
+        }
         return PendingIntent.getBroadcast(
             context,
-            interventionId.toInt() * 10 + kind.hashCode(),
+            interventionId.toInt() * KIND_BUCKET + offset,
             intent,
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
         )
@@ -104,5 +116,7 @@ class AdviceNotifier @Inject constructor(
     companion object {
         const val NOTIF_ID_BASE = 5000
         private const val TAG = "AdviceNotifier"
+        /** Reserve 4 request-code slots per intervention (3 feedback kinds + 1 spare). */
+        private const val KIND_BUCKET = 4
     }
 }
