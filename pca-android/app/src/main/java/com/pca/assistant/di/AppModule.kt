@@ -1,6 +1,7 @@
 package com.pca.assistant.di
 
 import android.content.Context
+import com.pca.assistant.BuildConfig
 import com.pca.assistant.data.db.PcaDatabase
 import com.pca.assistant.data.db.dao.DaySummaryDao
 import com.pca.assistant.data.db.dao.HourSummaryDao
@@ -48,7 +49,18 @@ object AppModule {
     @Provides
     @Singleton
     fun provideOkHttp(): OkHttpClient {
-        val log = HttpLoggingInterceptor().apply { level = HttpLoggingInterceptor.Level.BASIC }
+        // B-34: bridge URL (potentially the user's home IP) ends up in
+        // logcat at BASIC level. Restrict to debug builds — release ships
+        // with NONE so a release-build APK doesn't leak the user's LAN
+        // topology into logs that other on-device apps used to be able to
+        // read on older Android versions.
+        val log = HttpLoggingInterceptor().apply {
+            level = if (BuildConfig.DEBUG) {
+                HttpLoggingInterceptor.Level.BASIC
+            } else {
+                HttpLoggingInterceptor.Level.NONE
+            }
+        }
         return OkHttpClient.Builder()
             .connectTimeout(10, TimeUnit.SECONDS)
             .readTimeout(60, TimeUnit.SECONDS)
