@@ -4,10 +4,8 @@ import android.util.Log
 import com.pca.assistant.models.ModelRegistry
 import com.pca.assistant.settings.AppSettings
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.sync.Mutex
-import kotlinx.coroutines.sync.withLock
-import kotlinx.coroutines.withContext
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.withContext
 import java.io.File
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -32,7 +30,12 @@ class WhisperJniRecognizer @Inject constructor(
 
     override val id: String = "whisper.cpp"
 
-    private val lock = Mutex()
+    // Java monitor (not coroutine Mutex) so [release] is a non-suspend
+    // function and can be called from non-coroutine contexts like
+    // [com.pca.assistant.service.ListeningService.onDestroy] without a
+    // runBlocking-on-Main hazard. recognize() takes the same lock during
+    // inference, so release() is correctly serialised with in-flight calls.
+    private val lock = Any()
 
     /** Null until the first successful nativeInit. */
     @Volatile private var ctxPtr: Long = 0L
@@ -67,9 +70,10 @@ class WhisperJniRecognizer @Inject constructor(
         if (ctxPtr == 0L) return SttResult("", 0f, hintLanguage)
 
         val text = withContext(Dispatchers.Default) {
-            // Whisper.cpp is not internally thread-safe across a single context;
-            // serialise calls.
-            lock.withLock {
+            // Whisper.cpp is not internally thread-safe across a single
+            // context; the synchronized lock also pairs with release() to
+            // prevent use-after-free (B-26).
+            synchronized(lock) {
                 val ptr = ctxPtr
                 if (ptr == 0L) "" else nativeRecognize(ptr, pcm, hintLanguage, recommendedThreads())
             }
@@ -81,18 +85,27 @@ class WhisperJniRecognizer @Inject constructor(
         )
     }
 
+    /**
+     * Release the native whisper_context. B-26: takes the same Java
+     * monitor that [recognize] holds for the duration of inference, so we
+     * never call nativeRelease() while another coroutine is inside
+     * nativeRecognize() with the same ctx pointer (use-after-free in C++).
+     * Brief blocking on contention — wipe is rare and short.
+     */
     override fun release() {
-        val ptr = ctxPtr
-        ctxPtr = 0L
-        loadedFor = null
-        loadedSize = 0L
-        loadedMtime = 0L
-        if (nativeAvailable && ptr != 0L) {
-            runCatching { nativeRelease(ptr) }
+        synchronized(lock) {
+            val ptr = ctxPtr
+            ctxPtr = 0L
+            loadedFor = null
+            loadedSize = 0L
+            loadedMtime = 0L
+            if (nativeAvailable && ptr != 0L) {
+                runCatching { nativeRelease(ptr) }
+            }
         }
     }
 
-    private suspend fun ensureLoaded(modelFile: File) {
+    private fun ensureLoaded(modelFile: File) {
         // Fast path — same file, same size, same mtime → reuse loaded ctx.
         if (ctxPtr != 0L &&
             loadedFor == modelFile.absolutePath &&
@@ -100,12 +113,12 @@ class WhisperJniRecognizer @Inject constructor(
             loadedMtime == modelFile.lastModified()
         ) return
 
-        lock.withLock {
+        synchronized(lock) {
             if (ctxPtr != 0L &&
                 loadedFor == modelFile.absolutePath &&
                 loadedSize == modelFile.length() &&
                 loadedMtime == modelFile.lastModified()
-            ) return@withLock
+            ) return@synchronized
             // Drop stale ctx — wipe / redownload / model swap (B-2).
             if (ctxPtr != 0L) {
                 runCatching { nativeRelease(ctxPtr) }
