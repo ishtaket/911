@@ -7,9 +7,11 @@ package com.pca.assistant.stt
  * which prefers:
  *   - [WhisperJniRecognizer] — whisper.cpp v1.7.1 via JNI, NEON-tuned for
  *     Exynos 2100. Model is downloaded on demand into the app's filesDir.
- *   - [AndroidSpeechRecognizerImpl] — soft fallback for the window between
- *     first install and model download (or for dev builds where the native
- *     `libpca_whisper_jni.so` couldn't be loaded).
+ *   - [NoopSpeechRecognizer]   — honest empty result for the window between
+ *     first install and model download. Android's system SpeechRecognizer
+ *     is intentionally NOT used as a fallback: it requires exclusive
+ *     access to the mic and would steal it from the always-on
+ *     [com.pca.assistant.audio.AudioCapture] feed.
  *
  * Both implementations satisfy this single-method contract so the foreground
  * service stays agnostic.

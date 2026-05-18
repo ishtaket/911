@@ -7,6 +7,7 @@ import com.pca.assistant.data.db.entity.OwnerProfileEntity
 import com.pca.assistant.settings.AppSettings
 import com.pca.assistant.speaker.SpeakerIdentifier
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
@@ -73,24 +74,28 @@ class OnboardingViewModel @Inject constructor(
         )
     }
 
-    fun finish(name: String, languageHint: String?) {
-        viewModelScope.launch {
-            val averaged = averageEmbeddings(_state.value.embeddings)
-            val bytes = averaged.toLittleEndianBytes()
-            ownerDao.upsert(
-                OwnerProfileEntity(
-                    id = 1,
-                    name = name.ifBlank { "Owner" },
-                    voiceEmbedding = bytes,
-                    preferencesJson = "{}",
-                    l3Summary = "",
-                    preferredLanguage = (languageHint ?: Locale.getDefault().language).ifBlank { "en" },
-                    updatedAt = System.currentTimeMillis(),
-                )
+    /**
+     * Returns the [Job] that performs the DB + DataStore writes. Callers must
+     * `.join()` it before navigating to the dashboard — otherwise the next
+     * screen observes [Settings.onboardingDone] == false for a frame and
+     * bounces back to onboarding.
+     */
+    fun finish(name: String, languageHint: String?): Job = viewModelScope.launch {
+        val averaged = averageEmbeddings(_state.value.embeddings)
+        val bytes = averaged.toLittleEndianBytes()
+        ownerDao.upsert(
+            OwnerProfileEntity(
+                id = 1,
+                name = name.ifBlank { "Owner" },
+                voiceEmbedding = bytes,
+                preferencesJson = "{}",
+                l3Summary = "",
+                preferredLanguage = (languageHint ?: Locale.getDefault().language).ifBlank { "en" },
+                updatedAt = System.currentTimeMillis(),
             )
-            settings.setOnboardingDone(true)
-            settings.setListeningEnabled(true)
-        }
+        )
+        settings.setOnboardingDone(true)
+        settings.setListeningEnabled(true)
     }
 
     private fun averageEmbeddings(list: List<FloatArray>): FloatArray {

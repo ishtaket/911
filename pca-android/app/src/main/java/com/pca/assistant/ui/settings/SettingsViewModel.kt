@@ -2,6 +2,7 @@ package com.pca.assistant.ui.settings
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import android.content.Context
 import com.pca.assistant.data.db.PcaDatabase
 import com.pca.assistant.data.security.DbPassphrase
 import com.pca.assistant.models.ModelDownloader
@@ -35,6 +36,7 @@ data class DownloadStatus(
 
 @HiltViewModel
 class SettingsViewModel @Inject constructor(
+    private val context: Context,
     private val settings: AppSettings,
     private val db: PcaDatabase,
     private val passphrase: DbPassphrase,
@@ -101,14 +103,26 @@ class SettingsViewModel @Inject constructor(
 
     fun wipeEverything() = viewModelScope.launch {
         withContext(Dispatchers.IO) {
-            db.ownerDao().wipe()
-            db.transcriptDao().wipe()
-            db.windowDao().wipe()
-            db.interventionDao().wipe()
-            db.openThreadDao().wipe()
-            db.hourSummaryDao().wipe()
-            db.daySummaryDao().wipe()
-            db.placeDao().wipe()
+            // Empty every table — best-effort, ignore failures since the DB
+            // file will be deleted next anyway.
+            runCatching { db.ownerDao().wipe() }
+            runCatching { db.transcriptDao().wipe() }
+            runCatching { db.windowDao().wipe() }
+            runCatching { db.interventionDao().wipe() }
+            runCatching { db.openThreadDao().wipe() }
+            runCatching { db.hourSummaryDao().wipe() }
+            runCatching { db.daySummaryDao().wipe() }
+            runCatching { db.placeDao().wipe() }
+            // Close + delete the SQLCipher file. Without this, the next
+            // process start generates a new Keystore key and Room tries to
+            // open the old (now-unreadable) ciphertext file → crash loop.
+            runCatching { db.close() }
+            runCatching { context.deleteDatabase(PcaDatabase.DB_NAME) }
+            // Also drop the downloaded model files — a full wipe should be
+            // a clean factory reset.
+            runCatching {
+                registry.modelsDir().listFiles()?.forEach { it.delete() }
+            }
         }
         settings.wipe()
         passphrase.wipe()

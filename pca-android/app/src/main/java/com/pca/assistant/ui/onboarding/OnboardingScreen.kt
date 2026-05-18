@@ -78,12 +78,17 @@ fun OnboardingScreen(vm: OnboardingViewModel, onDone: () -> Unit) {
                     onContinue = vm::next,
                     onBack = vm::back,
                 )
-                OnbStep.FINISH -> FinishStep(
-                    onStart = {
-                        vm.finish(name = "Owner", languageHint = null)
-                        onDone()
-                    }
-                )
+                OnbStep.FINISH -> {
+                    val finishScope = rememberCoroutineScope()
+                    FinishStep(
+                        onStart = {
+                            finishScope.launch {
+                                vm.finish(name = "Owner", languageHint = null).join()
+                                onDone()
+                            }
+                        }
+                    )
+                }
             }
         }
     }

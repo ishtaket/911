@@ -43,8 +43,10 @@ APK остаётся <30 МБ. Веса берутся в первый запу�
 | `ecapa-tdnn.onnx`               | ~27 МБ     | HF mirror                                         |
 
 `AdaptiveSpeechRecognizer` и `AdaptiveSpeakerIdentifier` сами переключаются:
-пока модели нет на диске — используется fallback (Android STT / синтетический эмбеддинг);
-как только файл появляется — следующий чанк уже идёт в Whisper / ONNX без перезапуска.
+пока модели нет на диске — STT возвращает пустые транскрипты (`NoopSpeechRecognizer` —
+честный no-op, потому что Android STT конфликтует с always-on `AudioCapture` за
+микрофон), а embedding строится синтетически. Как только файл появляется —
+следующий чанк уже идёт в Whisper / ONNX без перезапуска.
 
 Шифрование БД: **SQLCipher** + 256-битная парольная фраза в **AndroidKeystore**
 (StrongBox запрашивается при наличии аппаратного TEE).
@@ -128,15 +130,14 @@ python server.py --provider codex --port 8765
 
 ## Дорожная карта до Whisper / ONNX (§12)
 
-Текущий интерфейс `com.pca.assistant.stt.SpeechRecognizer` принимает 16-kHz
-PCM и возвращает `SttResult`. Реализация на whisper.cpp:
+Whisper.cpp уже встроен — собирается CMake-ом из `app/src/main/cpp/CMakeLists.txt`,
+JNI-обёртка `WhisperJniRecognizer` подключена в `BindingsModule` через
+`AdaptiveSpeechRecognizer`. Что остаётся пользователю на устройстве:
 
-1. Собрать `libwhisper.so` для `arm64-v8a` (Exynos 2100 → NEON, без QNN).
-2. Положить в `app/src/main/jniLibs/arm64-v8a/`.
-3. Реализовать `WhisperJniRecognizer : SpeechRecognizer` (см. doc-комментарий
-   в `SpeechRecognizer.kt`).
-4. В `BindingsModule` поменять `@Binds AndroidSpeechRecognizerImpl` на новый.
-5. Добавить on-demand загрузку модели в `SettingsScreen` (UI-крючки уже есть).
+1. Скачать модель `ggml-large-v3-turbo-q5_0.bin` (~800 МБ) через
+   Settings → Model downloads.
+2. После скачивания следующий 5-минутный тик автоматически идёт через
+   whisper.cpp — без перезапуска приложения.
 
-Подробности — см. §12 спецификации (Large-v3 turbo Q5 базовый, Ivrit.AI
-бустер для иврита, LoRA RU+HE после сбора датасета).
+Дальнейшие улучшения — см. §12 спецификации (Ivrit.AI бустер для иврита,
+LoRA RU+HE после сбора датасета).

@@ -9,6 +9,7 @@ import com.pca.assistant.llm.ProviderRouter
 import com.pca.assistant.settings.AppSettings
 import com.pca.assistant.settings.LanguageChoice
 import com.pca.assistant.ui.notification.AdviceNotifier
+import android.util.Log
 import kotlinx.coroutines.flow.first
 import kotlinx.serialization.json.Json
 import java.util.Locale
@@ -49,7 +50,18 @@ class WindowProcessor @Inject constructor(
         val request = aggregator.buildRequest(slice.copy(windowId = 0L), replyLang)
 
         val start = System.currentTimeMillis()
-        val (providerId, decision) = router.decide(request)
+        val routed = try {
+            router.decide(request)
+        } catch (t: Throwable) {
+            // Should be unreachable — the router falls back to mock and mock
+            // never throws — but if something pathological happens (OOM,
+            // serializer collapse) we record the window as queued-but-not-sent
+            // so the ticker keeps running and the dashboard sees it.
+            Log.e("WindowProcessor", "router.decide failed: ${t.message}", t)
+            aggregator.persistWindow(slice, providerId = null, sent = false, latencyMs = null)
+            return
+        }
+        val (providerId, decision) = routed
         val latency = System.currentTimeMillis() - start
 
         val windowId = aggregator.persistWindow(slice, providerId = providerId, sent = true, latencyMs = latency)

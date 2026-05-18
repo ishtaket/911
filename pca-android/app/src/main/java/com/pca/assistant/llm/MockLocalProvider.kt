@@ -118,11 +118,15 @@ class MockLocalProvider @Inject constructor() : LlmProvider {
             "эй ассистент", "ассистент,",
             "היי עוזר", "עוזר,"
         )
+        // (?U) enables Pattern.UNICODE_CHARACTER_CLASS so \b and \w treat
+        // Cyrillic / Hebrew letters as word characters — without this flag
+        // Java regex's \b only marks ASCII word boundaries and the RU + HE
+        // patterns below silently never fire.
         val PROMISE_PATTERNS = listOf(
-            Regex("\\bi (?:will|gotta|need to|have to|must|should) \\w+"),
-            Regex("\\bremind me\\b"),
-            Regex("\\b(?:я |мне )?(?:надо|нужно|должен|должна|обещаю|напомни)\\b"),
-            Regex("\\b(?:צריך|חייב|מבטיח|תזכיר)\\b"),
+            Regex("(?U)\\bi (?:will|gotta|need to|have to|must|should) \\w+"),
+            Regex("(?U)\\bremind me\\b"),
+            Regex("(?U)\\b(?:я |мне )?(?:надо|нужно|должен|должна|обещаю|напомни)\\b"),
+            Regex("(?U)\\b(?:צריך|חייב|מבטיח|תזכיר)\\b"),
         )
     }
 }

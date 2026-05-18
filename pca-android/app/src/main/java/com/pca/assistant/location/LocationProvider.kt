@@ -10,13 +10,9 @@ import com.google.android.gms.location.Priority
 import com.pca.assistant.data.db.dao.PlaceDao
 import com.pca.assistant.data.db.entity.PlaceEntity
 import kotlinx.coroutines.tasks.await
+import kotlinx.coroutines.withTimeoutOrNull
 import javax.inject.Inject
 import javax.inject.Singleton
-import kotlin.math.atan2
-import kotlin.math.cos
-import kotlin.math.pow
-import kotlin.math.sin
-import kotlin.math.sqrt
 
 /**
  * Spec §3.5: GPS coordinates bucketed into place names via a local place map.
@@ -44,15 +40,17 @@ class LocationProvider @Inject constructor(
     suspend fun current(): Snapshot {
         if (!hasFinePermission()) return Snapshot(null, null, null, false)
         return try {
-            val loc = fused.getCurrentLocation(Priority.PRIORITY_BALANCED_POWER_ACCURACY, null)
-                .await()
+            // Fused provider sometimes never resolves when the GPS chip is
+            // off and there are no recent fixes. Cap the wait so the 5-min
+            // ticker never blocks indefinitely.
+            val loc = withTimeoutOrNull(LOCATION_TIMEOUT_MS) {
+                fused.getCurrentLocation(Priority.PRIORITY_BALANCED_POWER_ACCURACY, null).await()
+            }
             if (loc == null) {
                 Snapshot(null, null, null, false)
             } else {
-                val places = placeDao.all()
-                val match = places.firstOrNull { distanceMetres(loc.latitude, loc.longitude, it.lat, it.lng) <= it.radius }
-                val label = match?.label ?: bucketLabel(loc.latitude, loc.longitude)
-                Snapshot(loc.latitude, loc.longitude, label, match?.pauseRecording == true)
+                val match = PlaceMatcher.match(loc.latitude, loc.longitude, placeDao.all())
+                Snapshot(loc.latitude, loc.longitude, match.label, match.pauseRecording)
             }
         } catch (e: SecurityException) {
             Snapshot(null, null, null, false)
@@ -61,19 +59,7 @@ class LocationProvider @Inject constructor(
         }
     }
 
-    private fun bucketLabel(lat: Double, lng: Double): String {
-        val rl = String.format("%.2f", lat)
-        val rn = String.format("%.2f", lng)
-        return "cell:$rl,$rn"
-    }
-
-    private fun distanceMetres(lat1: Double, lng1: Double, lat2: Double, lng2: Double): Double {
-        val r = 6_371_000.0
-        val dLat = Math.toRadians(lat2 - lat1)
-        val dLng = Math.toRadians(lng2 - lng1)
-        val a = sin(dLat / 2).pow(2) +
-            cos(Math.toRadians(lat1)) * cos(Math.toRadians(lat2)) * sin(dLng / 2).pow(2)
-        val c = 2 * atan2(sqrt(a), sqrt(1 - a))
-        return r * c
+    private companion object {
+        const val LOCATION_TIMEOUT_MS = 5_000L
     }
 }

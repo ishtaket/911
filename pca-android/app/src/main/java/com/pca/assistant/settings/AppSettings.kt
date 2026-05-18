@@ -39,16 +39,27 @@ class AppSettings @Inject constructor(
 ) {
 
     val flow: Flow<Settings> = context.dataStore.data.map { p ->
+        // Safe-parse enums: a stale or hand-edited value from a downgrade
+        // shouldn't crash the settings flow (and through it the whole UI).
         Settings(
-            providerMode = enumValueOf(p[K_PROVIDER] ?: ProviderMode.MOCK.name),
+            providerMode = parseEnum(p[K_PROVIDER], ProviderMode.MOCK),
             bridgeUrl = p[K_BRIDGE_URL].orEmpty(),
             windowMinutes = (p[K_WINDOW_MIN] ?: 5).coerceIn(1, 30),
-            language = enumValueOf(p[K_LANG] ?: LanguageChoice.SYSTEM.name),
-            sttModel = enumValueOf(p[K_STT_MODEL] ?: SttModelChoice.ANDROID_BUILT_IN.name),
+            language = parseEnum(p[K_LANG], LanguageChoice.SYSTEM),
+            sttModel = parseEnum(p[K_STT_MODEL], SttModelChoice.ANDROID_BUILT_IN),
             geofencePause = p[K_GEOFENCE_PAUSE] == true,
             onboardingDone = p[K_ONBOARDING] == true,
             listeningEnabled = p[K_LISTENING] != false,
         )
+    }
+
+    private inline fun <reified E : Enum<E>> parseEnum(stored: String?, default: E): E {
+        if (stored.isNullOrBlank()) return default
+        return try {
+            enumValueOf<E>(stored)
+        } catch (_: IllegalArgumentException) {
+            default
+        }
     }
 
     suspend fun setProviderMode(mode: ProviderMode) =

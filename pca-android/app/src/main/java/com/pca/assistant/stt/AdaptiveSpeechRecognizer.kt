@@ -10,9 +10,9 @@ import javax.inject.Singleton
  * Resolution order, evaluated per-call so the next chunk picks up changes:
  *   1. [WhisperJniRecognizer]  — production path; requires `libpca_whisper_jni.so`
  *      (built by CMake) and a downloaded ggml model on disk.
- *   2. [AndroidSpeechRecognizerImpl] — soft fallback for the brief window
- *      between first install and model download, and for dev builds where
- *      whisper.cpp couldn't be compiled (e.g. emulator with unsupported ABI).
+ *   2. [NoopSpeechRecognizer]  — honest empty result while we wait for the
+ *      user to download a model. Android's built-in STT is NOT used because
+ *      it competes for the mic with our always-on capture (see NoopSpeechRecognizer).
  *
  * Both implementations honour the same contract, so consumers (the foreground
  * service, the enrollment flow) never need to know which is active.
@@ -20,23 +20,22 @@ import javax.inject.Singleton
 @Singleton
 class AdaptiveSpeechRecognizer @Inject constructor(
     private val whisper: WhisperJniRecognizer,
-    private val androidFallback: AndroidSpeechRecognizerImpl,
+    private val noop: NoopSpeechRecognizer,
     private val registry: ModelRegistry,
 ) : SpeechRecognizer {
 
     override val id: String
-        get() = if (whisperReady()) whisper.id else androidFallback.id
+        get() = if (whisperReady()) whisper.id else noop.id
 
     override suspend fun recognize(pcm: ShortArray, hintLanguage: String?): SttResult =
         if (whisperReady()) whisper.recognize(pcm, hintLanguage)
-        else androidFallback.recognize(pcm, hintLanguage)
+        else noop.recognize(pcm, hintLanguage)
 
     override fun release() {
         runCatching { whisper.release() }
-        runCatching { androidFallback.release() }
     }
 
-    private fun whisperReady(): Boolean {
+    fun whisperReady(): Boolean {
         if (!WhisperJniRecognizer.nativeAvailable) return false
         return registry.isReady(ModelRegistry.WHISPER_TURBO_Q5) ||
             registry.isReady(ModelRegistry.WHISPER_SMALL_Q5)
