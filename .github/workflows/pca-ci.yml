@@ -1,0 +1,69 @@
+name: PCA Android CI
+
+# Builds and unit-tests the Personal Context Assistant module
+# (pca-android/). Runs in parallel to the Rescue911 CI defined in ci.yml.
+
+on:
+  push:
+    paths:
+      - 'pca-android/**'
+      - '.github/workflows/pca-ci.yml'
+  pull_request:
+    paths:
+      - 'pca-android/**'
+      - '.github/workflows/pca-ci.yml'
+
+jobs:
+  pca-build:
+    name: pca-android · assembleDebug + unit tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK 17 (Temurin)
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+        with:
+          packages: 'platforms;android-34 build-tools;34.0.0 ndk;26.1.10909125'
+
+      - name: Cache Gradle
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: pca-gradle-${{ runner.os }}-${{ hashFiles('pca-android/**/*.gradle*', 'pca-android/gradle/wrapper/gradle-wrapper.properties', 'pca-android/gradle/libs.versions.toml') }}
+          restore-keys: |
+            pca-gradle-${{ runner.os }}-
+
+      - name: Make gradlew executable
+        run: chmod +x pca-android/gradlew
+
+      - name: Run unit tests
+        working-directory: pca-android
+        run: ./gradlew :app:testDebugUnitTest --console=plain --no-daemon --stacktrace
+
+      - name: Assemble debug APK
+        working-directory: pca-android
+        run: ./gradlew :app:assembleDebug --console=plain --no-daemon --stacktrace
+
+      - name: Upload debug APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: pca-app-debug
+          path: pca-android/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Upload unit-test report on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pca-unit-test-report
+          path: pca-android/app/build/reports/tests/testDebugUnitTest/
+          if-no-files-found: ignore

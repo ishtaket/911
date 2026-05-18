@@ -90,7 +90,7 @@ jobs:
           set -e
           echo "Scanning tracked files for forbidden artifacts..."
 
-          forbidden=$(git ls-files | grep -E '^(\.env(\..+)?|backend/\.venv/|logs/|android/app/build/|android/\.gradle/|android/local\.properties)$|\.(apk|aab|png|jpg|jpeg|webp)$' | grep -vE '^\.env\.example$' || true)
+          forbidden=$(git ls-files | grep -E '^(\.env(\..+)?|backend/\.venv/|logs/|android/app/build/|android/\.gradle/|android/local\.properties|pca-android/app/build/|pca-android/\.gradle/|pca-android/local\.properties)$|\.(apk|aab|png|jpg|jpeg|webp)$' | grep -vE '^\.env\.example$' || true)
 
           if [ -n "$forbidden" ]; then
             echo "::error::Forbidden tracked files detected:"

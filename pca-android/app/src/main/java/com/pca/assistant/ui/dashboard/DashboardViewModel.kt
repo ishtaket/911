@@ -1,0 +1,104 @@
+package com.pca.assistant.ui.dashboard
+
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import com.pca.assistant.data.db.dao.InterventionDao
+import com.pca.assistant.data.db.dao.OpenThreadDao
+import com.pca.assistant.data.db.dao.WindowDao
+import com.pca.assistant.data.db.entity.InterventionEntity
+import com.pca.assistant.data.db.entity.OpenThreadEntity
+import com.pca.assistant.data.db.entity.WindowEntity
+import com.pca.assistant.service.ListeningState
+import com.pca.assistant.service.ServiceState
+import com.pca.assistant.settings.AppSettings
+import com.pca.assistant.settings.ProviderMode
+import com.pca.assistant.settings.Settings
+import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.stateIn
+import java.util.Calendar
+import javax.inject.Inject
+
+data class DashboardState(
+    val listening: ListeningState,
+    val provider: String,
+    val windowsToday: Int,
+    val interventionsToday: Int,
+    val openThreadsCount: Int,
+    val openThreads: List<OpenThreadEntity>,
+    val recentWindows: List<WindowEntity>,
+    val recentInterventions: List<InterventionEntity>,
+)
+
+@HiltViewModel
+class DashboardViewModel @Inject constructor(
+    settings: AppSettings,
+    serviceState: ServiceState,
+    windowDao: WindowDao,
+    interventionDao: InterventionDao,
+    openThreadDao: OpenThreadDao,
+) : ViewModel() {
+
+    val state: StateFlow<DashboardState>
+
+    init {
+        val sinceMidnight = midnightTodayMs()
+        val counts = combine(
+            windowDao.countSince(sinceMidnight),
+            interventionDao.countSince(sinceMidnight),
+        ) { w, i -> w to i }
+
+        val lists = combine(
+            openThreadDao.observeOpen(),
+            windowDao.observeRecent(20),
+            interventionDao.observeRecent(20),
+        ) { threads, windows, ints -> Triple(threads, windows, ints) }
+
+        val headers = combine(
+            settings.flow,
+            serviceState.state,
+        ) { s: Settings, ls: ListeningState -> s to ls }
+
+        state = combine(headers, counts, lists) { hdr, cnt, lst ->
+            val (cfg, ls) = hdr
+            val (windowsToday, intToday) = cnt
+            val (threads, windows, ints) = lst
+            DashboardState(
+                listening = ls,
+                provider = when (cfg.providerMode) {
+                    ProviderMode.MOCK -> "Local mock"
+                    ProviderMode.BRIDGE -> "HTTP bridge"
+                },
+                windowsToday = windowsToday,
+                interventionsToday = intToday,
+                openThreadsCount = threads.size,
+                openThreads = threads,
+                recentWindows = windows,
+                recentInterventions = ints,
+            )
+        }.stateIn(
+            viewModelScope,
+            SharingStarted.WhileSubscribed(5_000),
+            DashboardState(
+                listening = ListeningState.STOPPED,
+                provider = "—",
+                windowsToday = 0,
+                interventionsToday = 0,
+                openThreadsCount = 0,
+                openThreads = emptyList(),
+                recentWindows = emptyList(),
+                recentInterventions = emptyList(),
+            )
+        )
+    }
+
+    private fun midnightTodayMs(): Long {
+        val cal = Calendar.getInstance().apply {
+            set(Calendar.HOUR_OF_DAY, 0); set(Calendar.MINUTE, 0)
+            set(Calendar.SECOND, 0); set(Calendar.MILLISECOND, 0)
+        }
+        return cal.timeInMillis
+    }
+}
