@@ -48,26 +48,34 @@ class OnnxEcapaIdentifier @Inject constructor(
 
     override fun embedding(pcm: ShortArray): FloatArray {
         if (pcm.isEmpty()) return FloatArray(resolvedSize)
-        val s = ensureSession() ?: return FloatArray(resolvedSize)
 
-        val samples = FloatArray(pcm.size) { i -> pcm[i] / 32768f }
-        return try {
-            val env = OrtEnvironment.getEnvironment()
-            val shape = longArrayOf(1, samples.size.toLong())
-            OnnxTensor.createTensor(env, FloatBuffer.wrap(samples), shape).use { tensor ->
-                val key = inputName ?: s.inputNames.first()
-                s.run(mapOf(key to tensor)).use { results ->
-                    val raw = results.get(0)
-                    val out = extractFloatArray(raw.value)
-                    if (out.isNotEmpty()) {
-                        resolvedSize = out.size
-                        l2Normalize(out)
-                    } else FloatArray(resolvedSize)
+        // B-14 fix: hold the lock through the entire inference so a
+        // concurrent release() (from the wipe path) cannot call
+        // OrtSession.close() while we are inside session.run() — that
+        // would crash in native ORT code. Embeddings are short
+        // (~10 ms) so the contention cost is negligible against the
+        // foreground service's serial chunk processing.
+        synchronized(lock) {
+            val s = ensureSessionLocked() ?: return FloatArray(resolvedSize)
+            val samples = FloatArray(pcm.size) { i -> pcm[i] / 32768f }
+            return try {
+                val env = OrtEnvironment.getEnvironment()
+                val shape = longArrayOf(1, samples.size.toLong())
+                OnnxTensor.createTensor(env, FloatBuffer.wrap(samples), shape).use { tensor ->
+                    val key = inputName ?: s.inputNames.first()
+                    s.run(mapOf(key to tensor)).use { results ->
+                        val raw = results.get(0)
+                        val out = extractFloatArray(raw.value)
+                        if (out.isNotEmpty()) {
+                            resolvedSize = out.size
+                            l2Normalize(out)
+                        } else FloatArray(resolvedSize)
+                    }
                 }
+            } catch (t: Throwable) {
+                Log.w(TAG, "embedding failed: ${t.message}")
+                FloatArray(resolvedSize)
             }
-        } catch (t: Throwable) {
-            Log.w(TAG, "embedding failed: ${t.message}")
-            FloatArray(resolvedSize)
         }
     }
 
@@ -86,61 +94,53 @@ class OnnxEcapaIdentifier @Inject constructor(
         }
     }
 
-    private fun ensureSession(): OrtSession? {
+    /**
+     * Must be called WITH `lock` already held (the embedding fast path
+     * holds it for the duration of inference per B-14). Returns the
+     * cached session if the underlying file hasn't moved, otherwise
+     * closes the stale one and builds a fresh session — or returns null
+     * if the file is gone.
+     */
+    private fun ensureSessionLocked(): OrtSession? {
         val file = registry.fileFor(ModelRegistry.ECAPA_TDNN_ONNX)
         val gone = !file.exists() || file.length() < 1024
-        val current = session
-        // Fast path: cached session and the underlying file hasn't moved
-        // (same absolute path, same size, same mtime). Avoids stat-ing the
-        // file lock on every embedding call.
-        if (current != null &&
+        val cached = session
+        if (cached != null &&
             !gone &&
             file.absolutePath == loadedFor &&
             file.length() == loadedSize &&
             file.lastModified() == loadedMtime
         ) {
-            return current
+            return cached
         }
-        synchronized(lock) {
-            val cached = session
-            // Re-check under lock (DCL).
-            if (cached != null &&
-                !gone &&
-                file.absolutePath == loadedFor &&
-                file.length() == loadedSize &&
-                file.lastModified() == loadedMtime
-            ) {
-                return cached
+        // Drop stale state — either the file was wiped (B-1) or replaced
+        // with a different download (model swap).
+        if (cached != null) {
+            runCatching { cached.close() }
+            session = null
+            inputName = null
+            loadedFor = null
+            loadedMtime = 0L
+            loadedSize = 0L
+        }
+        if (gone) return null
+        return try {
+            val env = OrtEnvironment.getEnvironment()
+            val opts = OrtSession.SessionOptions().apply {
+                setIntraOpNumThreads(2)
+                setOptimizationLevel(OrtSession.SessionOptions.OptLevel.BASIC_OPT)
             }
-            // Drop stale state — either the file was wiped (B-1 fix) or
-            // replaced with a different download (model swap).
-            if (cached != null) {
-                runCatching { cached.close() }
-                session = null
-                inputName = null
-                loadedFor = null
-                loadedMtime = 0L
-                loadedSize = 0L
-            }
-            if (gone) return null
-            return try {
-                val env = OrtEnvironment.getEnvironment()
-                val opts = OrtSession.SessionOptions().apply {
-                    setIntraOpNumThreads(2)
-                    setOptimizationLevel(OrtSession.SessionOptions.OptLevel.BASIC_OPT)
-                }
-                val s = env.createSession(file.absolutePath, opts)
-                inputName = s.inputNames.first()
-                session = s
-                loadedFor = file.absolutePath
-                loadedMtime = file.lastModified()
-                loadedSize = file.length()
-                Log.i(TAG, "ECAPA session loaded: file=${file.name} inputs=${s.inputNames} outputs=${s.outputNames}")
-                s
-            } catch (t: Throwable) {
-                Log.e(TAG, "createSession failed: ${t.message}", t)
-                null
-            }
+            val s = env.createSession(file.absolutePath, opts)
+            inputName = s.inputNames.first()
+            session = s
+            loadedFor = file.absolutePath
+            loadedMtime = file.lastModified()
+            loadedSize = file.length()
+            Log.i(TAG, "ECAPA session loaded: file=${file.name} inputs=${s.inputNames} outputs=${s.outputNames}")
+            s
+        } catch (t: Throwable) {
+            Log.e(TAG, "createSession failed: ${t.message}", t)
+            null
         }
     }
 

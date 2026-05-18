@@ -88,10 +88,28 @@ class ModelRegistry @Inject constructor(
         )
 
         /**
-         * ECAPA-TDNN exported to ONNX. There are several community exports
-         * of speechbrain/spkrec-ecapa-voxceleb; the URL here points to a
-         * widely-used sherpa-onnx export. Override in settings if you ship
-         * your own.
+         * Speaker embedding ONNX model.
+         *
+         * IMPORTANT (B-19): the default URL is a PLACEHOLDER pointing at a
+         * sherpa-onnx ERes2Net export. That model expects pre-extracted
+         * fbank/mel features as input, NOT raw 16 kHz PCM, which is what
+         * [com.pca.assistant.speaker.OnnxEcapaIdentifier] currently feeds
+         * it. The download will succeed but the embeddings will be noise,
+         * so cosine-vs-enrolled stays near zero and owner identification
+         * silently fails to fire.
+         *
+         * To get real owner identification today, ship a speaker-embedding
+         * ONNX that accepts raw 16 kHz mono float audio on its input
+         * (shape `[1, n_samples]`). Speechbrain's `spkrec-ecapa-voxceleb`
+         * exported with `--input-type=audio` is the canonical choice;
+         * Pyannote's `pyannote/embedding` is another. Drop the converted
+         * `.onnx` into `filesDir/models/ecapa-tdnn.onnx` (or override the
+         * URL via the same downloader entry point).
+         *
+         * Until a working model is in place, [AdaptiveSpeakerIdentifier]
+         * routes to [com.pca.assistant.speaker.SyntheticSpeakerIdentifier]
+         * — owner identification works correctly for the device's own
+         * mic + noise floor profile.
          */
         val ECAPA_TDNN_ONNX = ModelSpec(
             id = "ecapa-tdnn-onnx",

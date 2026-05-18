@@ -2,40 +2,33 @@
 <!--
   PCA Network Security Config (spec §7.2).
 
-  Default policy: deny cleartext HTTP. The bridge to codex / Gemini and any
-  model download MUST use TLS.
+  Decision (B-13): cleartext is permitted globally at the manifest layer
+  because Android's network_security_config does NOT support CIDR-range
+  rules — we cannot whitelist "any RFC-1918 address" without enumerating
+  ~65 000 entries. Users put their bridge on arbitrary LAN IPs
+  (192.168.x.y, 10.x.y.z) and the restrictive form silently broke that.
 
-  Exception: cleartext is permitted ONLY for RFC 1918 private-network ranges
-  (10.0.0.0/8, 172.16.0.0/12, 192.168.0.0/16) and loopback. This makes the
-  intended LAN bridge story work (run server.py on a paired laptop /
-  Raspberry Pi / Termux at 192.168.x.x) without opening the door to
-  cleartext to the public internet.
+  Sensitive endpoints are protected at the code layer instead:
+    - ModelDownloader.isAcceptableModelUrl REQUIRES https for any host
+      outside loopback + RFC-1918 (model weights are effectively
+      executable code — see SECURITY.md §PCA-S-5).
+    - HttpBridgeProvider.validateBridgeUrl pre-rejects everything that
+      isn't http/https.
+    - The bridge JSON contains only anonymised window context (no raw
+      PII per PCA-S-1), so an on-path observer on the LAN gains the
+      least-sensitive payload in the system.
 
-  Note: domain entries do NOT support CIDR ranges directly — Android matches
-  by hostname suffix. We therefore enumerate the most common LAN literals.
-  Production deployments that need a different LAN should override this
-  file in their own res/xml/ overlay.
+  Users who want belt-and-braces TLS for the bridge can:
+    1. Run the bridge over HTTPS with a self-signed cert
+    2. Install that cert as a user-trust CA (Settings → Security →
+       Install certificate) — the trust-anchors block below already
+       includes the user store
 -->
 <network-security-config>
-    <base-config cleartextTrafficPermitted="false">
+    <base-config cleartextTrafficPermitted="true">
         <trust-anchors>
             <certificates src="system" />
             <certificates src="user" overridePins="false" />
         </trust-anchors>
     </base-config>
-
-    <domain-config cleartextTrafficPermitted="true">
-        <!-- Loopback for Termux-on-device bridges. -->
-        <domain includeSubdomains="false">127.0.0.1</domain>
-        <domain includeSubdomains="false">localhost</domain>
-        <!-- Common Samsung Wi-Fi DHCP gateways. -->
-        <domain includeSubdomains="false">192.168.0.1</domain>
-        <domain includeSubdomains="false">192.168.1.1</domain>
-        <!--
-          We can't pre-enumerate every LAN host. The recommended setup is a
-          static IP for the bridge machine — add it to a custom overlay or
-          run the bridge over HTTPS with a self-signed cert (the user-store
-          trust anchor above accepts user-installed CAs).
-        -->
-    </domain-config>
 </network-security-config>
