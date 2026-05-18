@@ -239,7 +239,14 @@ def health() -> dict:
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--host", default="0.0.0.0")
+    # PCA-S-23: default --host to loopback. A bridge listening on 0.0.0.0
+    # in a Wi-Fi network with no auth lets every device on the LAN POST
+    # arbitrary LlmRequest, burn the user's subscription quota, and read
+    # transcripts off /decide. The Termux installer already passes
+    # `--host 127.0.0.1`; this changes the default so the laptop variant
+    # also stays safe-by-default. Users who run the bridge on a paired
+    # device must opt in explicitly via --host 0.0.0.0 and accept the risk.
+    parser.add_argument("--host", default="127.0.0.1")
     parser.add_argument("--port", default=8765, type=int)
     parser.add_argument(
         "--provider", default=PROVIDER, choices=["codex", "claude", "gemini"],
@@ -252,6 +259,16 @@ if __name__ == "__main__":
     PROVIDER = args.provider
 
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s %(message)s")
+
+    if args.host == "0.0.0.0":
+        log.warning(
+            "BIND ALL INTERFACES: bridge is reachable from every device on "
+            "this network with no authentication. Anyone in the same Wi-Fi "
+            "can POST /decide to burn your %s subscription and read transcript "
+            "snippets. Bind to a specific LAN IP and put the bridge behind a "
+            "reverse proxy with auth, or use --host 127.0.0.1 + an SSH tunnel.",
+            args.provider,
+        )
 
     import uvicorn  # noqa: WPS433
     uvicorn.run("server:app", host=args.host, port=args.port, log_level="info")

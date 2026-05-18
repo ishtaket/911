@@ -54,17 +54,43 @@ class ModelBootstrapWorker @AssistedInject constructor(
 
     override suspend fun doWork(): Result {
         val cfg = settings.flow.first()
-        // Bootstrap targets: the spec-recommended Whisper (per current sttModel
-        // pick) + ECAPA for owner identification. Optional Ivrit booster is
-        // NOT auto-downloaded — it's an extra GB on top and only useful for
-        // primarily-Hebrew users, so left as an explicit Settings download.
+        // Bootstrap targets — SECURITY (PCA-S-19): ONLY models with verified
+        // canonical URLs go here. The current ECAPA spec defaults to a
+        // sherpa-onnx ERes2Net export which requires fbank/mel features on
+        // input while our pipeline feeds raw PCM — silently produces
+        // garbage embeddings, so owner identification would *appear* to
+        // work but actually accept any voice. False biometric security is
+        // worse than no biometric security: users think they're protected.
+        // Until a Speechbrain-style audio-input ONNX ships with a pinned
+        // sha256, ECAPA stays MANUAL-only via Settings → Model downloads.
         val targets = listOfNotNull(
             registry.whisperFor(cfg.sttModel),
-            ModelRegistry.ECAPA_TDNN_ONNX,
         )
+        if (targets.isEmpty()) return Result.success()
+
+        // Hard retry cap (PCA-S-24): WorkManager exponential backoff is
+        // unbounded by default; if a URL is permanently broken or sha256
+        // perpetually mismatches we'd burn battery and data forever.
+        if (runAttemptCount >= MAX_ATTEMPTS) {
+            return Result.failure(
+                workDataOf(KEY_FAIL_REASON to "max attempts exceeded ($runAttemptCount)")
+            )
+        }
 
         for ((index, spec) in targets.withIndex()) {
             if (registry.isReady(spec)) continue
+            // PCA-S-20: refuse to even start if there's clearly not enough
+            // free space. ~2x the model size keeps headroom for the .part
+            // file plus the final rename without filling the partition.
+            val available = registry.modelsDir().usableSpace
+            val needed = spec.approxMb.toLong() * 1024L * 1024L * 2L
+            if (available < needed) {
+                return Result.failure(
+                    workDataOf(
+                        KEY_FAIL_REASON to "insufficient disk: need ~${needed / 1024 / 1024} MB, have ${available / 1024 / 1024} MB"
+                    )
+                )
+            }
             val outcome = downloadOne(spec, index + 1, targets.size)
             if (outcome != null) return outcome
         }
@@ -118,6 +144,9 @@ class ModelBootstrapWorker @AssistedInject constructor(
         const val KEY_DOWNLOADED_MB = "downloaded_mb"
         const val KEY_TOTAL_MB = "total_mb"
         const val KEY_FAIL_REASON = "fail_reason"
+
+        /** Bound on WorkManager retries — see PCA-S-24. */
+        private const val MAX_ATTEMPTS = 10
     }
 }
 
@@ -134,6 +163,11 @@ object ModelBootstrap {
     fun schedule(context: Context, allowMetered: Boolean) {
         val constraints = Constraints.Builder()
             .setRequiredNetworkType(if (allowMetered) NetworkType.CONNECTED else NetworkType.UNMETERED)
+            // PCA-S-29: ~800 MB download on a low battery is rude.
+            // WorkManager defers until the device is above the platform's
+            // low-battery threshold; user can override by plugging in.
+            .setRequiresBatteryNotLow(true)
+            .setRequiresStorageNotLow(true)
             .build()
         val req = OneTimeWorkRequestBuilder<ModelBootstrapWorker>()
             .setConstraints(constraints)

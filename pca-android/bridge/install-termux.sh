@@ -7,12 +7,23 @@
 # учётки в ~/.config (своих директориях) после интерактивного `codex login`
 # или `gemini auth`. Bridge просто шеллит их как subprocess.
 #
-# Запуск:
-#   pkg install -y curl
-#   curl -fsSL https://raw.githubusercontent.com/ishtaket/911/claude/build-samsung-app-YaU0S/pca-android/bridge/install-termux.sh | bash
+# ---------------------------------------------------------------------------
+# SECURITY (PCA-S-21): этот скрипт можно запустить двумя способами:
 #
-# Или, если уже склонировал репозиторий:
-#   cd pca-android/bridge && bash install-termux.sh
+#   A) curl | bash  (быстро, доверяй github raw + TLS):
+#        pkg install -y curl
+#        curl -fsSL <URL> | bash
+#
+#   B) clone + inspect + run  (рекомендуется параноикам):
+#        pkg install -y git
+#        git clone https://github.com/ishtaket/911.git
+#        cd 911/pca-android/bridge
+#        less install-termux.sh    # прочитай что внутри
+#        bash install-termux.sh
+#
+# Вариант B даёт проверить содержимое перед исполнением. Вариант A быстрее
+# но опирается на то что нет MitM на пути до github raw (TLS закрывает).
+# ---------------------------------------------------------------------------
 #
 # Что делает:
 #   1. Ставит Termux-пакеты (python, nodejs, git, etc.)
@@ -22,6 +33,15 @@
 #   5. Создаёт launcher-скрипт ~/run-pca-bridge.sh
 
 set -euo pipefail
+
+# PCA-S-22: refuse to run anywhere that isn't Termux — somebody piping this
+# into a regular Linux shell would otherwise install packages with the
+# wrong package manager and write to /data/data/... which doesn't exist.
+if [[ ! -d "/data/data/com.termux/files/usr" ]]; then
+    echo "ERROR: this script must run inside Termux on Android." >&2
+    echo "       /data/data/com.termux/files/usr not found." >&2
+    exit 1
+fi
 
 echo "== PCA bridge installer for Termux =="
 echo

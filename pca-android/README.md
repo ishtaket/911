@@ -144,8 +144,16 @@ codex login   # откроется браузер для ChatGPT Plus/Pro OAuth
 cd bridge
 python -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
-python server.py --provider codex --port 8765
+# --host 127.0.0.1 по умолчанию (PCA-S-23). Для LAN-доступа нужно явно:
+python server.py --provider codex --port 8765 --host 192.168.1.50
 ```
+
+**Security note**: `--host 0.0.0.0` без auth-обёртки — любой в той же
+Wi-Fi сможет жечь твою подписку и читать транскрипты. Лучше:
+- bind на конкретный LAN-интерфейс (`--host 192.168.x.x`)
+- или поставить SSH-туннель `ssh -L 8765:127.0.0.1:8765 user@laptop` и
+  в Android'е указать `http://127.0.0.1:8765`
+- или поднять nginx с Basic Auth перед bridge
 
 В приложении: `Настройки → LLM provider → HTTP bridge`, URL вида
 `http://192.168.x.x:8765` (IP машины в твоей домашней сети).
