@@ -33,6 +33,12 @@ class FakeSettings(initial: Settings = DEFAULT) {
     fun mutate(block: (Settings) -> Settings) { _flow.value = block(_flow.value) }
 
     companion object {
+        /**
+         * Test convenience default. The PRODUCTION default (per spec §3.4)
+         * is BRIDGE — see [AppSettings.flow]. Tests use MOCK here because
+         * most exercise the mock provider directly; tests that explicitly
+         * verify bridge behavior call .copy(providerMode = ProviderMode.BRIDGE).
+         */
         val DEFAULT = Settings(
             providerMode = ProviderMode.MOCK,
             bridgeUrl = "",

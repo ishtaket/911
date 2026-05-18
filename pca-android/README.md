@@ -103,11 +103,17 @@ Speech Services by Google → Языки → скачать `Русский (Р�
 `עברית (ישראל)`. Без офлайн-моделей `SpeechRecognizer` будет идти в облако
 Google для распознавания.
 
-## LLM-bridge (опционально)
+## LLM-bridge
 
-По умолчанию приложение использует встроенный `MockLocalProvider` (полностью
-оффлайн, без сети). Чтобы подключить настоящий codex / Gemini CLI, поднимите
-референс-мост на любой машине:
+**Это основной режим работы** (per spec §3.4: primary = codex CLI, fallback =
+Gemini CLI). Приложение шипуется с дефолтом `provider = BRIDGE`. Пока URL
+bridge не задан в Settings, каждое окно автоматически фолбэчится на
+`MockLocalProvider` (deep fallback per §3.4 health-check) — никаких подсказок
+от настоящего LLM не будет.
+
+Чтобы подключить настоящий codex / Gemini CLI, поднимите референс-мост на
+любой машине (ноутбук в той же Wi-Fi, домашний сервер, Termux на самом
+телефоне):
 
 ```bash
 cd bridge
@@ -126,7 +132,7 @@ python server.py --provider codex --port 8765
 - [x] В LLM уходит только анонимизированный текст; токен-мапа в RAM.
 - [x] Кнопка «Полная очистка» в Настройках стирает БД, DataStore и Keystore-ключ.
 - [x] Постоянное foreground-уведомление «recording in progress» (требование §3.1 / Android 14).
-- [x] В режиме MockLocal сеть НЕ используется вообще.
+- [x] При выборе режима «Local mock» в Settings — сеть НЕ используется вообще.
 
 ## Дорожная карта до Whisper / ONNX (§12)
 

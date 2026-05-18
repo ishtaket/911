@@ -57,9 +57,10 @@
 
     <string name="settings_title">Настройки</string>
     <string name="settings_provider">LLM-провайдер</string>
-    <string name="settings_provider_mock">Локальная заглушка (без сети)</string>
-    <string name="settings_provider_bridge">HTTP-bridge (codex / Gemini)</string>
+    <string name="settings_provider_mock">Локальная заглушка (offline-фолбэк)</string>
+    <string name="settings_provider_bridge">HTTP-bridge (codex / Gemini) — по умолчанию</string>
     <string name="settings_bridge_url">URL bridge</string>
+    <string name="settings_bridge_url_missing">URL bridge не задан. Пока его нет (или не выбрана «Локальная заглушка») каждое окно уходит в офлайн-заглушку — подними bridge/server.py на ноутбуке / Termux, чтобы получать настоящие ответы codex/Gemini.</string>
     <string name="settings_window_minutes">Длительность окна (мин)</string>
     <string name="settings_language">Основной язык</string>
     <string name="settings_lang_system">Системный</string>

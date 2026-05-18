@@ -24,6 +24,12 @@ import javax.inject.Inject
 data class DashboardState(
     val listening: ListeningState,
     val provider: String,
+    /**
+     * True when the user is on BRIDGE provider mode (default) but hasn't
+     * configured a URL. Every LLM call silently falls back to the offline
+     * mock — surfaces a tertiary-colored warning on the dashboard.
+     */
+    val bridgeUrlMissing: Boolean,
     val windowsToday: Int,
     val interventionsToday: Int,
     val openThreadsCount: Int,
@@ -71,6 +77,7 @@ class DashboardViewModel @Inject constructor(
                     ProviderMode.MOCK -> "Local mock"
                     ProviderMode.BRIDGE -> "HTTP bridge"
                 },
+                bridgeUrlMissing = cfg.providerMode == ProviderMode.BRIDGE && cfg.bridgeUrl.isBlank(),
                 windowsToday = windowsToday,
                 interventionsToday = intToday,
                 openThreadsCount = threads.size,
@@ -84,6 +91,7 @@ class DashboardViewModel @Inject constructor(
             DashboardState(
                 listening = ListeningState.STOPPED,
                 provider = "—",
+                bridgeUrlMissing = false,
                 windowsToday = 0,
                 interventionsToday = 0,
                 openThreadsCount = 0,

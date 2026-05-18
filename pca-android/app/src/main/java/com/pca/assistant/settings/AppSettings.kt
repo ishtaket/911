@@ -61,7 +61,12 @@ class AppSettings @Inject constructor(
             // Safe-parse enums: a stale or hand-edited value from a downgrade
             // shouldn't crash the settings flow (and through it the whole UI).
             Settings(
-                providerMode = parseEnum(p[K_PROVIDER], ProviderMode.MOCK),
+                // Spec §3.4 — "Primary: codex CLI. Fallback: Gemini CLI."
+                // BRIDGE is therefore the documented default. MockLocal stays
+                // as a deep-fallback INSIDE the bridge path (health-check
+                // breaker), and as a manual choice in Settings for users
+                // who explicitly want fully-offline behavior.
+                providerMode = parseEnum(p[K_PROVIDER], ProviderMode.BRIDGE),
                 bridgeUrl = p[K_BRIDGE_URL].orEmpty(),
                 windowMinutes = (p[K_WINDOW_MIN] ?: 5).coerceIn(1, 30),
                 language = parseEnum(p[K_LANG], LanguageChoice.SYSTEM),

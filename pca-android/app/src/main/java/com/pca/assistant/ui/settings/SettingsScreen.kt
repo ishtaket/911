@@ -79,18 +79,20 @@ fun SettingsScreen(vm: SettingsViewModel, onBack: () -> Unit, onReEnroll: () -> 
         ) {
 
             Section(title = stringResource(R.string.settings_provider)) {
+                // BRIDGE first — per spec §3.4 it's the primary provider.
+                // Mock is the explicit-offline choice.
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    AssistChip(
-                        onClick = { vm.setProvider(ProviderMode.MOCK) },
-                        label = { Text(stringResource(R.string.settings_provider_mock)) },
-                        leadingIcon = if (cfg.providerMode == ProviderMode.MOCK) ({
-                            Icon(androidx.compose.material.icons.Icons.Default.Check, contentDescription = null)
-                        }) else null
-                    )
                     AssistChip(
                         onClick = { vm.setProvider(ProviderMode.BRIDGE) },
                         label = { Text(stringResource(R.string.settings_provider_bridge)) },
                         leadingIcon = if (cfg.providerMode == ProviderMode.BRIDGE) ({
+                            Icon(androidx.compose.material.icons.Icons.Default.Check, contentDescription = null)
+                        }) else null
+                    )
+                    AssistChip(
+                        onClick = { vm.setProvider(ProviderMode.MOCK) },
+                        label = { Text(stringResource(R.string.settings_provider_mock)) },
+                        leadingIcon = if (cfg.providerMode == ProviderMode.MOCK) ({
                             Icon(androidx.compose.material.icons.Icons.Default.Check, contentDescription = null)
                         }) else null
                     )
@@ -107,6 +109,14 @@ fun SettingsScreen(vm: SettingsViewModel, onBack: () -> Unit, onReEnroll: () -> 
                     Spacer(Modifier.height(8.dp))
                     Button(onClick = { vm.setBridgeUrl(bridgeText) }) {
                         Text(stringResource(R.string.action_save))
+                    }
+                    if (cfg.bridgeUrl.isBlank()) {
+                        Spacer(Modifier.height(8.dp))
+                        Text(
+                            text = stringResource(R.string.settings_bridge_url_missing),
+                            color = MaterialTheme.colorScheme.tertiary,
+                            style = MaterialTheme.typography.bodySmall,
+                        )
                     }
                 }
             }
