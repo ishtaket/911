@@ -81,6 +81,14 @@ interface WindowDao {
     @Query("DELETE FROM windows WHERE id = :id")
     suspend fun delete(id: Long)
 
+    /**
+     * Spec §2.3 retention: L0 windows are kept "24h raw, then summary".
+     * Called by [com.pca.assistant.pipeline.HourRollupWorker] (B-27 fix)
+     * to prevent unbounded DB growth.
+     */
+    @Query("DELETE FROM windows WHERE startTs < :olderThan")
+    suspend fun purgeOlderThan(olderThan: Long)
+
     @Query("DELETE FROM windows")
     suspend fun wipe()
 }

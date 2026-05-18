@@ -70,8 +70,12 @@ class HourRollupWorker @AssistedInject constructor(
         )
         if (summary != null) hourDao.upsert(summary)
 
-        // Retention: keep raw transcripts 24 h, hour summaries 7 days.
-        transcriptDao.purgeOlderThan(now - 24 * 60 * 60_000L)
+        // Spec §2.3 retention (B-27 fix): L0 windows + raw transcripts both
+        // age out at 24 h once they've contributed to an hour summary; hour
+        // summaries themselves last 7 days; day summaries 30 (DayRollupWorker).
+        val twentyFourHoursAgo = now - 24 * 60 * 60_000L
+        transcriptDao.purgeOlderThan(twentyFourHoursAgo)
+        windowDao.purgeOlderThan(twentyFourHoursAgo)
         hourDao.purgeOlderThan(now - 7L * 24 * 60 * 60_000L)
         return Result.success()
     }

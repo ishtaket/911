@@ -79,6 +79,9 @@ class FakeWindowDao : WindowDao {
     override suspend fun delete(id: Long) {
         store.value = store.value.filterNot { it.id == id }
     }
+    override suspend fun purgeOlderThan(olderThan: Long) {
+        store.value = store.value.filter { it.startTs >= olderThan }
+    }
     override suspend fun wipe() { store.value = emptyList() }
 }
 
