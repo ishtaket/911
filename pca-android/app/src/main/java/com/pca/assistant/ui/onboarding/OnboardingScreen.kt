@@ -158,6 +158,26 @@ private fun EnrollStep(
     val scope = rememberCoroutineScope()
     val activity = context as? FragmentActivity
 
+    // B-30 fix: re-enrollment can be triggered from Settings while the
+    // foreground service is still holding the mic. AudioRecord would fail
+    // with "mic busy" on OneUI. Pause the service while we're on this step
+    // and resume it on dispose if the service was running before.
+    androidx.compose.runtime.DisposableEffect(Unit) {
+        com.pca.assistant.service.ListeningService.sendAction(
+            context, com.pca.assistant.service.ListeningService.ACTION_PAUSE
+        )
+        onDispose {
+            // Resume on exit. If onboarding was the initial flow (service
+            // wasn't running), this RESUME is delivered to a non-existent
+            // service and is a no-op — startForegroundService creates it,
+            // but onCreate immediately bails on the missing perm check or
+            // is followed by Finish → start. Either way no UX impact.
+            com.pca.assistant.service.ListeningService.sendAction(
+                context, com.pca.assistant.service.ListeningService.ACTION_RESUME
+            )
+        }
+    }
+
     Text(stringResource(R.string.onb_enroll_title), style = MaterialTheme.typography.titleLarge)
     Text(stringResource(R.string.onb_enroll_body))
     Spacer(Modifier.height(8.dp))
