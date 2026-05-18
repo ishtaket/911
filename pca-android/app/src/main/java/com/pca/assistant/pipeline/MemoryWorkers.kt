@@ -11,6 +11,7 @@ import androidx.work.WorkManager
 import androidx.work.WorkerParameters
 import com.pca.assistant.data.db.dao.DaySummaryDao
 import com.pca.assistant.data.db.dao.HourSummaryDao
+import com.pca.assistant.data.db.dao.LlmHealthDao
 import com.pca.assistant.data.db.dao.OwnerDao
 import com.pca.assistant.data.db.dao.TranscriptDao
 import com.pca.assistant.data.db.dao.WindowDao
@@ -48,6 +49,7 @@ class HourRollupWorker @AssistedInject constructor(
     private val windowDao: WindowDao,
     private val hourDao: HourSummaryDao,
     private val transcriptDao: TranscriptDao,
+    private val llmHealthDao: LlmHealthDao,
     private val json: Json,
 ) : CoroutineWorker(appContext, params) {
 
@@ -73,10 +75,14 @@ class HourRollupWorker @AssistedInject constructor(
         // Spec §2.3 retention (B-27 fix): L0 windows + raw transcripts both
         // age out at 24 h once they've contributed to an hour summary; hour
         // summaries themselves last 7 days; day summaries 30 (DayRollupWorker).
+        // B-28: also bound llm_health to 7 days — it's a diagnostic table
+        // and runs at ~288 rows/day, so unbounded growth is a real concern.
         val twentyFourHoursAgo = now - 24 * 60 * 60_000L
+        val sevenDaysAgo = now - 7L * 24 * 60 * 60_000L
         transcriptDao.purgeOlderThan(twentyFourHoursAgo)
         windowDao.purgeOlderThan(twentyFourHoursAgo)
-        hourDao.purgeOlderThan(now - 7L * 24 * 60 * 60_000L)
+        hourDao.purgeOlderThan(sevenDaysAgo)
+        llmHealthDao.purgeOlderThan(sevenDaysAgo)
         return Result.success()
     }
 
