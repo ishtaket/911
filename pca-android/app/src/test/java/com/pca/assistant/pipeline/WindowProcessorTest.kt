@@ -1,5 +1,6 @@
 package com.pca.assistant.pipeline
 
+import com.pca.assistant.anonymizer.Anonymizer
 import com.pca.assistant.data.db.entity.TranscriptEntity
 import com.pca.assistant.llm.MockLocalProvider
 import com.pca.assistant.llm.ProviderRouter
@@ -60,7 +61,7 @@ class WindowProcessorTest {
         notifier = mockk(relaxed = true).also {
             justNotify(it)
         }
-        val aggregator = WindowAggregator(transcriptDao, windowDao, hourDao, openThreadDao, ownerDao)
+        val aggregator = WindowAggregator(transcriptDao, windowDao, hourDao, openThreadDao, ownerDao, Anonymizer())
         val router = ProviderRouter(
             mock = MockLocalProvider(),
             bridge = mockk(relaxed = true),

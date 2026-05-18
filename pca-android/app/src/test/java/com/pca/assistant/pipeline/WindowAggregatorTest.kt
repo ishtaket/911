@@ -1,5 +1,6 @@
 package com.pca.assistant.pipeline
 
+import com.pca.assistant.anonymizer.Anonymizer
 import com.pca.assistant.data.db.entity.HourSummaryEntity
 import com.pca.assistant.data.db.entity.OpenThreadEntity
 import com.pca.assistant.data.db.entity.OwnerProfileEntity
@@ -33,7 +34,7 @@ class WindowAggregatorTest {
         windowDao = FakeWindowDao()
         hourDao = FakeHourSummaryDao()
         openThreadDao = FakeOpenThreadDao()
-        agg = WindowAggregator(transcriptDao, windowDao, hourDao, openThreadDao, ownerDao)
+        agg = WindowAggregator(transcriptDao, windowDao, hourDao, openThreadDao, ownerDao, Anonymizer())
     }
 
     @Test fun `collectSlice over an empty range yields hadSpeech=false`() = runTest {

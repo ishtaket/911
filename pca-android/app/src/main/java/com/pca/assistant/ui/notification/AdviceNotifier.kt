@@ -41,6 +41,10 @@ class AdviceNotifier @Inject constructor(
             .setAutoCancel(true)
             .setContentIntent(tap)
             .setCategory(NotificationCompat.CATEGORY_RECOMMENDATION)
+            // SECURITY (PCA-S-4): hide advice body on lockscreen — it can
+            // carry residual context (location label, anonymisation tokens,
+            // open-thread topics) the owner doesn't want on display.
+            .setVisibility(NotificationCompat.VISIBILITY_PRIVATE)
             .addAction(
                 R.drawable.ic_mic,
                 context.getString(R.string.feedback_useful),

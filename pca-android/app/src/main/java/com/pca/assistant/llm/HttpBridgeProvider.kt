@@ -29,10 +29,8 @@ class HttpBridgeProvider @Inject constructor(
 ) : LlmProvider {
 
     override suspend fun decide(request: LlmRequest): LlmDecision {
-        val base = settings.flow.first().bridgeUrl.trimEnd('/')
-        if (base.isBlank()) {
-            throw LlmProviderException(id, "Bridge URL not configured in settings")
-        }
+        val base = settings.flow.first().bridgeUrl.trim().trimEnd('/')
+        validateBridgeUrl(base)
         val body = json.encodeToString(LlmRequest.serializer(), request)
             .toRequestBody("application/json; charset=utf-8".toMediaType())
         val http = Request.Builder()
@@ -53,6 +51,29 @@ class HttpBridgeProvider @Inject constructor(
             throw e
         } catch (e: Throwable) {
             throw LlmProviderException(id, e.message ?: e.javaClass.simpleName, e)
+        }
+    }
+
+    /**
+     * SECURITY (PCA-S-3): Reject schemes other than http/https so we don't
+     * forward our serialised window payload through `file://`,
+     * `javascript:`, `content://`, `ftp://` or other handlers that OkHttp
+     * would otherwise refuse with a confusing IAE. Cleartext http is
+     * still allowed at this layer; the platform's network_security_config
+     * narrows it further to RFC-1918 + loopback ranges.
+     */
+    internal fun validateBridgeUrl(base: String) {
+        if (base.isBlank()) {
+            throw LlmProviderException(id, "Bridge URL not configured in settings")
+        }
+        val lower = base.lowercase()
+        if (!(lower.startsWith("http://") || lower.startsWith("https://"))) {
+            throw LlmProviderException(id, "Bridge URL scheme must be http or https")
+        }
+        // Authority required (host part, optional port). e.g. http:// alone is invalid.
+        val afterScheme = base.substringAfter("://").substringBefore('/')
+        if (afterScheme.isBlank()) {
+            throw LlmProviderException(id, "Bridge URL is missing a host")
         }
     }
 }

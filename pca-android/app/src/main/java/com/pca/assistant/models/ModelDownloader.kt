@@ -29,8 +29,38 @@ class ModelDownloader @Inject constructor(
         data class Failed(val reason: String) : Progress
     }
 
+    private fun schemeOf(url: String): String =
+        url.substringBefore("://", missingDelimiterValue = "(none)")
+
+    internal fun isAcceptableModelUrl(url: String): Boolean {
+        val lower = url.lowercase()
+        if (lower.startsWith("https://")) return true
+        if (!lower.startsWith("http://")) return false
+        // Extract host part for the cleartext allowlist.
+        val host = url.substringAfter("://").substringBefore('/').substringBefore(':')
+        return host == "localhost" ||
+            host == "127.0.0.1" ||
+            host.startsWith("10.") ||
+            host.startsWith("192.168.") ||
+            (host.startsWith("172.") && run {
+                // 172.16.0.0/12 — second octet 16..31
+                val second = host.substringAfter("172.").substringBefore('.').toIntOrNull() ?: return@run false
+                second in 16..31
+            })
+    }
+
     fun download(spec: ModelSpec, overrideUrl: String? = null): Flow<Progress> = flow {
         val url = (overrideUrl?.trim().takeIf { !it.isNullOrEmpty() }) ?: spec.defaultUrl
+        // SECURITY (PCA-S-5): model weights are effectively executable code
+        // (whisper.cpp + ONNX run model-defined ops), so a MITM-tampered
+        // .bin / .onnx is roughly equivalent to arbitrary code substitution.
+        // Require https for anything that crosses the public internet;
+        // allow http only for loopback and RFC-1918 private ranges, matching
+        // the cleartext exception in network_security_config.xml.
+        if (!isAcceptableModelUrl(url)) {
+            emit(Progress.Failed("refused: model URL must be https or LAN-cleartext (got: ${schemeOf(url)})"))
+            return@flow
+        }
         val target = registry.fileFor(spec)
         val part = File(target.parentFile, "${target.name}.part")
 

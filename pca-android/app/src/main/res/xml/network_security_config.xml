@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  PCA Network Security Config (spec §7.2).
+
+  Default policy: deny cleartext HTTP. The bridge to codex / Gemini and any
+  model download MUST use TLS.
+
+  Exception: cleartext is permitted ONLY for RFC 1918 private-network ranges
+  (10.0.0.0/8, 172.16.0.0/12, 192.168.0.0/16) and loopback. This makes the
+  intended LAN bridge story work (run server.py on a paired laptop /
+  Raspberry Pi / Termux at 192.168.x.x) without opening the door to
+  cleartext to the public internet.
+
+  Note: domain entries do NOT support CIDR ranges directly — Android matches
+  by hostname suffix. We therefore enumerate the most common LAN literals.
+  Production deployments that need a different LAN should override this
+  file in their own res/xml/ overlay.
+-->
+<network-security-config>
+    <base-config cleartextTrafficPermitted="false">
+        <trust-anchors>
+            <certificates src="system" />
+            <certificates src="user" overridePins="false" />
+        </trust-anchors>
+    </base-config>
+
+    <domain-config cleartextTrafficPermitted="true">
+        <!-- Loopback for Termux-on-device bridges. -->
+        <domain includeSubdomains="false">127.0.0.1</domain>
+        <domain includeSubdomains="false">localhost</domain>
+        <!-- Common Samsung Wi-Fi DHCP gateways. -->
+        <domain includeSubdomains="false">192.168.0.1</domain>
+        <domain includeSubdomains="false">192.168.1.1</domain>
+        <!--
+          We can't pre-enumerate every LAN host. The recommended setup is a
+          static IP for the bridge machine — add it to a custom overlay or
+          run the bridge over HTTPS with a self-signed cert (the user-store
+          trust anchor above accepts user-installed CAs).
+        -->
+    </domain-config>
+</network-security-config>

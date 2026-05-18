@@ -3,6 +3,7 @@ package com.pca.assistant.service
 import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
+// Notification.VISIBILITY_PRIVATE / NotificationCompat.VISIBILITY_PRIVATE — both used.
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
@@ -13,7 +14,6 @@ import androidx.core.content.ContextCompat
 import androidx.lifecycle.LifecycleService
 import androidx.lifecycle.lifecycleScope
 import com.pca.assistant.R
-import com.pca.assistant.anonymizer.Anonymizer
 import com.pca.assistant.audio.AudioCapture
 import com.pca.assistant.audio.VoiceActivityDetector
 import com.pca.assistant.data.db.dao.OwnerDao
@@ -46,7 +46,6 @@ class ListeningService : LifecycleService() {
     @Inject lateinit var transcriptDao: TranscriptDao
     @Inject lateinit var ownerDao: OwnerDao
     @Inject lateinit var location: LocationProvider
-    @Inject lateinit var anonymizer: Anonymizer
     @Inject lateinit var windowProcessor: WindowProcessor
     @Inject lateinit var settings: AppSettings
     @Inject lateinit var serviceState: ServiceState
@@ -149,7 +148,6 @@ class ListeningService : LifecycleService() {
         val hint = inferSttLanguageHint()
         val result = stt.recognize(pcm, hint)
         if (result.text.isBlank()) return
-        val anon = anonymizer.anonymize(result.text)
         val loc = location.current()
         val owner = ownerDao.get()
         val embedding = speakerId.embedding(pcm)
@@ -158,11 +156,19 @@ class ListeningService : LifecycleService() {
         } ?: 0f
         val isOwner = speakerId.isOwner(score)
 
+        // SECURITY (PCA-S-1): per-chunk anonymisation produced incoherent
+        // tokens across chunks (every chunk restarted at [EMAIL_1] for
+        // different originals). We now anonymise at window-build time
+        // inside WindowAggregator, with a single coherent token map for
+        // the whole 5-min window. The per-chunk `textAnonymized` column
+        // is best-effort and intentionally a copy of the raw text — its
+        // presence is preserved for schema stability but downstream
+        // consumers must re-anonymise via WindowAggregator.
         transcriptDao.insert(
             TranscriptEntity(
                 ts = System.currentTimeMillis(),
                 text = result.text,
-                textAnonymized = anon.anonymized,
+                textAnonymized = result.text,
                 speakerId = if (isOwner) "owner" else "other",
                 speakerScore = score,
                 isOwner = isOwner,
@@ -252,6 +258,10 @@ class ListeningService : LifecycleService() {
             .setForegroundServiceBehavior(NotificationCompat.FOREGROUND_SERVICE_IMMEDIATE)
             .setPriority(NotificationCompat.PRIORITY_LOW)
             .setCategory(NotificationCompat.CATEGORY_SERVICE)
+            // SECURITY (PCA-S-4): also pin per-notification visibility — the
+            // channel default already covers Android 8+, but PRIVATE here
+            // documents intent and protects older notification shades.
+            .setVisibility(NotificationCompat.VISIBILITY_PRIVATE)
             .build()
     }
 
@@ -294,6 +304,10 @@ class ListeningService : LifecycleService() {
                 ).apply {
                     description = context.getString(R.string.notif_channel_listening_desc)
                     setShowBadge(false)
+                    // SECURITY (PCA-S-4): hide "recording in progress" from
+                    // a locked screen — public visibility leaks state to
+                    // anyone glancing at the phone.
+                    lockscreenVisibility = Notification.VISIBILITY_PRIVATE
                 }
                 val advice = NotificationChannel(
                     CHANNEL_ADVICE,
@@ -301,6 +315,11 @@ class ListeningService : LifecycleService() {
                     NotificationManager.IMPORTANCE_DEFAULT,
                 ).apply {
                     description = context.getString(R.string.notif_channel_advice_desc)
+                    // SECURITY (PCA-S-4): advice can contain anonymisation
+                    // tokens, location labels, etc. Lockscreen sees a
+                    // generic "PCA notification" placeholder; the full
+                    // text only appears once the user unlocks.
+                    lockscreenVisibility = Notification.VISIBILITY_PRIVATE
                 }
                 nm.createNotificationChannel(listening)
                 nm.createNotificationChannel(advice)

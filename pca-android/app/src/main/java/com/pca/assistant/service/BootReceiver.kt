@@ -17,22 +17,31 @@ class BootReceiver : BroadcastReceiver() {
     @Inject lateinit var settings: AppSettings
 
     override fun onReceive(context: Context, intent: Intent) {
-        when (intent.action) {
-            Intent.ACTION_BOOT_COMPLETED,
-            Intent.ACTION_LOCKED_BOOT_COMPLETED,
-            Intent.ACTION_MY_PACKAGE_REPLACED -> {
-                val pending = goAsync()
-                CoroutineScope(Dispatchers.Default).launch {
-                    try {
-                        val cfg = settings.flow.first()
-                        if (cfg.onboardingDone && cfg.listeningEnabled) {
-                            ListeningService.start(context)
-                        }
-                    } finally {
-                        pending.finish()
-                    }
+        // SECURITY (PCA-S-6): exported=true is mandatory for ACTION_BOOT_COMPLETED
+        // (the system sends it), so any app on the device can also fire intents
+        // at this receiver. Refuse anything that isn't one of our three
+        // documented actions before doing any work.
+        val action = intent.action ?: return
+        if (action !in HANDLED_ACTIONS) return
+
+        val pending = goAsync()
+        CoroutineScope(Dispatchers.Default).launch {
+            try {
+                val cfg = settings.flow.first()
+                if (cfg.onboardingDone && cfg.listeningEnabled) {
+                    ListeningService.start(context)
                 }
+            } finally {
+                pending.finish()
             }
         }
+    }
+
+    private companion object {
+        val HANDLED_ACTIONS = setOf(
+            Intent.ACTION_BOOT_COMPLETED,
+            Intent.ACTION_LOCKED_BOOT_COMPLETED,
+            Intent.ACTION_MY_PACKAGE_REPLACED,
+        )
     }
 }

@@ -188,6 +188,9 @@ dependencies {
     testImplementation(libs.coroutines.test)
     testImplementation(libs.room.testing)
     testImplementation(libs.okhttp.mockwebserver)
+    // kotlin-reflect — needed by reflection-based invariant tests
+    // (e.g. LlmPayloadPrivacyTest asserts WindowPayload has no lat/lng).
+    testImplementation("org.jetbrains.kotlin:kotlin-reflect:2.0.0")
 
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.espresso.core)

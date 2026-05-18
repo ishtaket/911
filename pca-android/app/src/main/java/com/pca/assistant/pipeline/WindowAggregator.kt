@@ -1,5 +1,6 @@
 package com.pca.assistant.pipeline
 
+import com.pca.assistant.anonymizer.Anonymizer
 import com.pca.assistant.data.db.dao.HourSummaryDao
 import com.pca.assistant.data.db.dao.OpenThreadDao
 import com.pca.assistant.data.db.dao.OwnerDao
@@ -16,6 +17,15 @@ import javax.inject.Singleton
  * Assembles the L0 window payload from raw transcript rows + context
  * (location label, owner presence, time bounds) and prepares the rich
  * request that goes to the LLM evaluator (spec §3.3).
+ *
+ * SECURITY (PCA-S-1): Anonymisation happens HERE, at window-build time,
+ * over the joined raw transcript. Doing it per-chunk in [com.pca.assistant.service.ListeningService]
+ * caused token collisions across chunks (every chunk's PII restarted at
+ * `[EMAIL_1]`), which meant the LLM received the same token referring to
+ * different originals — a coherence + privacy bug. Anonymising over the
+ * joined text produces a single coherent mapping for the whole window.
+ * The mapping itself never leaves [collectSlice] — it lives on the stack
+ * and is discarded the moment we return.
  */
 @Singleton
 class WindowAggregator @Inject constructor(
@@ -24,6 +34,7 @@ class WindowAggregator @Inject constructor(
     private val hourDao: HourSummaryDao,
     private val openThreadDao: OpenThreadDao,
     private val ownerDao: OwnerDao,
+    private val anonymizer: Anonymizer,
 ) {
 
     data class WindowSlice(
@@ -90,7 +101,15 @@ class WindowAggregator @Inject constructor(
     suspend fun collectSlice(from: Long, to: Long): WindowSlice {
         val rows = transcriptDao.between(from, to)
         val combined = rows.joinToString(" ") { it.text }.trim()
-        val combinedAnon = rows.joinToString(" ") { it.textAnonymized }.trim()
+        // SECURITY (PCA-S-1): re-anonymise over the joined raw text so the
+        // token map is coherent for the whole window. The per-chunk values
+        // already stored in `transcripts.textAnonymized` are kept for audit
+        // but are intentionally NOT concatenated here.
+        val anonResult = if (combined.isBlank()) {
+            Anonymizer.AnonymizationResult(combined, emptyMap())
+        } else {
+            anonymizer.anonymize(combined)
+        }
         val ownerPresent = rows.any { it.isOwner }
         val location = rows.lastOrNull { it.placeLabel != null }?.placeLabel
         return WindowSlice(
@@ -98,7 +117,7 @@ class WindowAggregator @Inject constructor(
             startTs = from,
             endTs = to,
             transcriptOriginal = combined,
-            transcriptAnonymized = combinedAnon,
+            transcriptAnonymized = anonResult.anonymized,
             isOwnerPresent = ownerPresent,
             locationLabel = location,
             hadSpeech = combined.isNotBlank(),
