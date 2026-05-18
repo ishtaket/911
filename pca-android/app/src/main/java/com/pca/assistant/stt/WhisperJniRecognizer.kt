@@ -37,6 +37,9 @@ class WhisperJniRecognizer @Inject constructor(
     /** Null until the first successful nativeInit. */
     @Volatile private var ctxPtr: Long = 0L
     @Volatile private var loadedFor: String? = null
+    /** Track size + mtime so a wipe-and-redownload reloads the model (B-2). */
+    @Volatile private var loadedSize: Long = 0L
+    @Volatile private var loadedMtime: Long = 0L
 
     enum class Ready { Loaded, NoModel, NativeMissing }
 
@@ -54,6 +57,10 @@ class WhisperJniRecognizer @Inject constructor(
         val spec = registry.whisperFor(cfg.sttModel)
         val modelFile = registry.fileFor(spec)
         if (!modelFile.exists() || modelFile.length() < 1024) {
+            // File disappeared since last load (Settings → Delete / wipe).
+            // Drop the cached ctx so we don't keep the deleted model resident
+            // in memory until process death.
+            if (ctxPtr != 0L) release()
             return SttResult("", 0f, hintLanguage)
         }
         ensureLoaded(modelFile)
@@ -78,19 +85,34 @@ class WhisperJniRecognizer @Inject constructor(
         val ptr = ctxPtr
         ctxPtr = 0L
         loadedFor = null
+        loadedSize = 0L
+        loadedMtime = 0L
         if (nativeAvailable && ptr != 0L) {
             runCatching { nativeRelease(ptr) }
         }
     }
 
     private suspend fun ensureLoaded(modelFile: File) {
-        if (loadedFor == modelFile.absolutePath && ctxPtr != 0L) return
+        // Fast path — same file, same size, same mtime → reuse loaded ctx.
+        if (ctxPtr != 0L &&
+            loadedFor == modelFile.absolutePath &&
+            loadedSize == modelFile.length() &&
+            loadedMtime == modelFile.lastModified()
+        ) return
+
         lock.withLock {
-            if (loadedFor == modelFile.absolutePath && ctxPtr != 0L) return@withLock
+            if (ctxPtr != 0L &&
+                loadedFor == modelFile.absolutePath &&
+                loadedSize == modelFile.length() &&
+                loadedMtime == modelFile.lastModified()
+            ) return@withLock
+            // Drop stale ctx — wipe / redownload / model swap (B-2).
             if (ctxPtr != 0L) {
                 runCatching { nativeRelease(ctxPtr) }
                 ctxPtr = 0L
                 loadedFor = null
+                loadedSize = 0L
+                loadedMtime = 0L
             }
             val ptr = runCatching {
                 nativeInit(modelFile.absolutePath, /* useGpu = */ false, recommendedThreads())
@@ -100,6 +122,8 @@ class WhisperJniRecognizer @Inject constructor(
             if (ptr != 0L) {
                 ctxPtr = ptr
                 loadedFor = modelFile.absolutePath
+                loadedSize = modelFile.length()
+                loadedMtime = modelFile.lastModified()
                 Log.i(TAG, "whisper loaded: ${modelFile.name} (${nativeSystemInfo()})")
             } else {
                 Log.w(TAG, "whisper failed to load ${modelFile.name}")

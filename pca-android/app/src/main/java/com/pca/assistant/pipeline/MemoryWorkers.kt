@@ -15,15 +15,14 @@ import com.pca.assistant.data.db.dao.OwnerDao
 import com.pca.assistant.data.db.dao.TranscriptDao
 import com.pca.assistant.data.db.dao.WindowDao
 import com.pca.assistant.data.db.entity.DaySummaryEntity
-import com.pca.assistant.data.db.entity.HourSummaryEntity
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
 import kotlinx.coroutines.flow.first
+import kotlinx.serialization.json.Json
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Date
 import java.util.Locale
-import java.util.TimeZone
 import java.util.concurrent.TimeUnit
 
 /**
@@ -49,31 +48,29 @@ class HourRollupWorker @AssistedInject constructor(
     private val windowDao: WindowDao,
     private val hourDao: HourSummaryDao,
     private val transcriptDao: TranscriptDao,
+    private val json: Json,
 ) : CoroutineWorker(appContext, params) {
 
     override suspend fun doWork(): Result {
         val now = System.currentTimeMillis()
         val (hourStart, hourEnd) = lastClosedHour(now)
-        val rows = transcriptDao.between(hourStart, hourEnd)
-        if (rows.isEmpty()) return Result.success()
-        val ownerLines = rows.count { it.isOwner }
-        val otherLines = rows.size - ownerLines
-        val places = rows.mapNotNull { it.placeLabel }.distinct().take(6)
-        val sampleText = rows.takeLast(8).joinToString(" · ") { it.text.take(120) }
-        val summary = "Hour ${formatHour(hourStart)}: " +
-            "owner=${ownerLines} lines, others=${otherLines} lines. " +
-            "Places: ${if (places.isEmpty()) "—" else places.joinToString()}. " +
-            "Recent: $sampleText"
-        hourDao.upsert(
-            HourSummaryEntity(
-                hourStart = hourStart,
-                hourEnd = hourEnd,
-                summary = summary,
-                memoryNotesJson = "[]",
-                locationsJson = places.joinToString(prefix = "[", postfix = "]") { "\"$it\"" },
-                peopleJson = "[]",
-            )
+
+        val transcripts = transcriptDao.between(hourStart, hourEnd)
+        // Pull windows that overlap the hour to harvest LLM memory_notes
+        // (spec §3.3, fix B-4). Drop skipped windows — they never reached the LLM.
+        val allRecent = windowDao.observeRecent(200).first()
+        val windowsInHour = allRecent.filter {
+            it.startTs >= hourStart && it.startTs < hourEnd && it.sentToLlm
+        }
+
+        val summary = MemoryRollup.aggregateHour(
+            hourStart = hourStart,
+            hourEnd = hourEnd,
+            transcripts = transcripts,
+            windows = windowsInHour,
+            json = json,
         )
+        if (summary != null) hourDao.upsert(summary)
 
         // Retention: keep raw transcripts 24 h, hour summaries 7 days.
         transcriptDao.purgeOlderThan(now - 24 * 60 * 60_000L)
@@ -89,11 +86,6 @@ class HourRollupWorker @AssistedInject constructor(
         val start = cal.timeInMillis
         return start to end
     }
-
-    private fun formatHour(ts: Long): String =
-        SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.ROOT)
-            .apply { timeZone = TimeZone.getDefault() }
-            .format(Date(ts))
 }
 
 @HiltWorker

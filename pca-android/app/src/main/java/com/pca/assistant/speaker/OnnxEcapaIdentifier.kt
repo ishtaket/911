@@ -36,6 +36,12 @@ class OnnxEcapaIdentifier @Inject constructor(
     @Volatile private var session: OrtSession? = null
     @Volatile private var inputName: String? = null
     @Volatile private var resolvedSize: Int = DEFAULT_EMBEDDING_SIZE
+    /** Absolute path of the model file that produced the cached [session]. */
+    @Volatile private var loadedFor: String? = null
+    /** Last-modified timestamp of the file at the moment it was loaded. */
+    @Volatile private var loadedMtime: Long = 0L
+    /** Length at load time — guards against truncation/swap. */
+    @Volatile private var loadedSize: Long = 0L
     private val lock = Any()
 
     override val embeddingSize: Int get() = resolvedSize
@@ -81,13 +87,42 @@ class OnnxEcapaIdentifier @Inject constructor(
     }
 
     private fun ensureSession(): OrtSession? {
+        val file = registry.fileFor(ModelRegistry.ECAPA_TDNN_ONNX)
+        val gone = !file.exists() || file.length() < 1024
         val current = session
-        if (current != null) return current
+        // Fast path: cached session and the underlying file hasn't moved
+        // (same absolute path, same size, same mtime). Avoids stat-ing the
+        // file lock on every embedding call.
+        if (current != null &&
+            !gone &&
+            file.absolutePath == loadedFor &&
+            file.length() == loadedSize &&
+            file.lastModified() == loadedMtime
+        ) {
+            return current
+        }
         synchronized(lock) {
-            val existing = session
-            if (existing != null) return existing
-            val file = registry.fileFor(ModelRegistry.ECAPA_TDNN_ONNX)
-            if (!file.exists() || file.length() < 1024) return null
+            val cached = session
+            // Re-check under lock (DCL).
+            if (cached != null &&
+                !gone &&
+                file.absolutePath == loadedFor &&
+                file.length() == loadedSize &&
+                file.lastModified() == loadedMtime
+            ) {
+                return cached
+            }
+            // Drop stale state — either the file was wiped (B-1 fix) or
+            // replaced with a different download (model swap).
+            if (cached != null) {
+                runCatching { cached.close() }
+                session = null
+                inputName = null
+                loadedFor = null
+                loadedMtime = 0L
+                loadedSize = 0L
+            }
+            if (gone) return null
             return try {
                 val env = OrtEnvironment.getEnvironment()
                 val opts = OrtSession.SessionOptions().apply {
@@ -97,12 +132,27 @@ class OnnxEcapaIdentifier @Inject constructor(
                 val s = env.createSession(file.absolutePath, opts)
                 inputName = s.inputNames.first()
                 session = s
-                Log.i(TAG, "ECAPA session loaded: inputs=${s.inputNames} outputs=${s.outputNames}")
+                loadedFor = file.absolutePath
+                loadedMtime = file.lastModified()
+                loadedSize = file.length()
+                Log.i(TAG, "ECAPA session loaded: file=${file.name} inputs=${s.inputNames} outputs=${s.outputNames}")
                 s
             } catch (t: Throwable) {
                 Log.e(TAG, "createSession failed: ${t.message}", t)
                 null
             }
+        }
+    }
+
+    /** Best-effort release. Safe to call from the wipe path. */
+    fun release() {
+        synchronized(lock) {
+            runCatching { session?.close() }
+            session = null
+            inputName = null
+            loadedFor = null
+            loadedMtime = 0L
+            loadedSize = 0L
         }
     }
 

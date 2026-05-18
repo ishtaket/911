@@ -76,6 +76,10 @@ A compromised OS or root user is **out of scope**.
 | Path traversal via spec filename | All `ModelSpec.filename` values are compile-time constants under `ModelRegistry`; validated by `ModelRegistryTest::filenames are filesystem-safe` | `PCA-S-13` | `ModelRegistry`, test |
 | ReDoS via crafted transcript | Every Anonymizer regex uses bounded `{n,m}` quantifiers; the patterns are documented in `Anonymizer.RULES` | `PCA-S-14` | `Anonymizer` |
 | Backup / cloud-restore leaks DB and DataStore | `android:allowBackup=false`; `data_extraction_rules` excludes every domain | `PCA-S-15` | `AndroidManifest.xml`, `data_extraction_rules.xml` |
+| Wipe leaves stale ONNX session resident → next embedding uses deleted weights | `OnnxEcapaIdentifier.ensureSession` tracks loaded path + size + mtime, closes the cached session when the file disappears or is replaced | `PCA-S-16` | `OnnxEcapaIdentifier`, `AdaptiveSpeakerResetTest` |
+| Wipe / re-download leaves stale whisper.cpp ctx resident | `WhisperJniRecognizer.ensureLoaded` checks path + size + mtime; `recognize` actively releases when file is gone | `PCA-S-17` | `WhisperJniRecognizer`, `AdaptiveSpeechResetTest` |
+| Wipe-while-running races: foreground service / dashboard DAO observers crash on closed DB | `SettingsViewModel.wipeEverything` sequences: stop service → release native ctx → wipe tables → close + delete DB file → drop model files → wipe DataStore + Keystore → `Process.killProcess` | `PCA-S-18` | `SettingsViewModel.wipeEverything` |
+| Spec §3.3 — `memory_note` returned by the LLM never flowed into the L1 layer | `HourRollupWorker` now decodes each `windows.llmResponseJson`, extracts `memoryNote`, and writes the list into `hour_summaries.memoryNotesJson` via `MemoryRollup.aggregateHour` | `PCA-B-4`  | `MemoryRollup`, `MemoryRollupTest` |
 
 ## 4. Cryptography
 
