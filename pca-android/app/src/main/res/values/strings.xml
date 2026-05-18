@@ -81,6 +81,7 @@
     <string name="settings_download_model">Download model</string>
     <string name="settings_models_title">Model downloads</string>
     <string name="settings_models_delete">Delete</string>
+    <string name="settings_models_ecapa_warning">Experimental — current default URL points at an ERes2Net export that expects mel features but our pipeline feeds raw PCM. Speaker identification will produce noise embeddings and silently fail to recognize the owner. See SECURITY.md (PCA-S-19).</string>
     <string name="settings_allow_cellular">Download over cellular</string>
     <string name="settings_allow_cellular_desc">Off by default. Whisper turbo is ~800 MB — keep on Wi-Fi unless you really want to pay for the bytes.</string>
     <string name="dash_bootstrap_waiting_wifi">Waiting for Wi-Fi to download models (%1$d/%2$d). Toggle Settings → Download over cellular if you don\'t mind the data.</string>

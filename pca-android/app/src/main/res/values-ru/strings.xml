@@ -75,6 +75,7 @@
     <string name="settings_download_model">Скачать модель</string>
     <string name="settings_models_title">Загрузка моделей</string>
     <string name="settings_models_delete">Удалить</string>
+    <string name="settings_models_ecapa_warning">Экспериментально — URL по умолчанию указывает на ERes2Net-экспорт, которому нужны mel-features, а мы шлём raw PCM. Эмбеддинги будут шумом, owner-ID молча не работает. См. SECURITY.md (PCA-S-19).</string>
     <string name="settings_allow_cellular">Загружать по мобильному</string>
     <string name="settings_allow_cellular_desc">По умолчанию выключено. Whisper turbo весит ~800 МБ — лучше дождаться Wi-Fi.</string>
     <string name="dash_bootstrap_waiting_wifi">Жду Wi-Fi чтобы скачать модели (%1$d/%2$d). В Настройках можно разрешить мобильный трафик.</string>

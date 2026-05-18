@@ -271,6 +271,17 @@ private fun ModelRow(
             Column(Modifier.weight(1f)) {
                 Text(spec.id, style = MaterialTheme.typography.bodyLarge)
                 Text("≈ ${spec.approxMb} MB", style = MaterialTheme.typography.bodySmall)
+                // PCA-S-30: ECAPA default URL points at a placeholder
+                // (ERes2Net) that produces noise embeddings on raw PCM.
+                // Surface the warning right here so users don't tap
+                // Download and silently lose owner identification.
+                if (spec.id == com.pca.assistant.models.ModelRegistry.ECAPA_TDNN_ONNX.id) {
+                    Text(
+                        text = stringResource(R.string.settings_models_ecapa_warning),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.tertiary,
+                    )
+                }
             }
             when {
                 ready -> Button(onClick = onDelete) {

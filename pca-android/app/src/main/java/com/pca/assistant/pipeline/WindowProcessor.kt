@@ -78,27 +78,35 @@ class WindowProcessor @Inject constructor(
             llmResponseJson = responseJson,
         )
 
-        // Threads bookkeeping.
+        // Threads bookkeeping with DEFENSIVE BOUNDS against a misbehaving
+        // bridge (PCA-S-33 / S-34):
+        //   - close-list chunked under SQLite's 999-parameter `IN (...)` limit
+        //   - new-list capped at MAX_NEW_THREADS_PER_WINDOW so a runaway LLM
+        //     can't insert 10k rows in one tick.
         if (decision.openThreadsUpdate.closed.isNotEmpty()) {
-            openThreadDao.close(decision.openThreadsUpdate.closed)
+            decision.openThreadsUpdate.closed
+                .chunked(SQLITE_IN_LIMIT)
+                .forEach { openThreadDao.close(it) }
         }
         if (decision.openThreadsUpdate.new.isNotEmpty()) {
             val now = System.currentTimeMillis()
             openThreadDao.upsertAll(
-                decision.openThreadsUpdate.new.map { n ->
-                    OpenThreadEntity(
-                        id = n.id,
-                        topic = n.topic,
-                        openedAt = now,
-                        openedInWindowId = windowId,
-                        context = n.context,
-                        due = n.due,
-                        status = "open",
-                        lastMentionedAt = now,
-                        relatedPeopleJson = "[]",
-                        relatedLocationsJson = "[]",
-                    )
-                }
+                decision.openThreadsUpdate.new
+                    .take(MAX_NEW_THREADS_PER_WINDOW)
+                    .map { n ->
+                        OpenThreadEntity(
+                            id = n.id.take(MAX_THREAD_ID_LEN),
+                            topic = n.topic.take(MAX_THREAD_TOPIC_LEN),
+                            openedAt = now,
+                            openedInWindowId = windowId,
+                            context = n.context.take(MAX_THREAD_CONTEXT_LEN),
+                            due = n.due,
+                            status = "open",
+                            lastMentionedAt = now,
+                            relatedPeopleJson = "[]",
+                            relatedLocationsJson = "[]",
+                        )
+                    }
             )
         }
 
@@ -111,18 +119,23 @@ class WindowProcessor @Inject constructor(
         // into the DB (B-36 fix), they just don't fire a notification. The
         // user can still see them via the history surface.
         if (decision.intervene && !decision.advice.isNullOrBlank()) {
+            // PCA-S-35: cap advice + reason so a runaway LLM can't fill the
+            // DB with 100k-char rows. Notification truncates anyway; the
+            // history view is fine with 4 KB of text per row.
+            val advice = decision.advice.take(MAX_ADVICE_LEN)
+            val reason = decision.reason.take(MAX_REASON_LEN)
             val id = interventionDao.insert(
                 InterventionEntity(
                     windowId = windowId,
                     ts = System.currentTimeMillis(),
-                    advice = decision.advice,
+                    advice = advice,
                     urgency = safeUrgency,
-                    reason = decision.reason,
+                    reason = reason,
                     userFeedback = null,
                     shownAt = if (safeUrgency >= 1) System.currentTimeMillis() else null,
                 )
             )
-            if (safeUrgency >= 1) notifier.show(id, decision.advice, safeUrgency)
+            if (safeUrgency >= 1) notifier.show(id, advice, safeUrgency)
         }
     }
 
@@ -134,5 +147,16 @@ class WindowProcessor @Inject constructor(
             LanguageChoice.EN -> "en"
             LanguageChoice.SYSTEM -> Locale.getDefault().language.ifBlank { "en" }
         }
+    }
+
+    private companion object {
+        // Defensive bounds — see PCA-S-33 / S-34 / S-35.
+        const val SQLITE_IN_LIMIT = 900               // SQLite default cap is 999
+        const val MAX_NEW_THREADS_PER_WINDOW = 32
+        const val MAX_THREAD_ID_LEN = 128
+        const val MAX_THREAD_TOPIC_LEN = 256
+        const val MAX_THREAD_CONTEXT_LEN = 1024
+        const val MAX_ADVICE_LEN = 4096
+        const val MAX_REASON_LEN = 1024
     }
 }

@@ -144,7 +144,13 @@ fun DashboardScreen(
                 ) {
                     Column(Modifier.padding(12.dp)) {
                         val text = when {
-                            boot.failed -> stringResource(R.string.dash_bootstrap_failed, boot.failReason ?: "?")
+                            // PCA-S-31: escape `%` in failReason so a kernel-style
+                            // "%2X" error message doesn't blow stringResource's
+                            // String.format with MissingFormatArgumentException.
+                            boot.failed -> stringResource(
+                                R.string.dash_bootstrap_failed,
+                                (boot.failReason ?: "?").replace("%", "%%"),
+                            )
                             boot.running -> stringResource(
                                 R.string.dash_bootstrap_running,
                                 boot.modelOrdinal.coerceAtLeast(1),

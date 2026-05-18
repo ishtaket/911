@@ -75,6 +75,7 @@
     <string name="settings_download_model">הורד מודל</string>
     <string name="settings_models_title">הורדת מודלים</string>
     <string name="settings_models_delete">מחק</string>
+    <string name="settings_models_ecapa_warning">ניסיוני — כתובת ברירת המחדל מצביעה על ייצוא ERes2Net שדורש mel-features, אבל הצינור שלנו שולח PCM גולמי. ההטבעות יהיו רעש, זיהוי הבעלים לא יעבוד בשקט. ראה SECURITY.md (PCA-S-19).</string>
     <string name="settings_allow_cellular">הורד דרך רשת סלולרית</string>
     <string name="settings_allow_cellular_desc">כבוי כברירת מחדל. Whisper turbo במשקל ~800 מ"ב — עדיף להמתין ל-Wi-Fi.</string>
     <string name="dash_bootstrap_waiting_wifi">ממתין ל-Wi-Fi להורדת מודלים (%1$d/%2$d). בהגדרות אפשר לאפשר רשת סלולרית.</string>

@@ -80,10 +80,12 @@ class ModelBootstrapWorker @AssistedInject constructor(
         for ((index, spec) in targets.withIndex()) {
             if (registry.isReady(spec)) continue
             // PCA-S-20: refuse to even start if there's clearly not enough
-            // free space. ~2x the model size keeps headroom for the .part
-            // file plus the final rename without filling the partition.
+            // free space. The download writes a .part file (== model size)
+            // then atomic-renames to the final name, so peak disk use is
+            // ~1× the model. We require 1.2× for safety margin (FS journal,
+            // other apps writing, rename briefly holding both inodes).
             val available = registry.modelsDir().usableSpace
-            val needed = spec.approxMb.toLong() * 1024L * 1024L * 2L
+            val needed = spec.approxMb.toLong() * 1024L * 1024L * 12L / 10L
             if (available < needed) {
                 return Result.failure(
                     workDataOf(
