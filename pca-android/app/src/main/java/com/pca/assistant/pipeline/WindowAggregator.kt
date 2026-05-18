@@ -103,7 +103,11 @@ class WindowAggregator @Inject constructor(
             previousDecision = null,
             openThreads = openThreads,
             window = WindowPayload(
-                windowId = slice.windowId,
+                // B-21 fix: the Room-assigned auto-increment id isn't available
+                // until after the LLM round-trip, but the LLM uses window_id
+                // to correlate decisions across windows. Use startTs as the
+                // stable identifier — unique per 5-min tick, deterministic.
+                windowId = if (slice.windowId == 0L) slice.startTs else slice.windowId,
                 startTs = slice.startTs,
                 endTs = slice.endTs,
                 transcript = slice.transcriptAnonymized,
