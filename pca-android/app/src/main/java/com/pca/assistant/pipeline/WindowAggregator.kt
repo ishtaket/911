@@ -7,9 +7,11 @@ import com.pca.assistant.data.db.dao.OwnerDao
 import com.pca.assistant.data.db.dao.TranscriptDao
 import com.pca.assistant.data.db.dao.WindowDao
 import com.pca.assistant.data.db.entity.WindowEntity
+import com.pca.assistant.llm.contract.LlmDecision
 import com.pca.assistant.llm.contract.LlmRequest
 import com.pca.assistant.llm.contract.OpenThreadDto
 import com.pca.assistant.llm.contract.WindowPayload
+import kotlinx.serialization.SerializationException
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
@@ -53,7 +55,13 @@ class WindowAggregator @Inject constructor(
         @SerialName("is_owner") val isOwner: Boolean,
     )
 
-    private val blobJson = Json { encodeDefaults = true; explicitNulls = true }
+    private val blobJson = Json {
+        encodeDefaults = true
+        explicitNulls = true
+        // Tolerate older persisted responses or schema additions when we
+        // decode the previous decision back from the windows table.
+        ignoreUnknownKeys = true
+    }
 
     data class WindowSlice(
         val windowId: Long,
@@ -95,12 +103,26 @@ class WindowAggregator @Inject constructor(
             )
         }
 
+        // B-23 / spec §3.3 — feed the previous window's decision so the LLM
+        // can honour "do not repeat advice you already gave". Best-effort:
+        // if the last sent row has a malformed llmResponseJson, fall back to
+        // null instead of failing the whole window build.
+        val previous: LlmDecision? = windowDao.lastSent()?.llmResponseJson?.let { raw ->
+            try {
+                blobJson.decodeFromString(LlmDecision.serializer(), raw)
+            } catch (_: SerializationException) {
+                null
+            } catch (_: IllegalArgumentException) {
+                null
+            }
+        }
+
         return LlmRequest(
             systemPrompt = com.pca.assistant.llm.SystemPrompt.EVALUATOR,
             l3Profile = l3,
             l2Day = l2,
             l1Hour = l1,
-            previousDecision = null,
+            previousDecision = previous,
             openThreads = openThreads,
             window = WindowPayload(
                 // B-21 fix: the Room-assigned auto-increment id isn't available
