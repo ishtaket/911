@@ -25,7 +25,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -162,7 +162,7 @@ private fun EnrollStep(
     // foreground service is still holding the mic. AudioRecord would fail
     // with "mic busy" on OneUI. Pause the service while we're on this step
     // and resume it on dispose if the service was running before.
-    androidx.compose.runtime.DisposableEffect(Unit) {
+    DisposableEffect(Unit) {
         com.pca.assistant.service.ListeningService.sendAction(
             context, com.pca.assistant.service.ListeningService.ACTION_PAUSE
         )
