@@ -8,6 +8,7 @@ import com.pca.assistant.data.security.DbPassphrase
 import com.pca.assistant.models.ModelDownloader
 import com.pca.assistant.models.ModelRegistry
 import com.pca.assistant.models.ModelSpec
+import com.pca.assistant.pipeline.ModelBootstrap
 import com.pca.assistant.service.ListeningService
 import com.pca.assistant.settings.AppSettings
 import com.pca.assistant.speaker.OnnxEcapaIdentifier
@@ -66,6 +67,14 @@ class SettingsViewModel @Inject constructor(
     fun setLanguage(l: LanguageChoice) = viewModelScope.launch { settings.setLanguage(l) }
     fun setSttModel(m: SttModelChoice) = viewModelScope.launch { settings.setSttModel(m) }
     fun setGeofencePause(on: Boolean) = viewModelScope.launch { settings.setGeofencePause(on) }
+
+    fun setAllowCellularDownloads(on: Boolean) = viewModelScope.launch {
+        settings.setAllowCellularDownloads(on)
+        // Re-schedule the bootstrap worker so an already-blocked Wi-Fi-wait
+        // job picks up the new constraint immediately instead of waiting
+        // for Wi-Fi to appear.
+        ModelBootstrap.reschedule(context, allowMetered = on)
+    }
 
     fun download(spec: ModelSpec, overrideUrl: String? = null) {
         if (activeJobs[spec.id]?.isActive == true) return

@@ -33,6 +33,7 @@ data class Settings(
     val geofencePause: Boolean,
     val onboardingDone: Boolean,
     val listeningEnabled: Boolean,
+    val allowCellularDownloads: Boolean,
 )
 
 private val Context.dataStore by preferencesDataStore("pca_settings")
@@ -74,6 +75,10 @@ class AppSettings @Inject constructor(
                 geofencePause = p[K_GEOFENCE_PAUSE] == true,
                 onboardingDone = p[K_ONBOARDING] == true,
                 listeningEnabled = p[K_LISTENING] != false,
+                // Default OFF — Whisper turbo alone is ~800 MB and we don't
+                // want to blow through a user's cellular cap silently. The
+                // bootstrap worker waits for Wi-Fi until the user flips this.
+                allowCellularDownloads = p[K_ALLOW_CELLULAR] == true,
             )
         }
 
@@ -110,6 +115,9 @@ class AppSettings @Inject constructor(
     suspend fun setListeningEnabled(enabled: Boolean) =
         context.dataStore.edit { it[K_LISTENING] = enabled }
 
+    suspend fun setAllowCellularDownloads(enabled: Boolean) =
+        context.dataStore.edit { it[K_ALLOW_CELLULAR] = enabled }
+
     suspend fun wipe() = context.dataStore.edit { it.clear() }
 
     private companion object Keys {
@@ -122,5 +130,6 @@ class AppSettings @Inject constructor(
         val K_GEOFENCE_PAUSE: Preferences.Key<Boolean> = booleanPreferencesKey("geofence_pause")
         val K_ONBOARDING: Preferences.Key<Boolean> = booleanPreferencesKey("onboarding_done")
         val K_LISTENING: Preferences.Key<Boolean> = booleanPreferencesKey("listening_enabled")
+        val K_ALLOW_CELLULAR: Preferences.Key<Boolean> = booleanPreferencesKey("allow_cellular_downloads")
     }
 }

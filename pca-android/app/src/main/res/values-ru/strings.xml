@@ -75,6 +75,11 @@
     <string name="settings_download_model">Скачать модель</string>
     <string name="settings_models_title">Загрузка моделей</string>
     <string name="settings_models_delete">Удалить</string>
+    <string name="settings_allow_cellular">Загружать по мобильному</string>
+    <string name="settings_allow_cellular_desc">По умолчанию выключено. Whisper turbo весит ~800 МБ — лучше дождаться Wi-Fi.</string>
+    <string name="dash_bootstrap_waiting_wifi">Жду Wi-Fi чтобы скачать модели (%1$d/%2$d). В Настройках можно разрешить мобильный трафик.</string>
+    <string name="dash_bootstrap_running">Качаю модель %1$d / %2$d: %3$d %% (%4$d / %5$d МБ)</string>
+    <string name="dash_bootstrap_failed">Загрузка модели не удалась: %1$s</string>
     <string name="settings_geofence_pause">Пауза дома (геозона)</string>
     <string name="settings_wipe">Полная очистка</string>
     <string name="settings_wipe_confirm">Удалить все данные?</string>

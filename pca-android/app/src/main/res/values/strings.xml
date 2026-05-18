@@ -81,6 +81,11 @@
     <string name="settings_download_model">Download model</string>
     <string name="settings_models_title">Model downloads</string>
     <string name="settings_models_delete">Delete</string>
+    <string name="settings_allow_cellular">Download over cellular</string>
+    <string name="settings_allow_cellular_desc">Off by default. Whisper turbo is ~800 MB — keep on Wi-Fi unless you really want to pay for the bytes.</string>
+    <string name="dash_bootstrap_waiting_wifi">Waiting for Wi-Fi to download models (%1$d/%2$d). Toggle Settings → Download over cellular if you don\'t mind the data.</string>
+    <string name="dash_bootstrap_running">Downloading model %1$d / %2$d: %3$d %% (%4$d / %5$d MB)</string>
+    <string name="dash_bootstrap_failed">Model download failed: %1$s</string>
     <string name="settings_geofence_pause">Pause at home (geofence)</string>
     <string name="settings_wipe">Full wipe</string>
     <string name="settings_wipe_confirm">Erase all data?</string>

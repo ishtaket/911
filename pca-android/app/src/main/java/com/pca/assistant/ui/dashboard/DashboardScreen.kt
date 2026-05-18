@@ -22,6 +22,7 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -128,6 +129,53 @@ fun DashboardScreen(
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onTertiaryContainer,
                     )
+                }
+            }
+
+            s.bootstrap?.let { boot ->
+                Spacer(Modifier.height(8.dp))
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(14.dp),
+                    colors = CardDefaults.cardColors(
+                        containerColor = if (boot.failed) MaterialTheme.colorScheme.errorContainer
+                        else MaterialTheme.colorScheme.surfaceVariant,
+                    ),
+                ) {
+                    Column(Modifier.padding(12.dp)) {
+                        val text = when {
+                            boot.failed -> stringResource(R.string.dash_bootstrap_failed, boot.failReason ?: "?")
+                            boot.running -> stringResource(
+                                R.string.dash_bootstrap_running,
+                                boot.modelOrdinal.coerceAtLeast(1),
+                                boot.modelTotal.coerceAtLeast(1),
+                                boot.percent,
+                                boot.downloadedMb,
+                                boot.totalMb,
+                            )
+                            boot.enqueued -> stringResource(
+                                R.string.dash_bootstrap_waiting_wifi,
+                                boot.modelOrdinal.coerceAtLeast(1),
+                                boot.modelTotal.coerceAtLeast(2),
+                            )
+                            else -> ""
+                        }
+                        if (text.isNotBlank()) {
+                            Text(
+                                text = text,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = if (boot.failed) MaterialTheme.colorScheme.onErrorContainer
+                                else MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                        if (boot.running && boot.percent in 0..100) {
+                            Spacer(Modifier.height(6.dp))
+                            LinearProgressIndicator(
+                                progress = (boot.percent / 100f).coerceIn(0f, 1f),
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                        }
+                    }
                 }
             }
 

@@ -165,6 +165,30 @@ fun SettingsScreen(vm: SettingsViewModel, onBack: () -> Unit, onReEnroll: () -> 
                     )
                     Spacer(Modifier.height(8.dp))
                 }
+
+                // Cellular toggle — controls the auto-bootstrap worker
+                // constraint (Wi-Fi-only by default).
+                Spacer(Modifier.height(4.dp))
+                Row(
+                    Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Column(Modifier.weight(1f)) {
+                        Text(
+                            text = stringResource(R.string.settings_allow_cellular),
+                            style = MaterialTheme.typography.bodyLarge,
+                        )
+                        Text(
+                            text = stringResource(R.string.settings_allow_cellular_desc),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                    Switch(
+                        checked = cfg.allowCellularDownloads,
+                        onCheckedChange = { vm.setAllowCellularDownloads(it) }
+                    )
+                }
             }
 
             Section(title = stringResource(R.string.settings_geofence_pause)) {

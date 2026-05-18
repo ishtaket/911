@@ -75,6 +75,11 @@
     <string name="settings_download_model">הורד מודל</string>
     <string name="settings_models_title">הורדת מודלים</string>
     <string name="settings_models_delete">מחק</string>
+    <string name="settings_allow_cellular">הורד דרך רשת סלולרית</string>
+    <string name="settings_allow_cellular_desc">כבוי כברירת מחדל. Whisper turbo במשקל ~800 מ"ב — עדיף להמתין ל-Wi-Fi.</string>
+    <string name="dash_bootstrap_waiting_wifi">ממתין ל-Wi-Fi להורדת מודלים (%1$d/%2$d). בהגדרות אפשר לאפשר רשת סלולרית.</string>
+    <string name="dash_bootstrap_running">מוריד מודל %1$d / %2$d: %3$d %% (%4$d / %5$d מ"ב)</string>
+    <string name="dash_bootstrap_failed">הורדת המודל נכשלה: %1$s</string>
     <string name="settings_geofence_pause">השהה בבית (Geofence)</string>
     <string name="settings_wipe">מחיקה מלאה</string>
     <string name="settings_wipe_confirm">למחוק את כל הנתונים?</string>

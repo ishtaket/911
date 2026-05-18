@@ -48,6 +48,7 @@ class FakeSettings(initial: Settings = DEFAULT) {
             geofencePause = false,
             onboardingDone = true,
             listeningEnabled = true,
+            allowCellularDownloads = false,
         )
     }
 }

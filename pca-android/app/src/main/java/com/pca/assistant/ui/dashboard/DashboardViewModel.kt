@@ -1,13 +1,18 @@
 package com.pca.assistant.ui.dashboard
 
+import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import androidx.work.WorkInfo
+import androidx.work.WorkManager
 import com.pca.assistant.data.db.dao.InterventionDao
 import com.pca.assistant.data.db.dao.OpenThreadDao
 import com.pca.assistant.data.db.dao.WindowDao
 import com.pca.assistant.data.db.entity.InterventionEntity
 import com.pca.assistant.data.db.entity.OpenThreadEntity
 import com.pca.assistant.data.db.entity.WindowEntity
+import com.pca.assistant.pipeline.BootstrapProgress
+import com.pca.assistant.pipeline.ModelBootstrapWorker
 import com.pca.assistant.service.ListeningState
 import com.pca.assistant.service.ServiceState
 import com.pca.assistant.settings.AppSettings
@@ -17,6 +22,7 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import java.util.Calendar
 import javax.inject.Inject
@@ -30,6 +36,7 @@ data class DashboardState(
      * mock — surfaces a tertiary-colored warning on the dashboard.
      */
     val bridgeUrlMissing: Boolean,
+    val bootstrap: BootstrapProgress?,
     val windowsToday: Int,
     val interventionsToday: Int,
     val openThreadsCount: Int,
@@ -40,6 +47,7 @@ data class DashboardState(
 
 @HiltViewModel
 class DashboardViewModel @Inject constructor(
+    context: Context,
     settings: AppSettings,
     serviceState: ServiceState,
     windowDao: WindowDao,
@@ -67,7 +75,20 @@ class DashboardViewModel @Inject constructor(
             serviceState.state,
         ) { s: Settings, ls: ListeningState -> s to ls }
 
-        state = combine(headers, counts, lists) { hdr, cnt, lst ->
+        // Surface the model-bootstrap worker's status (Wi-Fi-waiting, percent,
+        // succeeded, failed) so the dashboard can show a download progress
+        // chip without forcing the user into Settings → Model downloads.
+        val bootstrapFlow = WorkManager.getInstance(context)
+            .getWorkInfosForUniqueWorkFlow(ModelBootstrapWorker.UNIQUE_NAME)
+            .map { infos ->
+                val info = infos.firstOrNull() ?: return@map null
+                // Worker emits Progress while RUNNING; final state has empty
+                // progress data but a known state we still want to surface.
+                val data = if (info.progress.keyValueMap.isEmpty()) info.outputData else info.progress
+                BootstrapProgress.from(data, info.state)
+            }
+
+        state = combine(headers, counts, lists, bootstrapFlow) { hdr, cnt, lst, boot ->
             val (cfg, ls) = hdr
             val (windowsToday, intToday) = cnt
             val (threads, windows, ints) = lst
@@ -78,6 +99,9 @@ class DashboardViewModel @Inject constructor(
                     ProviderMode.BRIDGE -> "HTTP bridge"
                 },
                 bridgeUrlMissing = cfg.providerMode == ProviderMode.BRIDGE && cfg.bridgeUrl.isBlank(),
+                // Hide the chip on SUCCEEDED — bootstrap is done, no need to
+                // keep nagging the user.
+                bootstrap = boot?.takeUnless { it.succeeded },
                 windowsToday = windowsToday,
                 interventionsToday = intToday,
                 openThreadsCount = threads.size,
@@ -92,6 +116,7 @@ class DashboardViewModel @Inject constructor(
                 listening = ListeningState.STOPPED,
                 provider = "—",
                 bridgeUrlMissing = false,
+                bootstrap = null,
                 windowsToday = 0,
                 interventionsToday = 0,
                 openThreadsCount = 0,
