@@ -119,7 +119,8 @@ def run_codex(prompt: str) -> dict:
     """Invoke `codex` CLI in non-interactive mode."""
     cmd = ["codex", "exec", "--json"]
     res = subprocess.run(
-        cmd, input=prompt, capture_output=True, text=True, timeout=120, check=False
+        cmd, input=prompt, capture_output=True, text=True, encoding="utf-8",
+        timeout=120, check=False,
     )
     if res.returncode != 0:
         raise HTTPException(status_code=502, detail=f"codex exit={res.returncode}: {res.stderr[:500]}")
@@ -132,7 +133,10 @@ def run_codex(prompt: str) -> dict:
 def run_gemini(prompt: str) -> dict:
     """Invoke `gemini` CLI."""
     cmd = ["gemini", "-y", "-q", prompt]
-    res = subprocess.run(cmd, capture_output=True, text=True, timeout=120, check=False)
+    res = subprocess.run(
+        cmd, capture_output=True, text=True, encoding="utf-8",
+        timeout=120, check=False,
+    )
     if res.returncode != 0:
         raise HTTPException(status_code=502, detail=f"gemini exit={res.returncode}: {res.stderr[:500]}")
     return json.loads(res.stdout)
