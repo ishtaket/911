@@ -4,6 +4,9 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.pca.assistant.data.db.PcaDatabase
 import com.pca.assistant.data.security.DbPassphrase
+import com.pca.assistant.models.ModelDownloader
+import com.pca.assistant.models.ModelRegistry
+import com.pca.assistant.models.ModelSpec
 import com.pca.assistant.settings.AppSettings
 import com.pca.assistant.settings.LanguageChoice
 import com.pca.assistant.settings.ProviderMode
@@ -11,22 +14,44 @@ import com.pca.assistant.settings.Settings
 import com.pca.assistant.settings.SttModelChoice
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import javax.inject.Inject
+
+data class DownloadStatus(
+    val specId: String,
+    val percent: Int,
+    val downloadedMb: Long,
+    val totalMb: Long,
+    val done: Boolean,
+    val failed: String?,
+)
 
 @HiltViewModel
 class SettingsViewModel @Inject constructor(
     private val settings: AppSettings,
     private val db: PcaDatabase,
     private val passphrase: DbPassphrase,
+    private val registry: ModelRegistry,
+    private val downloader: ModelDownloader,
 ) : ViewModel() {
 
     val state: StateFlow<Settings?> = settings.flow
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
+
+    private val _downloads = MutableStateFlow<Map<String, DownloadStatus>>(emptyMap())
+    val downloads: StateFlow<Map<String, DownloadStatus>> = _downloads.asStateFlow()
+
+    private val _modelsReady = MutableStateFlow(snapshotReady())
+    val modelsReady: StateFlow<Map<String, Boolean>> = _modelsReady.asStateFlow()
+
+    private val activeJobs = mutableMapOf<String, Job>()
 
     fun setProvider(mode: ProviderMode) = viewModelScope.launch { settings.setProviderMode(mode) }
     fun setBridgeUrl(url: String) = viewModelScope.launch { settings.setBridgeUrl(url) }
@@ -34,6 +59,45 @@ class SettingsViewModel @Inject constructor(
     fun setLanguage(l: LanguageChoice) = viewModelScope.launch { settings.setLanguage(l) }
     fun setSttModel(m: SttModelChoice) = viewModelScope.launch { settings.setSttModel(m) }
     fun setGeofencePause(on: Boolean) = viewModelScope.launch { settings.setGeofencePause(on) }
+
+    fun download(spec: ModelSpec, overrideUrl: String? = null) {
+        if (activeJobs[spec.id]?.isActive == true) return
+        activeJobs[spec.id] = viewModelScope.launch {
+            downloader.download(spec, overrideUrl).collect { p ->
+                val status = when (p) {
+                    is ModelDownloader.Progress.Running -> DownloadStatus(
+                        specId = spec.id,
+                        percent = p.percent,
+                        downloadedMb = p.downloaded / (1024 * 1024),
+                        totalMb = if (p.total > 0) p.total / (1024 * 1024) else 0,
+                        done = false,
+                        failed = null,
+                    )
+                    is ModelDownloader.Progress.Done -> {
+                        DownloadStatus(spec.id, 100, p.file.length() / (1024 * 1024), p.file.length() / (1024 * 1024), true, null)
+                    }
+                    is ModelDownloader.Progress.Failed -> DownloadStatus(spec.id, 0, 0, 0, false, p.reason)
+                }
+                _downloads.value = _downloads.value + (spec.id to status)
+                if (status.done) _modelsReady.value = snapshotReady()
+            }
+        }
+    }
+
+    fun deleteModel(spec: ModelSpec) {
+        viewModelScope.launch(Dispatchers.IO) {
+            runCatching { registry.fileFor(spec).delete() }
+            _modelsReady.value = snapshotReady()
+            _downloads.value = _downloads.value - spec.id
+        }
+    }
+
+    private fun snapshotReady(): Map<String, Boolean> = mapOf(
+        ModelRegistry.WHISPER_SMALL_Q5.id to registry.isReady(ModelRegistry.WHISPER_SMALL_Q5),
+        ModelRegistry.WHISPER_TURBO_Q5.id to registry.isReady(ModelRegistry.WHISPER_TURBO_Q5),
+        ModelRegistry.IVRIT_TURBO_Q5.id to registry.isReady(ModelRegistry.IVRIT_TURBO_Q5),
+        ModelRegistry.ECAPA_TDNN_ONNX.id to registry.isReady(ModelRegistry.ECAPA_TDNN_ONNX),
+    )
 
     fun wipeEverything() = viewModelScope.launch {
         withContext(Dispatchers.IO) {

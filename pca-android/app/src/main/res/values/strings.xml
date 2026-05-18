@@ -78,6 +78,8 @@
     <string name="settings_model_whisper_turbo">Whisper Large-v3 turbo Q5 (~800 MB)</string>
     <string name="settings_model_ivrit">Ivrit.AI turbo (Hebrew booster)</string>
     <string name="settings_download_model">Download model</string>
+    <string name="settings_models_title">Model downloads</string>
+    <string name="settings_models_delete">Delete</string>
     <string name="settings_geofence_pause">Pause at home (geofence)</string>
     <string name="settings_wipe">Full wipe</string>
     <string name="settings_wipe_confirm">Erase all data?</string>

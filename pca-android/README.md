@@ -9,17 +9,42 @@ Ultra (SM-G998B/DS, Exynos 2100, Android 14)**.
 
 ## Возможности (MVP)
 
-| Слой по спеке (§2.1)        | Реализация в MVP                                                                   |
+| Слой по спеке (§2.1)        | Реализация                                                                          |
 |-----------------------------|------------------------------------------------------------------------------------|
 | 1. Audio capture            | `ListeningService` (FGS, type=`microphone+location+dataSync`) + `AudioRecord` 16 kHz |
 | 2. VAD                      | Энергетический RMS-VAD (Silero VAD ONNX подключается за тем же интерфейсом)         |
-| 3. STT                      | Android `SpeechRecognizer` (без скачивания моделей). Whisper.cpp swap-in ready.   |
-| 4. Speaker ID               | Голосовой эмбеддинг RMS+ZCR (ECAPA-TDNN ONNX в проде), cosine vs reference         |
+| 3. STT                      | **whisper.cpp v1.7.1** через JNI (`libpca_whisper_jni.so`). Android STT — только fallback. |
+| 4. Speaker ID               | **ECAPA-TDNN ONNX** через ONNX Runtime Android. Synthetic — только fallback.        |
 | 5. Context aggregator       | `WindowAggregator` собирает L0 окно из транскриптов + локации                       |
 | 6. Anonymizer               | Regex NER (email, phone, IBAN, card, URL, geo); токен-мапа живёт только в RAM      |
 | 7. Decision LLM             | `ProviderRouter`: primary = HTTP-bridge (codex/Gemini), fallback = MockLocal       |
 | 8. Memory hierarchy         | WorkManager L1 (час), L2 (день), L3 (профиль, неделя)                              |
 | 9. Notification layer       | Foreground + advice-notifications с кнопками feedback (`useful / no / not_now`)    |
+
+### Нативные компоненты
+
+- **whisper.cpp** собирается из исходников через `externalNativeBuild { cmake }`. CMake
+  `FetchContent_Declare` тянет `ggerganov/whisper.cpp@v1.7.1` при первой настройке —
+  нужен `git` + сеть на build-машине. Кэширование Gradle переиспользуется.
+- **ONNX Runtime Android** (`com.microsoft.onnxruntime:onnxruntime-android:1.19.2`)
+  подключён как AAR (~15 МБ). Используется для ECAPA-TDNN.
+- **NDK r26** (`ndk;26.1.10909125`) + CMake 3.22.1 — указано в `app/build.gradle.kts`
+  и в `.github/workflows/pca-ci.yml`.
+
+### Модели (скачиваются по требованию)
+
+APK остаётся <30 МБ. Веса берутся в первый запуск через UI Настройки → «Загрузка моделей»:
+
+| Модель                          | Размер     | URL по умолчанию                                  |
+|---------------------------------|-----------:|---------------------------------------------------|
+| `ggml-large-v3-turbo-q5_0.bin`  | ~800 МБ    | HF `ggerganov/whisper.cpp`                        |
+| `ggml-small-q5_0.bin`           | ~466 МБ    | HF `ggerganov/whisper.cpp`                        |
+| `ggml-ivrit-turbo-q5_0.bin`     | ~1024 МБ   | HF (требует override URL — нет официальной GGML)  |
+| `ecapa-tdnn.onnx`               | ~27 МБ     | HF mirror                                         |
+
+`AdaptiveSpeechRecognizer` и `AdaptiveSpeakerIdentifier` сами переключаются:
+пока модели нет на диске — используется fallback (Android STT / синтетический эмбеддинг);
+как только файл появляется — следующий чанк уже идёт в Whisper / ONNX без перезапуска.
 
 Шифрование БД: **SQLCipher** + 256-битная парольная фраза в **AndroidKeystore**
 (StrongBox запрашивается при наличии аппаратного TEE).

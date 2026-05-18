@@ -72,6 +72,8 @@
     <string name="settings_model_whisper_turbo">Whisper Large-v3 turbo Q5 (~800 MB)</string>
     <string name="settings_model_ivrit">Ivrit.AI turbo (בוסטר עברית)</string>
     <string name="settings_download_model">הורד מודל</string>
+    <string name="settings_models_title">הורדת מודלים</string>
+    <string name="settings_models_delete">מחק</string>
     <string name="settings_geofence_pause">השהה בבית (Geofence)</string>
     <string name="settings_wipe">מחיקה מלאה</string>
     <string name="settings_wipe_confirm">למחוק את כל הנתונים?</string>

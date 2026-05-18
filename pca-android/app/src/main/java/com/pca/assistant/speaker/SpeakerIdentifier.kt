@@ -1,70 +1,36 @@
 package com.pca.assistant.speaker
 
-import javax.inject.Inject
-import javax.inject.Singleton
-import kotlin.math.sqrt
-
 /**
- * Spec §3.2, layer 4.
+ * Spec §3.2 / §6.3 — speaker identification layer.
  *
- * Real implementation: ECAPA-TDNN ONNX, cosine similarity vs enrolled
- * reference, score > 0.75 → is_owner=true.
- *
- * MVP shim: a deterministic synthetic embedding derived from rolling RMS +
- * zero-crossing rate of the chunk. It's stable per-voice for the same speaker
- * with the same mic and noise floor, which is enough to flip the is_owner
- * flag during a single session. The class API will not change when the ONNX
- * model is wired in.
+ * Default production implementation is [OnnxEcapaIdentifier], which runs an
+ * ECAPA-TDNN ONNX model via ONNX Runtime Android. If the model file is not
+ * yet on disk (user hasn't tapped "download" in Settings), the binding falls
+ * back to [SyntheticSpeakerIdentifier] so the enrollment + service pipeline
+ * stays functional. Both implementations honour the same threshold contract
+ * (cosine ≥ 0.75 → owner).
  */
-@Singleton
-class SpeakerIdentifier @Inject constructor() {
+interface SpeakerIdentifier {
+    /** Implementation tag for diagnostics. */
+    val id: String
 
-    fun embedding(pcm: ShortArray): FloatArray {
-        if (pcm.isEmpty()) return FloatArray(EMBEDDING_SIZE)
-        val out = FloatArray(EMBEDDING_SIZE)
-        val winSize = (pcm.size / EMBEDDING_SIZE).coerceAtLeast(1)
-        for (i in 0 until EMBEDDING_SIZE) {
-            val start = i * winSize
-            val end = minOf(start + winSize, pcm.size)
-            if (start >= end) continue
-            var sum = 0.0
-            var zc = 0
-            var prev = pcm[start].toInt()
-            for (j in start until end) {
-                val v = pcm[j].toInt()
-                sum += v.toDouble() * v
-                if ((prev xor v) and 0x8000 != 0) zc += 1
-                prev = v
-            }
-            val rms = sqrt(sum / (end - start)) / 32768.0
-            val zcr = zc.toDouble() / (end - start)
-            // Mix the two features so the resulting vector is more than amplitude-only.
-            out[i] = ((rms * 0.6 + zcr * 0.4) * 2.0 - 1.0).toFloat()
-        }
-        return l2Normalize(out)
-    }
+    /** Produce an L2-normalised embedding for a 16 kHz mono PCM clip. */
+    fun embedding(pcm: ShortArray): FloatArray
 
+    /** Cosine similarity between two L2-normalised embeddings of equal size. */
     fun cosineSimilarity(a: FloatArray, b: FloatArray): Float {
         if (a.size != b.size || a.isEmpty()) return 0f
         var dot = 0f
         for (i in a.indices) dot += a[i] * b[i]
-        // Both vectors are L2-normalized -> dot product == cosine.
         return dot.coerceIn(-1f, 1f)
     }
 
     fun isOwner(score: Float): Boolean = score >= OWNER_THRESHOLD
 
-    private fun l2Normalize(v: FloatArray): FloatArray {
-        var n = 0.0
-        for (x in v) n += x.toDouble() * x
-        val norm = sqrt(n).toFloat()
-        if (norm == 0f) return v
-        for (i in v.indices) v[i] = v[i] / norm
-        return v
-    }
+    /** Embedding size used by this implementation (varies by model). */
+    val embeddingSize: Int
 
     companion object {
-        const val EMBEDDING_SIZE = 64
-        const val OWNER_THRESHOLD = 0.75f
+        const val OWNER_THRESHOLD: Float = 0.75f
     }
 }

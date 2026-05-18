@@ -40,7 +40,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import androidx.compose.material3.LinearProgressIndicator
 import com.pca.assistant.R
+import com.pca.assistant.models.ModelRegistry
+import com.pca.assistant.models.ModelSpec
 import com.pca.assistant.settings.LanguageChoice
 import com.pca.assistant.settings.ProviderMode
 import com.pca.assistant.settings.SttModelChoice
@@ -134,6 +137,26 @@ fun SettingsScreen(vm: SettingsViewModel, onBack: () -> Unit, onReEnroll: () -> 
                 ModelChoice(R.string.settings_model_ivrit, SttModelChoice.WHISPER_TURBO_PLUS_IVRIT, cfg.sttModel, vm::setSttModel)
             }
 
+            Section(title = stringResource(R.string.settings_models_title)) {
+                val readyMap by vm.modelsReady.collectAsState()
+                val downloadsMap by vm.downloads.collectAsState()
+                listOf(
+                    ModelRegistry.WHISPER_TURBO_Q5,
+                    ModelRegistry.WHISPER_SMALL_Q5,
+                    ModelRegistry.IVRIT_TURBO_Q5,
+                    ModelRegistry.ECAPA_TDNN_ONNX,
+                ).forEach { spec ->
+                    ModelRow(
+                        spec = spec,
+                        ready = readyMap[spec.id] == true,
+                        status = downloadsMap[spec.id],
+                        onDownload = { vm.download(spec) },
+                        onDelete = { vm.deleteModel(spec) },
+                    )
+                    Spacer(Modifier.height(8.dp))
+                }
+            }
+
             Section(title = stringResource(R.string.settings_geofence_pause)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Switch(checked = cfg.geofencePause, onCheckedChange = { vm.setGeofencePause(it) })
@@ -199,6 +222,49 @@ private fun LangChip(labelRes: Int, value: LanguageChoice, current: LanguageChoi
             containerColor = if (current == value) MaterialTheme.colorScheme.surfaceVariant else MaterialTheme.colorScheme.surface
         )
     )
+}
+
+@Composable
+private fun ModelRow(
+    spec: ModelSpec,
+    ready: Boolean,
+    status: DownloadStatus?,
+    onDownload: () -> Unit,
+    onDelete: () -> Unit,
+) {
+    Column(Modifier.fillMaxWidth()) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Column(Modifier.weight(1f)) {
+                Text(spec.id, style = MaterialTheme.typography.bodyLarge)
+                Text("≈ ${spec.approxMb} MB", style = MaterialTheme.typography.bodySmall)
+            }
+            when {
+                ready -> Button(onClick = onDelete) {
+                    Text(stringResource(R.string.settings_models_delete))
+                }
+                status != null && !status.done && status.failed == null -> {
+                    Text("${status.percent.coerceAtLeast(0)}%")
+                }
+                else -> Button(onClick = onDownload) {
+                    Text(stringResource(R.string.settings_download_model))
+                }
+            }
+        }
+        if (status != null && !status.done && status.failed == null && status.percent >= 0) {
+            Spacer(Modifier.height(4.dp))
+            LinearProgressIndicator(
+                progress = { status.percent / 100f },
+                modifier = Modifier.fillMaxWidth()
+            )
+        }
+        if (status?.failed != null) {
+            Text(
+                text = status.failed,
+                color = MaterialTheme.colorScheme.error,
+                style = MaterialTheme.typography.bodySmall
+            )
+        }
+    }
 }
 
 @Composable

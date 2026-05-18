@@ -72,6 +72,8 @@
     <string name="settings_model_whisper_turbo">Whisper Large-v3 turbo Q5 (~800 МБ)</string>
     <string name="settings_model_ivrit">Ivrit.AI turbo (бустер иврита)</string>
     <string name="settings_download_model">Скачать модель</string>
+    <string name="settings_models_title">Загрузка моделей</string>
+    <string name="settings_models_delete">Удалить</string>
     <string name="settings_geofence_pause">Пауза дома (геозона)</string>
     <string name="settings_wipe">Полная очистка</string>
     <string name="settings_wipe_confirm">Удалить все данные?</string>

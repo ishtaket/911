@@ -12,7 +12,9 @@ import com.pca.assistant.data.db.dao.PlaceDao
 import com.pca.assistant.data.db.dao.TranscriptDao
 import com.pca.assistant.data.db.dao.WindowDao
 import com.pca.assistant.data.security.DbPassphrase
-import com.pca.assistant.stt.AndroidSpeechRecognizerImpl
+import com.pca.assistant.speaker.AdaptiveSpeakerIdentifier
+import com.pca.assistant.speaker.SpeakerIdentifier
+import com.pca.assistant.stt.AdaptiveSpeechRecognizer
 import com.pca.assistant.stt.SpeechRecognizer
 import dagger.Binds
 import dagger.Module
@@ -74,6 +76,11 @@ object AppModule {
 @Module
 @InstallIn(SingletonComponent::class)
 abstract class BindingsModule {
+    /** Production STT — whisper.cpp via JNI, with Android SpeechRecognizer fallback. */
     @Binds @Singleton
-    abstract fun bindSpeechRecognizer(impl: AndroidSpeechRecognizerImpl): SpeechRecognizer
+    abstract fun bindSpeechRecognizer(impl: AdaptiveSpeechRecognizer): SpeechRecognizer
+
+    /** Production speaker ID — ECAPA-TDNN ONNX, with synthetic embedding fallback. */
+    @Binds @Singleton
+    abstract fun bindSpeakerIdentifier(impl: AdaptiveSpeakerIdentifier): SpeakerIdentifier
 }

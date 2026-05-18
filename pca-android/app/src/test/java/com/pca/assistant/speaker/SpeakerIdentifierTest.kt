@@ -8,7 +8,7 @@ import kotlin.random.Random
 
 class SpeakerIdentifierTest {
 
-    private val id = SpeakerIdentifier()
+    private val id: SpeakerIdentifier = SyntheticSpeakerIdentifier()
 
     @Test fun `embedding is L2 normalised`() {
         val sine = ShortArray(8_000) { i -> (sin(i * 0.05) * 1000).toInt().toShort() }

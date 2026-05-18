@@ -3,17 +3,16 @@ package com.pca.assistant.stt
 /**
  * Spec §3.1, layer 3 — local STT.
  *
- * The full spec aims for whisper.cpp via JNI with on-demand model download
- * (small Q5 / large-v3 turbo Q5 / Ivrit.AI booster). For the MVP we ship a
- * working Android-native pipeline: the always-on foreground service collects
- * VAD-gated PCM and writes it as a transcript via this single-method facade.
+ * Production wiring routes through [com.pca.assistant.stt.AdaptiveSpeechRecognizer],
+ * which prefers:
+ *   - [WhisperJniRecognizer] — whisper.cpp v1.7.1 via JNI, NEON-tuned for
+ *     Exynos 2100. Model is downloaded on demand into the app's filesDir.
+ *   - [AndroidSpeechRecognizerImpl] — soft fallback for the window between
+ *     first install and model download (or for dev builds where the native
+ *     `libpca_whisper_jni.so` couldn't be loaded).
  *
- * Implementations:
- *   - [AndroidSpeechRecognizerImpl] — uses Android's built-in SpeechRecognizer
- *     (works on the S21 Ultra out of the box, no model download required).
- *     Selected when the user picks "Android SpeechRecognizer" in settings.
- *   - WhisperJniRecognizer (TODO) — to be wired in once the libwhisper.so
- *     artifact is built and the user has downloaded a ggml model.
+ * Both implementations satisfy this single-method contract so the foreground
+ * service stays agnostic.
  */
 interface SpeechRecognizer {
     val id: String

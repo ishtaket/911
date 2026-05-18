@@ -26,6 +26,16 @@ android {
             abiFilters += listOf("arm64-v8a")
         }
 
+        externalNativeBuild {
+            cmake {
+                arguments += listOf(
+                    "-DANDROID_STL=c++_shared",
+                    "-DCMAKE_BUILD_TYPE=Release",
+                )
+                cppFlags += listOf("-std=c++17", "-fexceptions", "-frtti")
+            }
+        }
+
         javaCompileOptions {
             annotationProcessorOptions {
                 arguments += mapOf(
@@ -37,6 +47,16 @@ android {
 
         vectorDrawables { useSupportLibrary = true }
     }
+
+    externalNativeBuild {
+        cmake {
+            path = file("src/main/cpp/CMakeLists.txt")
+            version = "3.22.1"
+        }
+    }
+
+    // NDK r26+ ships CMake 3.22.1 and clang-17 — required for whisper.cpp v1.7.1.
+    ndkVersion = "26.1.10909125"
 
     signingConfigs {
         create("releaseLocal") {
@@ -153,6 +173,7 @@ dependencies {
 
     implementation(libs.sqlcipher)
     implementation(libs.sqlite.ktx)
+    implementation(libs.onnxruntime.android)
 
     implementation(libs.okhttp)
     implementation(libs.okhttp.logging)

@@ -94,8 +94,9 @@ class OnboardingViewModel @Inject constructor(
     }
 
     private fun averageEmbeddings(list: List<FloatArray>): FloatArray {
-        if (list.isEmpty()) return FloatArray(SpeakerIdentifier.EMBEDDING_SIZE)
-        val out = FloatArray(SpeakerIdentifier.EMBEDDING_SIZE)
+        if (list.isEmpty()) return FloatArray(speakerId.embeddingSize)
+        val width = list.first().size
+        val out = FloatArray(width)
         for (e in list) {
             for (i in out.indices) out[i] += e[i]
         }
