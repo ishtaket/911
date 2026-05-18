@@ -83,7 +83,7 @@ class WindowProcessorUrgencyClampTest {
         notifier = mockk(relaxed = true)
         every { notifier.show(any(), any(), any()) } returns Unit
 
-        val aggregator = WindowAggregator(transcriptDao, windowDao, hourDao, openThreadDao, ownerDao, Anonymizer())
+        val aggregator = WindowAggregator(transcriptDao, windowDao, hourDao, openThreadDao, ownerDao, Anonymizer(), interventionDao)
         processor = WindowProcessor(
             aggregator = aggregator,
             router = ProviderRouter(MockLocalProvider(), bridge, healthDao, settings),
@@ -140,7 +140,7 @@ class WindowProcessorUrgencyClampTest {
                 )
             )
         }
-        val aggregator = WindowAggregator(tDao, wDao, hourDao, oDao, ownerDao, com.pca.assistant.anonymizer.Anonymizer())
+        val aggregator = WindowAggregator(tDao, wDao, hourDao, oDao, ownerDao, com.pca.assistant.anonymizer.Anonymizer(), intDao)
         val proc = WindowProcessor(
             aggregator = aggregator,
             router = com.pca.assistant.llm.ProviderRouter(com.pca.assistant.llm.MockLocalProvider(), bridge, healthDao, mockk { every { flow } returns fakeSettings.flow }),

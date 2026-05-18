@@ -19,6 +19,13 @@ data class LlmRequest(
     @SerialName("l2_day") val l2Day: String,
     @SerialName("l1_hour") val l1Hour: String,
     @SerialName("previous_decision") val previousDecision: LlmDecision? = null,
+    /**
+     * Owner's feedback on the previous intervention (if any). Spec §3.6 —
+     * "Feedback is written to DB and feeds into the next LLM context."
+     * One of `useful`, `no`, `not_now`, or null when the user hasn't
+     * acted on it yet.
+     */
+    @SerialName("previous_feedback") val previousFeedback: String? = null,
     @SerialName("open_threads") val openThreads: List<OpenThreadDto> = emptyList(),
     @SerialName("window") val window: WindowPayload,
     @SerialName("instruction") val instruction: String,

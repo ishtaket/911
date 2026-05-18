@@ -46,6 +46,7 @@ class LlmPayloadPrivacyTest {
             openThreadDao = FakeOpenThreadDao(),
             ownerDao = FakeOwnerDao(),
             anonymizer = Anonymizer(),
+            interventionDao = com.pca.assistant.testing.FakeInterventionDao(),
         )
     }
 

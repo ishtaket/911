@@ -61,7 +61,7 @@ class WindowProcessorTest {
         notifier = mockk(relaxed = true).also {
             justNotify(it)
         }
-        val aggregator = WindowAggregator(transcriptDao, windowDao, hourDao, openThreadDao, ownerDao, Anonymizer())
+        val aggregator = WindowAggregator(transcriptDao, windowDao, hourDao, openThreadDao, ownerDao, Anonymizer(), interventionDao)
         val router = ProviderRouter(
             mock = MockLocalProvider(),
             bridge = mockk(relaxed = true),

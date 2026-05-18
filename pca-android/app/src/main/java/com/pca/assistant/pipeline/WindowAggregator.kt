@@ -2,6 +2,7 @@ package com.pca.assistant.pipeline
 
 import com.pca.assistant.anonymizer.Anonymizer
 import com.pca.assistant.data.db.dao.HourSummaryDao
+import com.pca.assistant.data.db.dao.InterventionDao
 import com.pca.assistant.data.db.dao.OpenThreadDao
 import com.pca.assistant.data.db.dao.OwnerDao
 import com.pca.assistant.data.db.dao.TranscriptDao
@@ -40,6 +41,7 @@ class WindowAggregator @Inject constructor(
     private val openThreadDao: OpenThreadDao,
     private val ownerDao: OwnerDao,
     private val anonymizer: Anonymizer,
+    private val interventionDao: InterventionDao,
 ) {
 
     /**
@@ -117,12 +119,19 @@ class WindowAggregator @Inject constructor(
             }
         }
 
+        // Spec §3.6 (PCA-B-37 fix): feed the owner's feedback on the
+        // previous intervention back into the LLM context. `null` means
+        // either there was no prior intervention or the owner hasn't
+        // tapped a feedback button yet.
+        val previousFeedback: String? = interventionDao.last()?.userFeedback
+
         return LlmRequest(
             systemPrompt = com.pca.assistant.llm.SystemPrompt.EVALUATOR,
             l3Profile = l3,
             l2Day = l2,
             l1Hour = l1,
             previousDecision = previous,
+            previousFeedback = previousFeedback,
             openThreads = openThreads,
             window = WindowPayload(
                 // B-21 fix: the Room-assigned auto-increment id isn't available

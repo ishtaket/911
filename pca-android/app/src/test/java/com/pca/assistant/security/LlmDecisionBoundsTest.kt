@@ -73,7 +73,7 @@ class LlmDecisionBoundsTest {
             every { it.show(any(), any(), any()) } returns Unit
         }
 
-        val aggregator = WindowAggregator(tDao, wDao, hourDao, oDao, ownerDao, Anonymizer())
+        val aggregator = WindowAggregator(tDao, wDao, hourDao, oDao, ownerDao, Anonymizer(), intDao)
         val processor = WindowProcessor(
             aggregator = aggregator,
             router = ProviderRouter(MockLocalProvider(), bridge, healthDao, settings),
