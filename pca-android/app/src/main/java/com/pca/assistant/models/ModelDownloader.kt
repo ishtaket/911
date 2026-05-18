@@ -1,5 +1,6 @@
 package com.pca.assistant.models
 
+import com.pca.assistant.di.ModelDownloadHttp
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
@@ -19,7 +20,7 @@ import javax.inject.Singleton
  */
 @Singleton
 class ModelDownloader @Inject constructor(
-    private val client: OkHttpClient,
+    @ModelDownloadHttp private val client: OkHttpClient,
     private val registry: ModelRegistry,
 ) {
 

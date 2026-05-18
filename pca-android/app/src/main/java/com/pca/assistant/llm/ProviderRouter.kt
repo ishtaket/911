@@ -31,7 +31,11 @@ class ProviderRouter @Inject constructor(
     private val settings: AppSettings,
 ) {
 
-    @Volatile private var consecutiveBridgeFailures: Int = 0
+    // PCA-S-37 — `var Int += 1` is read+write, not atomic. The current
+    // ticker is single-threaded so a race can't happen in production, but
+    // any future parallel call site would silently drop failures and
+    // never trip the breaker. AtomicInteger costs nothing here.
+    private val consecutiveBridgeFailures = java.util.concurrent.atomic.AtomicInteger(0)
     @Volatile private var lastBridgeFailureAt: Long = 0L
 
     suspend fun decide(request: LlmRequest): Pair<String, LlmDecision> {
@@ -44,17 +48,17 @@ class ProviderRouter @Inject constructor(
 
     private suspend fun callWithFallback(request: LlmRequest): Pair<String, LlmDecision> {
         val now = System.currentTimeMillis()
-        val cooldown = consecutiveBridgeFailures >= SWITCH_AFTER_FAILURES &&
+        val cooldown = consecutiveBridgeFailures.get() >= SWITCH_AFTER_FAILURES &&
             (now - lastBridgeFailureAt) < REPROBE_AFTER_MS
         if (cooldown) {
             return callTracked(mock, request)
         }
         return try {
             val r = callTracked(bridge, request)
-            consecutiveBridgeFailures = 0
+            consecutiveBridgeFailures.set(0)
             r
         } catch (e: LlmProviderException) {
-            consecutiveBridgeFailures += 1
+            consecutiveBridgeFailures.incrementAndGet()
             lastBridgeFailureAt = System.currentTimeMillis()
             callTracked(mock, request)
         }

