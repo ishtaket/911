@@ -27,8 +27,11 @@ object PlaceMatcher {
 
     /** Round to ~1 km cell — keeps coordinates out of the LLM payload. */
     fun bucketLabel(lat: Double, lng: Double): String {
-        val rl = String.format("%.2f", lat)
-        val rn = String.format("%.2f", lng)
+        // Locale.ROOT (B-24) — on a RU / IW device the default locale uses
+        // a comma as the decimal separator, which would turn the cell into
+        // `cell:32,09,34,78` (three commas) and break re-parsing.
+        val rl = String.format(java.util.Locale.ROOT, "%.2f", lat)
+        val rn = String.format(java.util.Locale.ROOT, "%.2f", lng)
         return "cell:$rl,$rn"
     }
 

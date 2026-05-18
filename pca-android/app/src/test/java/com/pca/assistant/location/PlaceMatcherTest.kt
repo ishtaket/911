@@ -51,4 +51,21 @@ class PlaceMatcherTest {
         assertTrue(m.label.startsWith("cell:"))
         assertFalse(m.pauseRecording)
     }
+
+    @Test fun `bucket label is locale-stable on RU and DE (B-24)`() {
+        // Both locales use comma-as-decimal-separator by default. Without an
+        // explicit Locale.ROOT, String.format("%.2f", 32.0853) would render
+        // as "32,09" and turn the cell label into "cell:32,09,34,78" — three
+        // commas, unparseable. Pin the invariant.
+        val originalDefault = java.util.Locale.getDefault()
+        try {
+            for (loc in listOf(java.util.Locale("ru", "RU"), java.util.Locale("de", "DE"), java.util.Locale("fr", "FR"))) {
+                java.util.Locale.setDefault(loc)
+                val label = PlaceMatcher.bucketLabel(32.0853, 34.7818)
+                assertEquals("cell:32.09,34.78", label)
+            }
+        } finally {
+            java.util.Locale.setDefault(originalDefault)
+        }
+    }
 }
