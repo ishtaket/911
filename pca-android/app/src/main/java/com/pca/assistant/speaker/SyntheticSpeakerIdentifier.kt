@@ -21,32 +21,48 @@ class SyntheticSpeakerIdentifier @Inject constructor() : SpeakerIdentifier {
     override fun embedding(pcm: ShortArray): FloatArray {
         if (pcm.isEmpty()) return FloatArray(EMBEDDING_SIZE)
         val out = FloatArray(EMBEDDING_SIZE)
-        // Split dimensions: even indices carry RMS, odd indices carry ZCR.
-        // Blending the two into every dimension collapses stationary signals
-        // (constant RMS, constant ZCR) into a uniform vector — and after L2
-        // normalize, every uniform vector points the same way, so cos(sine,
-        // noise) ≈ 1.0 and the owner check would mis-classify wildly
-        // different voices as identical. Keeping the features separable on
-        // alternating dimensions preserves a discriminating direction.
-        val groups = EMBEDDING_SIZE / 2
-        val winSize = (pcm.size / groups).coerceAtLeast(1)
-        for (g in 0 until groups) {
-            val start = g * winSize
+        // Per-chunk 4-feature embedding so wildly different waveforms land on
+        // distinct directions in the 64-D space. A single blended feature
+        // collapses any stationary signal (constant or sine) to a uniform
+        // vector — and after L2 normalize, every uniform vector points the
+        // same way, so cos(sine, noise) ≈ 1.0 and the owner check would
+        // misclassify any input as the owner.
+        //
+        // Per chunk we emit: RMS (loudness), ZCR (frequency-ish content),
+        // peak-to-peak range (separates constants from oscillations), and
+        // signed mean (DC offset — a constant signal has a non-zero mean,
+        // a zero-mean oscillation has ~0). Together these cleanly separate
+        // sine, white noise, and constant signals from each other.
+        val chunks = EMBEDDING_SIZE / 4
+        val winSize = (pcm.size / chunks).coerceAtLeast(1)
+        for (c in 0 until chunks) {
+            val start = c * winSize
             val end = minOf(start + winSize, pcm.size)
             if (start >= end) continue
-            var sum = 0.0
+            var sumSq = 0.0
+            var sumSigned = 0.0
             var zc = 0
+            var mn = Int.MAX_VALUE
+            var mx = Int.MIN_VALUE
             var prev = pcm[start].toInt()
             for (j in start until end) {
                 val v = pcm[j].toInt()
-                sum += v.toDouble() * v
+                sumSq += v.toDouble() * v
+                sumSigned += v
                 if ((prev xor v) and 0x8000 != 0) zc += 1
+                if (v < mn) mn = v
+                if (v > mx) mx = v
                 prev = v
             }
-            val rms = sqrt(sum / (end - start)) / 32768.0
-            val zcr = zc.toDouble() / (end - start)
-            out[g * 2]     = (rms * 2.0 - 1.0).toFloat()
-            out[g * 2 + 1] = (zcr * 2.0 - 1.0).toFloat()
+            val n = (end - start).toDouble()
+            val rms = sqrt(sumSq / n) / 32768.0
+            val zcr = zc.toDouble() / n
+            val range = (mx - mn).toDouble() / 65536.0
+            val mean = (sumSigned / n) / 32768.0
+            out[c * 4]     = rms.toFloat()
+            out[c * 4 + 1] = zcr.toFloat()
+            out[c * 4 + 2] = range.toFloat()
+            out[c * 4 + 3] = mean.toFloat()
         }
         return l2Normalize(out)
     }
