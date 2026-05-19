@@ -25,8 +25,12 @@ class HttpBridgeProvider @Inject constructor(
     private val client: OkHttpClient,
     private val json: Json,
     private val settings: AppSettings,
-    override val id: String = "http-bridge",
 ) : LlmProvider {
+
+    // Hilt does not honour Kotlin constructor default values when generating
+    // the factory — declaring `id` in the constructor (even with a default)
+    // makes Dagger demand a `String` binding. Keep it as a plain property.
+    override val id: String = "http-bridge"
 
     override suspend fun decide(request: LlmRequest): LlmDecision {
         val base = settings.flow.first().bridgeUrl.trim().trimEnd('/')
