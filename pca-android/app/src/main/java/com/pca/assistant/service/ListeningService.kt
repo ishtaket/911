@@ -285,14 +285,34 @@ class ListeningService : LifecycleService() {
         const val MAX_CHUNKS = 60
 
         fun start(context: Context) {
+            // Android 14 enforces "started FGS must call startForeground()
+            // within 5 s; otherwise ForegroundServiceDidNotStartInTimeException
+            // kills the app". Our onCreate stopSelf-bails when RECORD_AUDIO
+            // isn't granted yet — but the system timer is already armed by
+            // the time onCreate runs, and on OneUI 6 the timeout still fires
+            // even after stopSelf(). Refuse to start the service in the first
+            // place when the permission is missing; the foreground service
+            // is intentionally only useful with mic access anyway.
+            if (!hasMicPermission(context)) return
             val intent = Intent(context, ListeningService::class.java)
             ContextCompat.startForegroundService(context, intent)
         }
 
         fun sendAction(context: Context, action: String) {
+            // Same Android-14 FGS contract as [start]. A PAUSE/RESUME/STOP
+            // intent delivered to a not-yet-created service triggers
+            // onCreate → stopSelf, the timer fires anyway, and the process
+            // crashes. Drop the action silently when we don't yet have the
+            // permission.
+            if (!hasMicPermission(context)) return
             val intent = Intent(context, ListeningService::class.java).apply { this.action = action }
             ContextCompat.startForegroundService(context, intent)
         }
+
+        private fun hasMicPermission(context: Context): Boolean =
+            ContextCompat.checkSelfPermission(
+                context, android.Manifest.permission.RECORD_AUDIO
+            ) == android.content.pm.PackageManager.PERMISSION_GRANTED
 
         fun ensureChannels(context: Context) {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
