@@ -79,24 +79,36 @@ jobs:
       # straight from the PR conversation without drilling into the
       # Actions log viewer (which is hard to navigate on mobile and
       # requires the right GitHub auth scope).
-      - name: Post build-failure tail to PR
+      - name: Post build-failure summary to PR
         if: failure() && github.event_name == 'pull_request'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -e
           {
-            echo "## ❌ pca-android CI failure — log tail"
+            echo "## ❌ pca-android CI failure"
             echo
             echo "Workflow run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
             echo "Commit: \`${{ github.sha }}\`"
             echo
             for log in /tmp/pca-unit-tests.log /tmp/pca-assemble.log; do
               [ -f "$log" ] || continue
-              echo "### $(basename "$log")"
+              echo "### $(basename "$log") — Kotlin compile errors"
               echo
               echo '```'
-              tail -n 150 "$log"
+              # Kotlin emits compile errors as:
+              #   e: file:///path/...kt:LINE:COL <msg>
+              # Plus AGP / Hilt sometimes use plain "error:" prefix.
+              # Grab 3 lines of context around each match.
+              grep -nE "^e: file://|^error:|FAILURE:|What went wrong|Unresolved reference|Type mismatch|cannot find symbol|symbol:|^> Task .* FAILED|Build cancelled" "$log" \
+                | head -200 \
+                || echo "(no Kotlin compile-error patterns matched; see full tail below)"
+              echo '```'
+              echo
+              echo "### $(basename "$log") — last 400 lines"
+              echo
+              echo '```'
+              tail -n 400 "$log"
               echo '```'
               echo
             done
