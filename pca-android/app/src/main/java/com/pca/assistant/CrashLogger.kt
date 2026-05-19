@@ -18,7 +18,8 @@ import java.util.Locale
  * Samsung's My Files app — without `adb logcat` we have no other diagnostic
  * surface on a phone-only install.
  *
- * Samsung's One UI blocks user access to `Android/data/*` on Android 13+,
+ * Samsung's One UI blocks user access to the Android/data tree on
+ * Android 13+,
  * so we publish the crash report into the system Downloads folder via
  * MediaStore (no extra permissions required on API 29+). We also keep a
  * copy under the app's external files dir as a fallback for non-Samsung
