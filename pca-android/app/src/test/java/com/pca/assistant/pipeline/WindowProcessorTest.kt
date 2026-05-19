@@ -58,7 +58,7 @@ class WindowProcessorTest {
         healthDao = FakeLlmHealthDao()
         fakeSettings = FakeSettings()
         settings = mockk { every { flow } returns fakeSettings.flow }
-        notifier = mockk(relaxed = true).also {
+        notifier = mockk<AdviceNotifier>(relaxed = true).also {
             justNotify(it)
         }
         val aggregator = WindowAggregator(transcriptDao, windowDao, hourDao, openThreadDao, ownerDao, Anonymizer(), interventionDao)
@@ -83,7 +83,7 @@ class WindowProcessorTest {
         every { n.show(any(), any(), any()) } returns Unit
     }
 
-    private fun seed(text: String, ts: Long = 1_000L) {
+    private suspend fun seed(text: String, ts: Long = 1_000L) {
         transcriptDao.insert(
             TranscriptEntity(
                 ts = ts, text = text, textAnonymized = text,

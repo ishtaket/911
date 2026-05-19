@@ -36,7 +36,7 @@ class AdaptiveSpeechResetTest {
         val ctx: Context = mockk()
         every { ctx.filesDir } returns tmp.root
         registry = ModelRegistry(ctx)
-        whisper = mockk(relaxed = true).also {
+        whisper = mockk<WhisperJniRecognizer>(relaxed = true).also {
             every { it.id } returns "whisper.cpp"
             coEvery { it.recognize(any(), any()) } returns SttResult("hi", 0.9f, "en")
         }

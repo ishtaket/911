@@ -37,7 +37,7 @@ class AdaptiveSpeakerResetTest {
         every { ctx.filesDir } returns tmp.root
         registry = ModelRegistry(ctx)
         synthetic = SyntheticSpeakerIdentifier()
-        onnx = mockk(relaxed = true).also {
+        onnx = mockk<OnnxEcapaIdentifier>(relaxed = true).also {
             every { it.id } returns "ecapa-tdnn-onnx"
             every { it.embeddingSize } returns 192
             every { it.embedding(any()) } returns FloatArray(192) { 0.01f }

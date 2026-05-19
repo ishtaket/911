@@ -46,7 +46,7 @@ class SpeakerInterfaceTest {
         assertEquals(0.75f, SpeakerIdentifier.OWNER_THRESHOLD, 0f)
     }
 
-    @Test fun `cosine is clamped into [-1 1] even on rounding excursions`() {
+    @Test fun `cosine is clamped into the minus-one to plus-one range even on rounding excursions`() {
         // Hand-craft slightly-larger-than-unit vectors so the raw dot is > 1.
         val v = floatArrayOf(1.0001f, 0f)
         assertTrue(impl.cosineSimilarity(v, v) in -1f..1f)
