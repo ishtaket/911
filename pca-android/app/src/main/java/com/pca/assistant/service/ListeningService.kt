@@ -65,8 +65,40 @@ class ListeningService : LifecycleService() {
             stopSelf()
             return
         }
-        startForeground(NOTIF_ID_LISTENING, buildListeningNotification(active = true))
+        // The manifest declares foregroundServiceType="microphone|location|dataSync".
+        // On Android 14, EACH declared type's permission gate is enforced at
+        // startForeground time — i.e. if location is declared but
+        // ACCESS_FINE/COARSE_LOCATION is missing, the call throws
+        // ForegroundServiceTypeSecurityException and the process dies. Compute
+        // the runtime type set so we only ask the system to grant types we
+        // actually have permission for; location capability degrades gracefully
+        // when the user hasn't granted it yet.
+        val types = computeFgsTypes()
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            startForeground(NOTIF_ID_LISTENING, buildListeningNotification(active = true), types)
+        } else {
+            startForeground(NOTIF_ID_LISTENING, buildListeningNotification(active = true))
+        }
         serviceState.update(ListeningState.LISTENING)
+    }
+
+    private fun computeFgsTypes(): Int {
+        var t = android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_MICROPHONE
+        if (locationPermissionGranted()) {
+            t = t or android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_LOCATION
+        }
+        t = t or android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC
+        return t
+    }
+
+    private fun locationPermissionGranted(): Boolean {
+        val fine = androidx.core.content.ContextCompat.checkSelfPermission(
+            this, android.Manifest.permission.ACCESS_FINE_LOCATION
+        ) == android.content.pm.PackageManager.PERMISSION_GRANTED
+        val coarse = androidx.core.content.ContextCompat.checkSelfPermission(
+            this, android.Manifest.permission.ACCESS_COARSE_LOCATION
+        ) == android.content.pm.PackageManager.PERMISSION_GRANTED
+        return fine || coarse
     }
 
     private fun audioCapturePermissionGranted(): Boolean =

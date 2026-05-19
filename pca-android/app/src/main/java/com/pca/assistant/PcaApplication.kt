@@ -29,6 +29,10 @@ class PcaApplication : Application(), Configuration.Provider {
 
     override fun onCreate() {
         super.onCreate()
+        // Capture any future unhandled exception to
+        // Android/data/com.pca.assistant/files/last_crash.txt so a phone-only
+        // install can still diagnose crashes without adb logcat.
+        CrashLogger.install(this)
         // Spec §2.1 / §3.6 — notification channels must exist before any
         // foreground service is started or any advice notification fires.
         ListeningService.ensureChannels(this)
