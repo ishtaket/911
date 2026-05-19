@@ -4,97 +4,103 @@ You are Claude Code working inside this repository.
 
 ## Project
 
-Israel-focused OSINT + GeoINT missing-person search platform.
-Working name: **Rescue911 OSINT**.
+**Personal Context Assistant (PCA)** — an Android app that listens to
+the owner's day in five-minute windows, transcribes locally with
+whisper.cpp, identifies whether the owner is speaking via an
+ECAPA-TDNN ONNX embedding, anonymises PII out of the transcript, and
+asks a subscription-CLI LLM (codex / Claude Code / Gemini CLI) whether
+the window contains anything worth surfacing as advice or remembering
+as an open thread. Built for a Samsung Galaxy S21 Ultra (SM-G998B/DS,
+Exynos 2100, Android 14) but works on any arm64 Android 13+ device.
 
-## Architecture (Android-first, server-ready)
+All code lives under `pca-android/`.
+
+## Architecture
 
 ```
-Android App  →  Secure Backend API  →  OSINT / GeoINT / Social / Archive providers
-                       ↓
-              Evidence / Hypothesis / Validation / Audit storage
+mic → AudioCapture (16 kHz mono PCM, 30 s buffers, never persisted)
+        ↓
+      VoiceActivityDetector → WhisperJniRecognizer (whisper.cpp JNI)
+                            → OnnxEcapaIdentifier (owner vs guest)
+        ↓
+   TranscriptDao (Room + SQLCipher) → WindowAggregator → WindowProcessor
+        ↓
+  Anonymizer (regex PII → tokens) → ProviderRouter (codex | gemini | bridge | mock)
+        ↓
+  LlmDecision JSON → InterventionDao + OpenThreadDao + AdviceNotifier
+        ↓
+  HourRollup → DayRollup → ProfileRollup  (WorkManager)
 ```
 
-- The Android app is the primary operator UI (field volunteers, analysts).
-- The backend is the secure OSINT/GeoINT brain and storage.
-- A future web dashboard is optional — not the priority.
-- Local-first development on Windows; server-ready deployment via Docker / CI.
-
-## Mission
-
-Build a lawful, evidence-based, multilingual platform for missing-person cases inside Israel. The platform must support English, Hebrew, and Russian, and must search public social networks, public search engines, indexed/archive sources, GeoINT image/video clues, and Israel-specific public sources.
+Subscription-CLI LLM access happens via a small user-controlled HTTP
+bridge (Termux on the same phone, or a home server). The Android
+device never talks directly to an LLM API and never carries an API
+key. A deterministic `MockLocalProvider` keeps the app usable before
+the bridge is set up.
 
 ## Hard safety boundaries
 
-- Use only public, lawful, permissioned, or API-accessible data.
-- Never hack, bypass login, bypass privacy, use stolen/leaked data, evade rate limits, or impersonate people.
-- Never automatically contact people.
-- Never present a lead as fact without 3-level validation.
-- Sensitive personal data must be minimized, protected, access-controlled, and auditable.
-- Every conclusion must be evidence-based and explainable.
-- Android must never store external provider API keys; it talks only to our backend.
-- Sensitive evidence and audit data live on the backend.
+- No raw PCM is ever persisted. Audio buffers are forwarded to STT and
+  then dropped.
+- DB is encrypted at rest with SQLCipher; the passphrase is wrapped by
+  an AndroidKeystore AES/GCM key (StrongBox preferred).
+- Anonymizer always runs before the transcript leaves device memory.
+  Owner identity (email, phone) MUST NOT appear in any LLM payload.
+- LLM CLIs are reached over **subscription auth** (the CLI's own
+  browser-OAuth flow), never pay-per-token API keys. Do not introduce
+  `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, `GEMINI_API_KEY` env vars
+  into the Android side or the bridge.
+- The HTTP bridge listens only on `127.0.0.1` by default; cleartext
+  HTTP is permitted only for loopback + RFC-1918 ranges via
+  `network_security_config.xml`.
+- WindowProcessor caps runaway LLM output (max 32 new threads, 4096
+  advice chars, 1024 reason chars, 900-row SQLite IN-list chunking).
+- ModelDownloader refuses non-https, non-LAN URLs; verifies SHA-256
+  when the spec carries one.
 
-## Main product
+## Stack
 
-A serious, trustworthy, accessible, professional rescue-themed Android dashboard. Heroic / Marvel-inspired but not childish: dark operational palette, emergency red, deep navy, gold accents, high contrast, 1–2 tap workflows.
+- **Android 14**, Kotlin 2.0, Jetpack Compose, Material 3, Hilt,
+  Room + SQLCipher, DataStore, OkHttp, Retrofit, WorkManager.
+- **whisper.cpp v1.7.1** fetched via CMake FetchContent at build time
+  (NEON arm64-v8a). No QNN — Exynos 2100 has no Hexagon DSP.
+- **ECAPA-TDNN ONNX** loaded via ONNX Runtime Android. A bootstrap
+  WorkManager job auto-downloads the model on first install when the
+  device is on UNMETERED network with battery and storage not low.
+- **kotlinx.serialization** for the LLM wire contract.
+- JUnit 4 + mockk + Robolectric for unit tests. CI runs
+  `:app:testDebugUnitTest` + `:app:assembleDebug` on every push and
+  PR.
 
-## Languages
+## Branch + release model
 
-- English
-- Hebrew (RTL layout)
-- Russian
-- Arabic place-name variants where useful (queries only)
-
-## Primary geography
-
-Israel only by default. Search queries, GeoINT, maps, locations, place names, and social-source weighting must prioritize Israel.
-
-## Core modules
-
-1. Case Intake
-2. Query Builder
-3. Web Search Connectors
-4. Social Search Connectors
-5. Archive / Deleted Indexed Information Search
-6. GeoINT Media Analysis
-7. Evidence Normalization
-8. Entity Resolution
-9. Hypothesis Engine
-10. Three-Level Validation
-11. Multilingual UI (Android)
-12. Audit / Privacy / Security
-
-## Stacks
-
-**Android:** Kotlin, Jetpack Compose, Material 3, Coroutines, Flow, Hilt (or clean manual DI), Room, DataStore, Retrofit/OkHttp, WorkManager, Coil, AndroidX Navigation Compose, MapLibre Android (or Maps abstraction), JUnit, Compose UI tests, ADB smoke scripts. Package: `com.rescue911.osint`.
-
-**Backend:** Python 3.12, FastAPI, Pydantic v2, SQLAlchemy 2.x, Alembic, PostgreSQL + PostGIS, Redis, httpx, Celery / Dramatiq / simple worker abstraction, S3/MinIO, OpenSearch (optional / mock), Qdrant (optional / mock), pytest, pytest-asyncio, respx.
-
-**Infra:** Docker Compose (local / staging / prod), nginx (optional), GitHub Actions CI, PowerShell scripts for Windows local dev.
+- Develop on `claude/build-samsung-app-YaU0S`.
+- `claude/build-samsung-app-YaU0S` is the only branch the rolling
+  `pca-latest` GitHub Release auto-publishes from (see
+  `.github/workflows/pca-ci.yml`).
+- The release exposes `app-debug.apk`, its SHA-256, and a build-info
+  text file for direct phone download — no GitHub login required.
 
 ## Validation rule
 
-Every milestone must include:
-1. Unit tests
-2. Integration or mocked-provider tests
-3. Smoke test / E2E check
-4. Documentation update
-5. Security / legal boundary check
-
-## Three-level validation
-
-- **Level 1 — Automated:** schema, URL/source, timestamp, content hash, dedupe, legal source check.
-- **Level 2 — Cross-source:** independent corroboration (social + archive, OCR + map POI, EXIF + visual clue, etc.).
-- **Level 3 — Human:** confirm / reject / needs_more_checks / escalate / contact_manually. **No hypothesis is "Confirmed" without Level 3.**
+Every change must include:
+1. Unit tests covering new logic.
+2. Mock-bridge or fake-DAO coverage where the change crosses a process
+   or storage boundary.
+3. A line in the PR description explaining the privacy impact (does
+   any new data leave the device? does it touch the LLM payload?).
+4. CI passing — both `pca-android · assembleDebug + unit tests` and
+   `Repository safety checks` must be green.
 
 ## Execution rules
 
-- Inspect the repository before changing code; do not assume structure.
+- Inspect the repository before changing code; do not assume
+  structure.
 - Keep changes small, testable, documented.
 - Prefer working mocks over waiting for API keys.
-- Prefer minimal working skeleton over over-engineered broken structure.
-- Do not delete existing user files.
+- Prefer minimal working skeleton over over-engineered broken
+  structure.
+- Do not delete user files outside `pca-android/`.
 - Do not commit secrets.
 - Do not claim tests passed unless actually run.
-- If blocked, document the blocker in `docs/FINAL_REPORT.md` and continue building everything else.
+- If blocked, document the blocker in a PR comment and continue.

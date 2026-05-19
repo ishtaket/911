@@ -1,0 +1,73 @@
+name: Repo safety
+
+# Repository hygiene: refuse to merge a tracked build artifact (APK, AAB,
+# binary image asset outside the resource folder), and refuse anything
+# that looks like a committed real API key. Runs on every push/PR so a
+# slip in any directory is caught — not just changes under pca-android/.
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  repository-safety:
+    name: Repository safety checks
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check for forbidden tracked files
+        run: |
+          set -e
+          echo "Scanning tracked files for forbidden artifacts..."
+
+          # pca-android product resources (icons, screenshots) are intentional
+          # binary assets — exempt them from the binary-asset ban. Everything
+          # else binary that lands in the tree is rejected.
+          forbidden=$(git ls-files \
+            | grep -E '^(pca-android/app/build/|pca-android/\.gradle/|pca-android/local\.properties)$|\.(apk|aab|png|jpg|jpeg|webp)$' \
+            | grep -vE '^pca-android/app/src/main/res/.*\.(png|jpg|jpeg|webp)$' \
+            || true)
+
+          if [ -n "$forbidden" ]; then
+            echo "::error::Forbidden tracked files detected:"
+            echo "$forbidden"
+            exit 1
+          fi
+          echo "OK: no forbidden tracked files."
+
+      - name: Scan for committed secrets
+        run: |
+          set -e
+          echo "Scanning tracked files for secret patterns..."
+
+          tracked=$(git ls-files | grep -vE '\.(png|jpg|jpeg|webp|jar|zip|gz|ico)$' || true)
+          if [ -z "$tracked" ]; then
+            echo "No tracked text files to scan."
+            exit 0
+          fi
+
+          fail=0
+
+          check() {
+            local pattern="$1"
+            local label="$2"
+            local hits
+            hits=$(echo "$tracked" | xargs grep -nIH -E "$pattern" 2>/dev/null || true)
+            if [ -n "$hits" ]; then
+              echo "::error::$label found:"
+              echo "$hits"
+              fail=1
+            fi
+          }
+
+          # Only fire on real key shapes, not empty placeholders.
+          check 'OPENAI_API_KEY[[:space:]]*=[[:space:]]*sk-[A-Za-z0-9_-]{16,}'    'OpenAI key'
+          check 'GOOGLE_API_KEY[[:space:]]*=[[:space:]]*AIza[A-Za-z0-9_-]{20,}'   'Google API key'
+          check 'ANTHROPIC_API_KEY[[:space:]]*=[[:space:]]*sk-ant-[A-Za-z0-9_-]{20,}' 'Anthropic key'
+          check 'AWS_SECRET_ACCESS_KEY[[:space:]]*=[[:space:]]*[A-Za-z0-9/+=]{30,}'   'AWS secret'
+
+          if [ "$fail" -ne 0 ]; then
+            exit 1
+          fi
+          echo "OK: no secret patterns found in tracked source."
