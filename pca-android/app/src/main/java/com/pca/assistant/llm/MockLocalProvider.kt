@@ -118,15 +118,20 @@ class MockLocalProvider @Inject constructor() : LlmProvider {
             "эй ассистент", "ассистент,",
             "היי עוזר", "עוזר,"
         )
-        // (?U) enables Pattern.UNICODE_CHARACTER_CLASS so \b and \w treat
-        // Cyrillic / Hebrew letters as word characters — without this flag
-        // Java regex's \b only marks ASCII word boundaries and the RU + HE
-        // patterns below silently never fire.
+        // Android's ICU regex (API 33+) rejects the (?U) embedded-flag form
+        // that the Java OpenJDK accepts on the desktop — kspDebug unit tests
+        // green, but on a real phone the MockLocalProvider class init throws
+        // PatternSyntaxException → ExceptionInInitializerError → Hilt fails
+        // to construct the LLM graph → ListeningService.onCreate dies. Use
+        // explicit Unicode-letter lookbehind/lookahead instead: `\p{L}` is a
+        // Unicode property supported by both engines, and this also makes
+        // the RU + HE word boundaries explicit instead of relying on
+        // engine-specific defaults for `\b`.
         val PROMISE_PATTERNS = listOf(
-            Regex("(?U)\\bi (?:will|gotta|need to|have to|must|should) \\w+"),
-            Regex("(?U)\\bremind me\\b"),
-            Regex("(?U)\\b(?:я |мне )?(?:надо|нужно|должен|должна|обещаю|напомни)\\b"),
-            Regex("(?U)\\b(?:צריך|חייב|מבטיח|תזכיר)\\b"),
+            Regex("(?<!\\p{L})i (?:will|gotta|need to|have to|must|should) \\p{L}+"),
+            Regex("(?<!\\p{L})remind me(?!\\p{L})"),
+            Regex("(?<!\\p{L})(?:я |мне )?(?:надо|нужно|должен|должна|обещаю|напомни)(?!\\p{L})"),
+            Regex("(?<!\\p{L})(?:צריך|חייב|מבטיח|תזכיר)(?!\\p{L})"),
         )
     }
 }
