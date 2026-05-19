@@ -13,6 +13,12 @@ on:
       - 'pca-android/**'
       - '.github/workflows/pca-ci.yml'
 
+# Needed for the publish step below to create / update the rolling
+# "pca-latest" GitHub Release (which gives a public unauthenticated
+# download URL for the APK — Actions artifacts require a GitHub login).
+permissions:
+  contents: write
+
 jobs:
   pca-build:
     name: pca-android · assembleDebug + unit tests
@@ -60,7 +66,7 @@ jobs:
         working-directory: pca-android
         run: ./gradlew :app:assembleDebug --console=plain --no-daemon --stacktrace
 
-      - name: Upload debug APK
+      - name: Upload debug APK (Actions artifact — requires GitHub login to download)
         uses: actions/upload-artifact@v4
         with:
           name: pca-app-debug
@@ -75,3 +81,58 @@ jobs:
           name: pca-unit-test-report
           path: pca-android/app/build/reports/tests/testDebugUnitTest/
           if-no-files-found: ignore
+
+      # ------------------------------------------------------------------
+      # Public rolling release. Anyone — logged in or not — can download
+      # from https://github.com/<owner>/<repo>/releases/download/pca-latest/app-debug.apk
+      # This is the link to put in the install instructions for the phone:
+      # no GitHub login, no ZIP unpacking, just tap-and-install.
+      #
+      # Runs ONLY on push (not on PRs), and only on the build branch the
+      # user actually installs from, so PR builds don't overwrite the
+      # rolling release.
+      # ------------------------------------------------------------------
+      - name: Rename APK with branch + commit
+        if: github.event_name == 'push' && github.ref == 'refs/heads/claude/build-samsung-app-YaU0S'
+        run: |
+          mkdir -p release-staging
+          cp pca-android/app/build/outputs/apk/debug/app-debug.apk \
+             release-staging/app-debug.apk
+          # Also include a checksum so users can verify integrity.
+          (cd release-staging && sha256sum app-debug.apk > app-debug.apk.sha256)
+          # And a small build-info file for traceability.
+          cat > release-staging/BUILD_INFO.txt <<EOF
+          PCA debug APK
+          ====================
+          Branch:   ${{ github.ref_name }}
+          Commit:   ${{ github.sha }}
+          Workflow: ${{ github.run_id }}
+          Built:    $(date -u +%Y-%m-%dT%H:%M:%SZ)
+          EOF
+
+      - name: Publish rolling pca-latest release
+        if: github.event_name == 'push' && github.ref == 'refs/heads/claude/build-samsung-app-YaU0S'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: pca-latest
+          name: PCA debug — latest build
+          body: |
+            **This release auto-updates on every push to `claude/build-samsung-app-YaU0S`.**
+
+            Direct phone-friendly downloads:
+
+            * APK: https://github.com/${{ github.repository }}/releases/download/pca-latest/app-debug.apk
+            * SHA-256: https://github.com/${{ github.repository }}/releases/download/pca-latest/app-debug.apk.sha256
+            * Build info: https://github.com/${{ github.repository }}/releases/download/pca-latest/BUILD_INFO.txt
+
+            Build: workflow run `${{ github.run_id }}` from commit `${{ github.sha }}`.
+          files: |
+            release-staging/app-debug.apk
+            release-staging/app-debug.apk.sha256
+            release-staging/BUILD_INFO.txt
+          prerelease: true
+          make_latest: false
+          # Overwrite the existing `pca-latest` tag/release each push.
+          # softprops/action-gh-release handles "tag exists" idempotently
+          # when given the same tag_name.
+          fail_on_unmatched_files: true
