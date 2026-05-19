@@ -13,11 +13,13 @@ on:
       - 'pca-android/**'
       - '.github/workflows/pca-ci.yml'
 
-# Needed for the publish step below to create / update the rolling
-# "pca-latest" GitHub Release (which gives a public unauthenticated
-# download URL for the APK — Actions artifacts require a GitHub login).
+# - contents: write — for the rolling pca-latest release publish step
+# - pull-requests: write — for the diagnostic "comment last lines of
+#   build log on failure" step so a reviewer reading the PR can see the
+#   error without drilling into the Actions log UI.
 permissions:
   contents: write
+  pull-requests: write
 
 jobs:
   pca-build:
@@ -59,12 +61,50 @@ jobs:
         run: chmod +x pca-android/gradlew
 
       - name: Run unit tests
+        id: unit_tests
         working-directory: pca-android
-        run: ./gradlew :app:testDebugUnitTest --console=plain --no-daemon --stacktrace
+        run: |
+          set -o pipefail
+          ./gradlew :app:testDebugUnitTest --console=plain --no-daemon --stacktrace 2>&1 | tee /tmp/pca-unit-tests.log
 
       - name: Assemble debug APK
+        id: assemble
         working-directory: pca-android
-        run: ./gradlew :app:assembleDebug --console=plain --no-daemon --stacktrace
+        run: |
+          set -o pipefail
+          ./gradlew :app:assembleDebug --console=plain --no-daemon --stacktrace 2>&1 | tee /tmp/pca-assemble.log
+
+      # Diagnostic: when either Gradle step fails, copy the tail of the
+      # combined logs into a PR comment so the failure is readable
+      # straight from the PR conversation without drilling into the
+      # Actions log viewer (which is hard to navigate on mobile and
+      # requires the right GitHub auth scope).
+      - name: Post build-failure tail to PR
+        if: failure() && github.event_name == 'pull_request'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -e
+          {
+            echo "## ❌ pca-android CI failure — log tail"
+            echo
+            echo "Workflow run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+            echo "Commit: \`${{ github.sha }}\`"
+            echo
+            for log in /tmp/pca-unit-tests.log /tmp/pca-assemble.log; do
+              [ -f "$log" ] || continue
+              echo "### $(basename "$log")"
+              echo
+              echo '```'
+              tail -n 150 "$log"
+              echo '```'
+              echo
+            done
+          } > /tmp/pca-failure-comment.md
+
+          gh pr comment "${{ github.event.pull_request.number }}" \
+            --body-file /tmp/pca-failure-comment.md \
+            --repo "${{ github.repository }}"
 
       - name: Upload debug APK (Actions artifact — requires GitHub login to download)
         uses: actions/upload-artifact@v4
