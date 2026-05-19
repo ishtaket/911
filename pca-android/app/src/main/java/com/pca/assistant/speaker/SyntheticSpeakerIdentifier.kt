@@ -21,9 +21,17 @@ class SyntheticSpeakerIdentifier @Inject constructor() : SpeakerIdentifier {
     override fun embedding(pcm: ShortArray): FloatArray {
         if (pcm.isEmpty()) return FloatArray(EMBEDDING_SIZE)
         val out = FloatArray(EMBEDDING_SIZE)
-        val winSize = (pcm.size / EMBEDDING_SIZE).coerceAtLeast(1)
-        for (i in 0 until EMBEDDING_SIZE) {
-            val start = i * winSize
+        // Split dimensions: even indices carry RMS, odd indices carry ZCR.
+        // Blending the two into every dimension collapses stationary signals
+        // (constant RMS, constant ZCR) into a uniform vector — and after L2
+        // normalize, every uniform vector points the same way, so cos(sine,
+        // noise) ≈ 1.0 and the owner check would mis-classify wildly
+        // different voices as identical. Keeping the features separable on
+        // alternating dimensions preserves a discriminating direction.
+        val groups = EMBEDDING_SIZE / 2
+        val winSize = (pcm.size / groups).coerceAtLeast(1)
+        for (g in 0 until groups) {
+            val start = g * winSize
             val end = minOf(start + winSize, pcm.size)
             if (start >= end) continue
             var sum = 0.0
@@ -37,7 +45,8 @@ class SyntheticSpeakerIdentifier @Inject constructor() : SpeakerIdentifier {
             }
             val rms = sqrt(sum / (end - start)) / 32768.0
             val zcr = zc.toDouble() / (end - start)
-            out[i] = ((rms * 0.6 + zcr * 0.4) * 2.0 - 1.0).toFloat()
+            out[g * 2]     = (rms * 2.0 - 1.0).toFloat()
+            out[g * 2 + 1] = (zcr * 2.0 - 1.0).toFloat()
         }
         return l2Normalize(out)
     }

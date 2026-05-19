@@ -62,16 +62,19 @@ class Anonymizer @Inject constructor() {
             Rule("URL", Regex("https?://[\\w.\\-/%?=&#:+]+")),
             // IBAN (rough — letters+digits, 15–34 chars)
             Rule("IBAN", Regex("\\b[A-Z]{2}[0-9]{2}[A-Z0-9]{11,30}\\b")),
-            // Credit card (13–19 digits, optional dashes/spaces, with Luhn-friendly grouping)
-            Rule("CARD", Regex("\\b(?:\\d[ \\-]?){13,19}\\b")),
             // International phone, e.g. +972 50-123-4567, +7 (495) 123-45-67
             Rule("PHONE", Regex("\\+\\d[\\d \\-()]{6,20}\\d")),
             // Local 9–11 digit phones with separators
             Rule("PHONE", Regex("\\b0\\d{1,2}[ \\-]?\\d{3}[ \\-]?\\d{3,4}\\b")),
             // GPS coordinates lat,lng
             Rule("GEO", Regex("-?\\d{1,2}\\.\\d{2,6}\\s*,\\s*-?\\d{1,3}\\.\\d{2,6}")),
-            // Long numeric IDs (10+ digits) that aren't already matched
+            // Long numeric IDs (10+ digits, no separators). Run before CARD so
+            // unseparated runs like "ticket 1234567890123" land in ID; CARD
+            // still catches the separator-formatted "1234-5678-9012-3456" form
+            // because the \b\d{10,}\b boundary needs ten+ contiguous digits.
             Rule("ID", Regex("\\b\\d{10,}\\b")),
+            // Credit card (13–19 digits, optional dashes/spaces, with Luhn-friendly grouping)
+            Rule("CARD", Regex("\\b(?:\\d[ \\-]?){13,19}\\b")),
         )
     }
 }

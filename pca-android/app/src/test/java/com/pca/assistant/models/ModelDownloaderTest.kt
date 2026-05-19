@@ -105,10 +105,21 @@ class ModelDownloaderTest {
     }
 
     @Test fun `connection drop emits Failed and cleans the partial file`() = runTest {
-        server.enqueue(MockResponse().setSocketPolicy(SocketPolicy.DISCONNECT_DURING_RESPONSE_BODY))
+        // MockResponse needs an actual body for DISCONNECT_DURING_RESPONSE_BODY
+        // to have something to truncate. We also claim a Content-Length larger
+        // than the body so OkHttp realises the stream ended short and throws
+        // an IOException instead of treating an empty truncated body as EOF.
+        val partial = bytesFilled(64 * 1024)
+        server.enqueue(
+            MockResponse()
+                .setResponseCode(200)
+                .setHeader("Content-Length", (partial.size * 4).toString())
+                .setBody(Buffer().write(partial))
+                .setSocketPolicy(SocketPolicy.DISCONNECT_DURING_RESPONSE_BODY)
+        )
         val events = downloader.download(spec()).toList()
         val last = events.last()
-        assertTrue(last is ModelDownloader.Progress.Failed)
+        assertTrue("last event must be Failed, got: $last", last is ModelDownloader.Progress.Failed)
         val dir = registry.modelsDir()
         assertFalse("part file leftover", dir.list()?.contains("test-model.part") == true)
     }
