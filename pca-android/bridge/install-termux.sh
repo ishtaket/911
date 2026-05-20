@@ -51,29 +51,19 @@ echo "[1/4] Installing Termux packages..."
 pkg update -y
 pkg install -y python python-pip git nodejs-lts curl termux-api
 
-# --- 2. Python venv + bridge requirements ---------------------------------
+# --- 2. Bridge server (stdlib-only — no pip deps) -------------------------
 PCA_HOME="${HOME}/pca-bridge"
 mkdir -p "${PCA_HOME}"
 
-if [[ ! -f "${PCA_HOME}/server.py" ]]; then
-    echo "[2/4] Fetching server.py..."
-    curl -fsSL -o "${PCA_HOME}/server.py" \
-        "https://raw.githubusercontent.com/ishtaket/911/claude/build-samsung-app-YaU0S/pca-android/bridge/server.py"
-fi
-
-if [[ ! -d "${PCA_HOME}/.venv" ]]; then
-    echo "[2/4] Creating venv..."
-    python -m venv "${PCA_HOME}/.venv"
-fi
-
-# shellcheck disable=SC1091
-source "${PCA_HOME}/.venv/bin/activate"
-pip install --quiet --upgrade pip
-# Plain `uvicorn` — NOT uvicorn[standard]. The [standard] extra pulls in
-# watchfiles, which has no prebuilt aarch64-android wheel and tries to
-# compile a Rust extension from source (fails without a rustup toolchain).
-# The bridge runs uvicorn.run() without --reload, so we don't need it.
-pip install --quiet fastapi uvicorn pydantic
+# Always re-fetch so an old copy (e.g. a previous FastAPI-based server.py)
+# is replaced by the current stdlib-only version.
+echo "[2/4] Fetching server.py..."
+curl -fsSL -o "${PCA_HOME}/server.py" \
+    "https://raw.githubusercontent.com/ishtaket/911/claude/build-samsung-app-YaU0S/pca-android/bridge/server.py"
+# The bridge uses only the Python standard library (http.server, json,
+# subprocess) — no FastAPI / uvicorn / pydantic. Those drag in Rust-built
+# wheels (pydantic-core, watchfiles) with no aarch64-android build, which
+# fail to compile under Termux. Nothing to pip-install here.
 
 # --- 3. CLI tools via npm --------------------------------------------------
 echo "[3/4] Installing codex + Gemini CLIs (npm)..."
@@ -102,14 +92,13 @@ cat > "${HOME}/run-pca-bridge.sh" <<'LAUNCHER'
 #!/data/data/com.termux/files/usr/bin/bash
 # Запуск PCA bridge.  Loopback only — никаких внешних коннектов на телефон.
 # CLI должны быть уже залогинены: `codex login` и/или `gemini` интерактивно.
+# Bridge на чистой стандартной библиотеке Python — venv не нужен.
 set -e
 PCA_HOME="${HOME}/pca-bridge"
 cd "${PCA_HOME}"
-# shellcheck disable=SC1091
-source .venv/bin/activate
 # Termux wake-lock — иначе Android прибьёт процесс при засыпании экрана
 termux-wake-lock 2>/dev/null || true
-# По умолчанию primary=codex.  Поменяй на --provider gemini если нужен Gemini.
+# По умолчанию primary=codex.  Поменяй на --provider gemini/claude если нужно.
 python server.py --host 127.0.0.1 --port 8765 --provider codex
 LAUNCHER
 chmod +x "${HOME}/run-pca-bridge.sh"
