@@ -58,16 +58,39 @@ object CrashLogger {
         }
 
         // Primary surface: system Downloads — visible in My Files on every
-        // Samsung One UI without any developer setting.
-        runCatching { writeToDownloads(context, body) }
+        // Samsung One UI without any developer setting. SECURITY: Downloads
+        // is world-readable (any app with media access, any file manager),
+        // and a stack trace's exception message could carry a transcript
+        // fragment or owner PII. Scrub PII-shaped tokens out of the copy that
+        // lands in shared storage — stack frames (class.method:line) hold no
+        // data values, so this keeps the report diagnostic while honouring
+        // the on-device privacy boundary.
+        runCatching { writeToDownloads(context, scrubPii(body)) }
             .onFailure { Log.w(TAG, "Downloads write failed: ${it.message}") }
 
-        // Fallback: app-private external files dir. Older phones, non-Samsung
-        // skins, and rooted devices can still read this with a file manager.
+        // Fallback: app-private external files dir. Scoped storage keeps this
+        // unreadable to other apps, so we keep the un-redacted body here for
+        // full-fidelity diagnosis via adb / root / a file manager that the
+        // device owner explicitly grants.
         runCatching {
             val baseDir = context.getExternalFilesDir(null) ?: context.filesDir
             File(baseDir, FILE_NAME).writeText(body)
         }
+    }
+
+    /**
+     * Mask the PII shapes the on-device [com.pca.assistant.anonymizer.Anonymizer]
+     * targets, so a crash report dropped into world-readable Downloads can't
+     * leak an email / phone / GPS fix / long numeric id that happened to be in
+     * an exception message.
+     */
+    private fun scrubPii(text: String): String {
+        var t = text
+        t = Regex("[A-Za-z0-9._%+\\-]+@[A-Za-z0-9.\\-]+\\.[A-Za-z]{2,}").replace(t, "[email]")
+        t = Regex("-?\\d{1,2}\\.\\d{2,6}\\s*,\\s*-?\\d{1,3}\\.\\d{2,6}").replace(t, "[geo]")
+        t = Regex("\\+\\d[\\d \\-()]{6,20}\\d").replace(t, "[phone]")
+        t = Regex("\\b\\d{10,}\\b").replace(t, "[num]")
+        return t
     }
 
     private fun writeToDownloads(context: Context, body: String) {
