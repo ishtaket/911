@@ -69,7 +69,11 @@ fi
 # shellcheck disable=SC1091
 source "${PCA_HOME}/.venv/bin/activate"
 pip install --quiet --upgrade pip
-pip install --quiet fastapi 'uvicorn[standard]' pydantic
+# Plain `uvicorn` — NOT uvicorn[standard]. The [standard] extra pulls in
+# watchfiles, which has no prebuilt aarch64-android wheel and tries to
+# compile a Rust extension from source (fails without a rustup toolchain).
+# The bridge runs uvicorn.run() without --reload, so we don't need it.
+pip install --quiet fastapi uvicorn pydantic
 
 # --- 3. CLI tools via npm --------------------------------------------------
 echo "[3/4] Installing codex + Gemini CLIs (npm)..."
