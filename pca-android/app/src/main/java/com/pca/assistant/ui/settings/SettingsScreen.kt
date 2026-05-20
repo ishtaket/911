@@ -54,6 +54,7 @@ import com.pca.assistant.settings.SttModelChoice
 fun SettingsScreen(vm: SettingsViewModel, onBack: () -> Unit, onReEnroll: () -> Unit) {
     val s by vm.state.collectAsState()
     var bridgeText by remember(s) { mutableStateOf(s?.bridgeUrl.orEmpty()) }
+    var bridgeTokenText by remember(s) { mutableStateOf(s?.bridgeToken.orEmpty()) }
     var showWipe by remember { mutableStateOf(false) }
 
     Scaffold(
@@ -108,7 +109,18 @@ fun SettingsScreen(vm: SettingsViewModel, onBack: () -> Unit, onReEnroll: () -> 
                         singleLine = true,
                     )
                     Spacer(Modifier.height(8.dp))
-                    Button(onClick = { vm.setBridgeUrl(bridgeText) }) {
+                    OutlinedTextField(
+                        value = bridgeTokenText,
+                        onValueChange = { bridgeTokenText = it },
+                        modifier = Modifier.fillMaxWidth(),
+                        label = { Text(stringResource(R.string.settings_bridge_token)) },
+                        singleLine = true,
+                    )
+                    Spacer(Modifier.height(8.dp))
+                    Button(onClick = {
+                        vm.setBridgeUrl(bridgeText)
+                        vm.setBridgeToken(bridgeTokenText)
+                    }) {
                         Text(stringResource(R.string.action_save))
                     }
                     if (cfg.bridgeUrl.isBlank()) {

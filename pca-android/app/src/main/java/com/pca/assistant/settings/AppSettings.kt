@@ -27,6 +27,7 @@ enum class LanguageChoice { SYSTEM, EN, RU, HE }
 data class Settings(
     val providerMode: ProviderMode,
     val bridgeUrl: String,
+    val bridgeToken: String,
     val windowMinutes: Int,
     val language: LanguageChoice,
     val sttModel: SttModelChoice,
@@ -69,6 +70,10 @@ class AppSettings @Inject constructor(
                 // who explicitly want fully-offline behavior.
                 providerMode = parseEnum(p[K_PROVIDER], ProviderMode.BRIDGE),
                 bridgeUrl = p[K_BRIDGE_URL].orEmpty(),
+                // Shared secret the loopback bridge prints on first run. Sent
+                // as the X-PCA-Token header so a co-installed app on the same
+                // device can't POST to 127.0.0.1:<port> and abuse the bridge.
+                bridgeToken = p[K_BRIDGE_TOKEN].orEmpty(),
                 windowMinutes = (p[K_WINDOW_MIN] ?: 5).coerceIn(1, 30),
                 language = parseEnum(p[K_LANG], LanguageChoice.SYSTEM),
                 sttModel = parseEnum(p[K_STT_MODEL], SttModelChoice.ANDROID_BUILT_IN),
@@ -97,6 +102,9 @@ class AppSettings @Inject constructor(
     suspend fun setBridgeUrl(url: String) =
         context.dataStore.edit { it[K_BRIDGE_URL] = url.trim() }
 
+    suspend fun setBridgeToken(token: String) =
+        context.dataStore.edit { it[K_BRIDGE_TOKEN] = token.trim() }
+
     suspend fun setWindowMinutes(min: Int) =
         context.dataStore.edit { it[K_WINDOW_MIN] = min.coerceIn(1, 30) }
 
@@ -124,6 +132,7 @@ class AppSettings @Inject constructor(
         const val TAG = "AppSettings"
         val K_PROVIDER: Preferences.Key<String> = stringPreferencesKey("provider")
         val K_BRIDGE_URL: Preferences.Key<String> = stringPreferencesKey("bridge_url")
+        val K_BRIDGE_TOKEN: Preferences.Key<String> = stringPreferencesKey("bridge_token")
         val K_WINDOW_MIN: Preferences.Key<Int> = intPreferencesKey("window_min")
         val K_LANG: Preferences.Key<String> = stringPreferencesKey("language")
         val K_STT_MODEL: Preferences.Key<String> = stringPreferencesKey("stt_model")

@@ -66,6 +66,7 @@
     <string name="settings_provider_mock">Local mock (offline fallback)</string>
     <string name="settings_provider_bridge">HTTP bridge (codex / Gemini) — default</string>
     <string name="settings_bridge_url">Bridge URL</string>
+    <string name="settings_bridge_token">Bridge token (printed by the bridge on first run)</string>
     <string name="settings_bridge_url_missing">Bridge URL is empty. Until you set it (or pick "Local mock" above) every window falls back to the offline mock provider — set up bridge/server.py on your laptop / Termux to get real codex/Gemini answers.</string>
     <string name="settings_window_minutes">Window duration (minutes)</string>
     <string name="settings_language">Primary language</string>

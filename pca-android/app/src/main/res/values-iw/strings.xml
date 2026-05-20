@@ -60,6 +60,7 @@
     <string name="settings_provider_mock">דמה מקומית (גיבוי לא-מקוון)</string>
     <string name="settings_provider_bridge">HTTP bridge (codex / Gemini) — ברירת מחדל</string>
     <string name="settings_bridge_url">כתובת ה-bridge</string>
+    <string name="settings_bridge_token">טוקן ה-bridge (מודפס בהפעלה הראשונה)</string>
     <string name="settings_bridge_url_missing">כתובת ה-bridge ריקה. עד שתגדיר אותה (או תבחר ב"דמה מקומית" למעלה) כל חלון נופל ל-mock הלא-מקוון — הרץ את bridge/server.py על המחשב הנייד / Termux כדי לקבל תשובות אמיתיות של codex/Gemini.</string>
     <string name="settings_window_minutes">משך חלון (דקות)</string>
     <string name="settings_language">שפה ראשית</string>

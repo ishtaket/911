@@ -33,15 +33,21 @@ class HttpBridgeProvider @Inject constructor(
     override val id: String = "http-bridge"
 
     override suspend fun decide(request: LlmRequest): LlmDecision {
-        val base = settings.flow.first().bridgeUrl.trim().trimEnd('/')
+        val cfg = settings.flow.first()
+        val base = cfg.bridgeUrl.trim().trimEnd('/')
         validateBridgeUrl(base)
         val body = json.encodeToString(LlmRequest.serializer(), request)
             .toRequestBody("application/json; charset=utf-8".toMediaType())
-        val http = Request.Builder()
+        val builder = Request.Builder()
             .url("$base/decide")
             .header("Accept", "application/json")
-            .post(body)
-            .build()
+        // Shared-secret auth (PCA-N-1): the bridge prints a token on first run;
+        // the user pastes it into Settings. Sending it as a header means a
+        // co-installed app that can also reach 127.0.0.1:<port> still can't
+        // drive the bridge without knowing the token.
+        val token = cfg.bridgeToken.trim()
+        if (token.isNotEmpty()) builder.header("X-PCA-Token", token)
+        val http = builder.post(body).build()
         return try {
             client.newCall(http).execute().use { resp ->
                 if (!resp.isSuccessful) {

@@ -42,6 +42,7 @@ class FakeSettings(initial: Settings = DEFAULT) {
         val DEFAULT = Settings(
             providerMode = ProviderMode.MOCK,
             bridgeUrl = "",
+            bridgeToken = "",
             windowMinutes = 5,
             language = LanguageChoice.EN,
             sttModel = SttModelChoice.ANDROID_BUILT_IN,

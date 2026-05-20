@@ -52,8 +52,11 @@ per spec §3.5).
 from __future__ import annotations
 
 import argparse
+import hmac
 import json
 import logging
+import os
+import secrets
 import subprocess
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
@@ -62,9 +65,38 @@ log = logging.getLogger("pca-bridge")
 # Set from argparse in __main__.
 PROVIDER = "codex"
 
+# Shared-secret auth (PCA-N-1). On Android the loopback interface is shared
+# across every installed app, so any app with INTERNET permission can reach
+# 127.0.0.1:<port> while the bridge runs. We require a token on /decide so a
+# co-installed app can't drive the bridge (burn the user's subscription, or
+# feed a crafted prompt to the CLI). The token is generated on first run,
+# stored next to this script (Termux-private), and printed for the user to
+# paste into the PCA app → Settings → Bridge token.
+TOKEN = ""
+DEFAULT_TOKEN_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), ".pca_token")
+
 # A single request can carry a long transcript + rollups; cap it so a rogue
 # client can't OOM the bridge by streaming an unbounded body.
 MAX_BODY_BYTES = 4 * 1024 * 1024
+
+
+def load_or_create_token(path: str) -> str:
+    """Return the persisted token, generating one (0600) on first run."""
+    try:
+        with open(path, encoding="utf-8") as f:
+            existing = f.read().strip()
+        if existing:
+            return existing
+    except FileNotFoundError:
+        pass
+    token = secrets.token_hex(32)
+    with open(path, "w", encoding="utf-8") as f:
+        f.write(token)
+    try:
+        os.chmod(path, 0o600)
+    except OSError:
+        pass
+    return token
 
 
 class BridgeError(Exception):
@@ -106,6 +138,12 @@ def build_prompt(req: dict) -> str:
         "",
         f"Reply language: {req.get('reply_language', 'en')}",
         "Return ONLY the strict JSON object specified in OUTPUT.",
+        # Defense in depth (PCA-N-1, layer B): even though the token gate
+        # already restricts callers to the PCA app, instruct the model to
+        # behave as a pure text responder so a crafted prompt can't coax an
+        # agentic CLI into touching the filesystem or running commands.
+        "Do NOT use any tools, do NOT read or write files, and do NOT run "
+        "shell commands. Produce only the JSON object as your entire output.",
     ]
     return "\n".join(parts)
 
@@ -177,17 +215,29 @@ def _run_cli(cmd: list[str], prompt: str | None, label: str) -> dict:
 
 
 def run_codex(prompt: str) -> dict:
-    """codex CLI (subscription, ChatGPT Plus/Pro). Prompt on stdin via exec mode."""
-    return _run_cli(["codex", "exec", "-"], prompt, "codex")
+    """codex CLI (subscription, ChatGPT Plus/Pro). Prompt on stdin via exec mode.
+
+    `--sandbox read-only` (PCA-N-1, layer B): codex `exec` is the autonomous
+    mode and will run shell commands by default. read-only denies writes and
+    command execution so a crafted prompt can't escape into the Termux
+    filesystem. If your installed codex version rejects this flag, drop the
+    two "--sandbox", "read-only" tokens below.
+    """
+    return _run_cli(["codex", "exec", "--sandbox", "read-only", "-"], prompt, "codex")
 
 
 def run_claude(prompt: str) -> dict:
-    """claude CLI (subscription, Claude Pro/Max via @anthropic-ai/claude-code)."""
+    """claude CLI (subscription, Claude Pro/Max via @anthropic-ai/claude-code).
+
+    `-p` (print/headless) mode without --dangerously-skip-permissions cannot
+    obtain tool-use approval, so it stays a non-agentic text responder.
+    """
     return _run_cli(["claude", "-p", prompt, "--output-format", "text"], None, "claude")
 
 
 def run_gemini(prompt: str) -> dict:
-    """gemini CLI (subscription, Google AI/AI Studio)."""
+    """gemini CLI (subscription, Google AI/AI Studio). `-p` is a one-shot,
+    non-interactive text query (no agentic tool loop)."""
     return _run_cli(["gemini", "-p", prompt], None, "gemini")
 
 
@@ -237,11 +287,22 @@ class Handler(BaseHTTPRequestHandler):
         else:
             self._send_json(404, {"detail": "not found"})
 
+    def _token_ok(self) -> bool:
+        # Constant-time compare so a co-installed app can't byte-by-byte time
+        # the token. TOKEN is always set (generated on startup), so a missing
+        # or wrong header is rejected.
+        supplied = self.headers.get("X-PCA-Token", "")
+        return hmac.compare_digest(supplied, TOKEN)
+
     def do_POST(self):  # noqa: N802
         if self._origin_blocked():
             return
         if self.path.rstrip("/") != "/decide":
             self._send_json(404, {"detail": "not found"})
+            return
+        if not self._token_ok():
+            log.warning("rejected /decide: bad or missing X-PCA-Token from %s", self.address_string())
+            self._send_json(401, {"detail": "missing or invalid X-PCA-Token"})
             return
         try:
             length = int(self.headers.get("Content-Length", "0"))
@@ -277,7 +338,7 @@ class Handler(BaseHTTPRequestHandler):
 
 
 def main() -> None:
-    global PROVIDER
+    global PROVIDER, TOKEN
     parser = argparse.ArgumentParser()
     # PCA-S-23: default --host to loopback. A bridge listening on 0.0.0.0 in a
     # Wi-Fi network with no auth lets every device on the LAN POST arbitrary
@@ -289,10 +350,21 @@ def main() -> None:
         help="Which subscription CLI to invoke. All authenticate via their own "
              "login flow (no API keys needed in this process).",
     )
+    parser.add_argument(
+        "--token-file", default=DEFAULT_TOKEN_FILE,
+        help="Path to the shared-secret token file (auto-generated on first run).",
+    )
     args = parser.parse_args()
     PROVIDER = args.provider
 
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s %(message)s")
+
+    TOKEN = load_or_create_token(args.token_file)
+    log.info("=" * 64)
+    log.info("BRIDGE TOKEN — paste into PCA app: Settings -> Bridge token")
+    log.info("    %s", TOKEN)
+    log.info("(stored in %s — keep it private)", args.token_file)
+    log.info("=" * 64)
 
     if args.host == "0.0.0.0":
         log.warning(

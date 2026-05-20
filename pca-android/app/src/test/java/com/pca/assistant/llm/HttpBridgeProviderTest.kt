@@ -101,6 +101,37 @@ class HttpBridgeProviderTest {
         assertTrue("payload must carry window.transcript", sent.contains("\"transcript\":\"hi\""))
     }
 
+    @Test fun `bridge token is sent as the X-PCA-Token header when set`() = runTest {
+        fakeSettings.mutate { it.copy(bridgeToken = "s3cr3t-token") }
+        server.enqueue(
+            MockResponse().setResponseCode(200).setBody(
+                """
+                {"window_understanding":"ok","intervene":false,"urgency":0,
+                 "reason":"r","memory_note":"n",
+                 "open_threads_update":{"closed":[],"new":[],"still_open":[]}}
+                """.trimIndent()
+            )
+        )
+        provider.decide(request())
+        val taken = server.takeRequest()
+        assertEquals("s3cr3t-token", taken.getHeader("X-PCA-Token"))
+    }
+
+    @Test fun `no X-PCA-Token header when token is blank`() = runTest {
+        server.enqueue(
+            MockResponse().setResponseCode(200).setBody(
+                """
+                {"window_understanding":"ok","intervene":false,"urgency":0,
+                 "reason":"r","memory_note":"n",
+                 "open_threads_update":{"closed":[],"new":[],"still_open":[]}}
+                """.trimIndent()
+            )
+        )
+        provider.decide(request())
+        val taken = server.takeRequest()
+        assertEquals(null, taken.getHeader("X-PCA-Token"))
+    }
+
     @Test fun `non-200 surfaces as LlmProviderException with the HTTP code`() = runTest {
         server.enqueue(MockResponse().setResponseCode(503).setBody("upstream"))
         val ex = try { provider.decide(request()); null } catch (e: LlmProviderException) { e }

@@ -63,6 +63,7 @@ class SettingsViewModel @Inject constructor(
 
     fun setProvider(mode: ProviderMode) = viewModelScope.launch { settings.setProviderMode(mode) }
     fun setBridgeUrl(url: String) = viewModelScope.launch { settings.setBridgeUrl(url) }
+    fun setBridgeToken(token: String) = viewModelScope.launch { settings.setBridgeToken(token) }
     fun setWindowMinutes(m: Int) = viewModelScope.launch { settings.setWindowMinutes(m) }
     fun setLanguage(l: LanguageChoice) = viewModelScope.launch { settings.setLanguage(l) }
     fun setSttModel(m: SttModelChoice) = viewModelScope.launch { settings.setSttModel(m) }

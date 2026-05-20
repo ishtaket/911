@@ -131,8 +131,15 @@ echo
 echo "После логина запусти bridge:"
 echo "  ~/run-pca-bridge.sh"
 echo
-echo "В приложении PCA: Настройки → LLM provider → HTTP bridge → URL:"
-echo "  http://127.0.0.1:8765"
+echo "При первом запуске bridge напечатает строку BRIDGE TOKEN — это"
+echo "общий секрет, который защищает loopback-эндпоинт от других"
+echo "приложений на телефоне. Скопируй его."
+echo
+echo "В приложении PCA: Настройки → LLM provider → HTTP bridge:"
+echo "  Bridge URL:   http://127.0.0.1:8765"
+echo "  Bridge token: <вставь напечатанный токен>"
+echo
+echo "Без верного токена bridge отдаёт 401 — это by design."
 echo
 echo "Чтобы bridge выживал ребуты, добавь запуск в ~/.termux/boot/ (нужен"
 echo "пакет termux-boot из F-Droid)."
