@@ -112,8 +112,8 @@ Java_com_pca_assistant_stt_WhisperJniRecognizer_nativeRecognize(
     fparams.translate        = false;
     fparams.no_context       = true;
     fparams.single_segment   = false;
-    fparams.suppress_blank   = false;
-    fparams.suppress_nst     = false;
+    fparams.suppress_blank             = false;
+    fparams.suppress_non_speech_tokens = false;
     fparams.n_threads        = nThreads > 0 ? nThreads : 4;
     // Greedy at temp 0 can decode straight into an end-of-text on short
     // phone clips and emit nothing; enabling temperature fallback lets the
