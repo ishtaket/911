@@ -73,7 +73,7 @@ class WhisperJniRecognizer @Inject constructor(
             return SttResult("", 0f, hintLanguage)
         }
 
-        val text = withContext(Dispatchers.Default) {
+        val raw = withContext(Dispatchers.Default) {
             // Whisper.cpp is not internally thread-safe across a single
             // context; the synchronized lock also pairs with release() to
             // prevent use-after-free (B-26).
@@ -82,7 +82,15 @@ class WhisperJniRecognizer @Inject constructor(
                 if (ptr == 0L) "" else nativeRecognize(ptr, pcm, hintLanguage, recommendedThreads())
             }
         }
-        diag.setWhisperNote("ctx=ok in=${pcm.size} out='${text.take(40)}' lang=${hintLanguage ?: "auto"}")
+        // The native side returns a \x01-prefixed diagnostic marker instead of
+        // text when decoding produced nothing (rms/buf/segment-count). Treat it
+        // as empty transcript but surface the metrics so we can see why.
+        val isMarker = raw.startsWith('')
+        val text = if (isMarker) "" else raw
+        diag.setWhisperNote(
+            if (isMarker) "ctx=ok in=${pcm.size} ${raw.drop(1)} lang=${hintLanguage ?: "auto"}"
+            else "ctx=ok in=${pcm.size} out='${text.take(40)}' lang=${hintLanguage ?: "auto"}"
+        )
         return SttResult(
             text = text.trim(),
             confidence = if (text.isBlank()) 0f else 0.85f,

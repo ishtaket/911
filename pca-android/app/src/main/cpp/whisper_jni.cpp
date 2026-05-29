@@ -14,6 +14,8 @@
 #include <string>
 #include <vector>
 #include <cstring>
+#include <cstdio>
+#include <cmath>
 
 #include "whisper.h"
 
@@ -78,7 +80,14 @@ Java_com_pca_assistant_stt_WhisperJniRecognizer_nativeRecognize(
     const jsize len = env->GetArrayLength(jPcm);
     if (len <= 0) return env->NewStringUTF("");
 
-    std::vector<float> samples(static_cast<size_t>(len));
+    // whisper.cpp needs >= 1 s of audio; right at 16000 it can error or emit
+    // nothing. Pad the working buffer to a comfortable minimum so short
+    // utterances still decode.
+    const size_t MIN_SAMPLES = 16000 * 2; // 2 s
+    const size_t inLen = static_cast<size_t>(len);
+    const size_t bufLen = inLen < MIN_SAMPLES ? MIN_SAMPLES : inLen;
+    std::vector<float> samples(bufLen, 0.0f);
+    double sumSq = 0.0;
     {
         jshort* raw = env->GetShortArrayElements(jPcm, nullptr);
         if (!raw) return env->NewStringUTF("");
@@ -88,13 +97,11 @@ Java_com_pca_assistant_stt_WhisperJniRecognizer_nativeRecognize(
             samples[i] = v;
             float a = v < 0 ? -v : v;
             if (a > maxAbs) maxAbs = a;
+            sumSq += static_cast<double>(v) * v;
         }
         env->ReleaseShortArrayElements(jPcm, raw, JNI_ABORT);
-        // Peak-normalize quiet far-field audio. Whisper's internal
-        // no_speech_thold rejects low-amplitude segments and returns empty
-        // text; the phone's mic often yields peaks around 0.05-0.3 of full
-        // scale. Scale the peak up to ~0.95, but cap the gain so we don't
-        // blow up pure silence/noise into a false signal.
+        // Peak-normalize quiet far-field audio so a soft but real utterance
+        // isn't decoded as silence. Cap the gain so pure noise isn't blown up.
         if (maxAbs > 1e-4f) {
             float gain = 0.95f / maxAbs;
             if (gain > 20.0f) gain = 20.0f;
@@ -103,6 +110,7 @@ Java_com_pca_assistant_stt_WhisperJniRecognizer_nativeRecognize(
             }
         }
     }
+    const double rms = len > 0 ? std::sqrt(sumSq / static_cast<double>(len)) : 0.0;
 
     whisper_full_params fparams = whisper_full_default_params(WHISPER_SAMPLING_GREEDY);
     fparams.print_realtime   = false;
@@ -136,9 +144,11 @@ Java_com_pca_assistant_stt_WhisperJniRecognizer_nativeRecognize(
     }
 
     const int ret = whisper_full(ctx, fparams, samples.data(), static_cast<int>(samples.size()));
+    char dbg[96];
     if (ret != 0) {
         LOGW("whisper_full ret=%d", ret);
-        return env->NewStringUTF("");
+        snprintf(dbg, sizeof(dbg), "\x01rms=%.3f buf=%zu ret=%d", rms, bufLen, ret);
+        return env->NewStringUTF(dbg);
     }
 
     std::string out;
@@ -147,6 +157,13 @@ Java_com_pca_assistant_stt_WhisperJniRecognizer_nativeRecognize(
     for (int i = 0; i < n; ++i) {
         const char* seg = whisper_full_get_segment_text(ctx, i);
         if (seg) out.append(seg);
+    }
+    // When decoding yields nothing, return a diagnostic marker (prefixed with
+    // \x01 so the Kotlin side can tell it apart from real transcript and show
+    // it as a note instead of treating it as recognized speech).
+    if (out.empty()) {
+        snprintf(dbg, sizeof(dbg), "\x01rms=%.3f buf=%zu n=%d empty", rms, bufLen, n);
+        return env->NewStringUTF(dbg);
     }
     return env->NewStringUTF(out.c_str());
 }
