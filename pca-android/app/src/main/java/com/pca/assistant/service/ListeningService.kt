@@ -262,10 +262,14 @@ class ListeningService : LifecycleService() {
 
     private suspend fun inferSttLanguageHint(): String? {
         val cfg = settings.flow.first()
+        // whisper.cpp expects ISO-639-1 codes ("en", "ru", "he"), NOT Android
+        // locale tags ("en-US"). Passing a locale tag makes whisper fail to
+        // match a language and can yield empty output. SYSTEM stays null →
+        // whisper auto-detects.
         return when (cfg.language) {
-            com.pca.assistant.settings.LanguageChoice.RU -> "ru-RU"
-            com.pca.assistant.settings.LanguageChoice.HE -> "iw-IL"
-            com.pca.assistant.settings.LanguageChoice.EN -> "en-US"
+            com.pca.assistant.settings.LanguageChoice.RU -> "ru"
+            com.pca.assistant.settings.LanguageChoice.HE -> "he"
+            com.pca.assistant.settings.LanguageChoice.EN -> "en"
             com.pca.assistant.settings.LanguageChoice.SYSTEM -> null
         }
     }

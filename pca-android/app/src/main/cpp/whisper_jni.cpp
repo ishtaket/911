@@ -112,11 +112,18 @@ Java_com_pca_assistant_stt_WhisperJniRecognizer_nativeRecognize(
     fparams.translate        = false;
     fparams.no_context       = true;
     fparams.single_segment   = false;
-    fparams.suppress_blank   = true;
+    fparams.suppress_blank   = false;
+    fparams.suppress_nst     = false;
     fparams.n_threads        = nThreads > 0 ? nThreads : 4;
-    // Be tolerant of quiet far-field phone audio: raise the no-speech
-    // rejection bar so a soft but real utterance isn't dropped as silence.
-    fparams.no_speech_thold  = 0.85f;
+    // Greedy at temp 0 can decode straight into an end-of-text on short
+    // phone clips and emit nothing; enabling temperature fallback lets the
+    // decoder retry at higher temps instead of returning empty.
+    fparams.temperature      = 0.0f;
+    fparams.temperature_inc  = 0.2f;
+    // Disable the no-speech / logprob gates that were silently dropping
+    // quiet far-field utterances as "silence".
+    fparams.no_speech_thold  = 1.0f;
+    fparams.logprob_thold    = -10.0f;
 
     std::string langStr = jstring_to_utf8(env, jLanguage);
     // Empty / "auto" — whisper.cpp will run language detection itself.

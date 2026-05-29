@@ -59,11 +59,13 @@ class ModelRegistry @Inject constructor(
          * URL scheme is documented in the whisper.cpp README and is the same
          * one the upstream `models/download-ggml-model.sh` script uses.
          */
+        // whisper.cpp publishes small quantized as q5_1 (not q5_0); the q5_0
+        // filename 404s. ~190 MB on disk.
         val WHISPER_SMALL_Q5 = ModelSpec(
-            id = "whisper-small-q5_0",
-            filename = "ggml-small-q5_0.bin",
-            defaultUrl = "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-small-q5_0.bin",
-            approxMb = 466,
+            id = "whisper-small-q5_1",
+            filename = "ggml-small-q5_1.bin",
+            defaultUrl = "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-small-q5_1.bin",
+            approxMb = 190,
         )
 
         /** Spec §12.4 recommended baseline — large-v3 turbo Q5 (~800 MB). */
