@@ -50,6 +50,8 @@ data class DashboardState(
      * mic permission is actually granted to the capture loop.
      */
     val sttDiag: String,
+    /** Per-stage capture counters: chunks/peak/VAD-speech/recognize/non-empty. */
+    val capDiag: String,
 )
 
 @HiltViewModel
@@ -62,6 +64,7 @@ class DashboardViewModel @Inject constructor(
     openThreadDao: OpenThreadDao,
     private val whisper: com.pca.assistant.stt.WhisperJniRecognizer,
     private val audioCapture: com.pca.assistant.audio.AudioCapture,
+    private val captureDiag: com.pca.assistant.audio.CaptureDiag,
 ) : ViewModel() {
 
     private fun sttDiag(): String {
@@ -108,7 +111,7 @@ class DashboardViewModel @Inject constructor(
                 BootstrapProgress.from(data, info.state)
             }
 
-        state = combine(headers, counts, lists, bootstrapFlow) { hdr, cnt, lst, boot ->
+        state = combine(headers, counts, lists, bootstrapFlow, captureDiag.flow) { hdr, cnt, lst, boot, cap ->
             val (cfg, ls) = hdr
             val (windowsToday, intToday) = cnt
             val (threads, windows, ints) = lst
@@ -129,6 +132,7 @@ class DashboardViewModel @Inject constructor(
                 recentWindows = windows,
                 recentInterventions = ints,
                 sttDiag = sttDiag(),
+                capDiag = "cap=${cap.chunks} peak=${cap.lastPeak} vad=${cap.speech} rec=${cap.recognize} txt=${cap.nonEmpty}",
             )
         }.stateIn(
             viewModelScope,
@@ -145,6 +149,7 @@ class DashboardViewModel @Inject constructor(
                 recentWindows = emptyList(),
                 recentInterventions = emptyList(),
                 sttDiag = "STT: …",
+                capDiag = "cap=… peak=… vad=… rec=… txt=…",
             )
         )
     }

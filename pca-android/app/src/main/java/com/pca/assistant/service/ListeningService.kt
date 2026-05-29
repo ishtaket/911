@@ -40,6 +40,7 @@ import javax.inject.Inject
 class ListeningService : LifecycleService() {
 
     @Inject lateinit var audioCapture: AudioCapture
+    @Inject lateinit var captureDiag: com.pca.assistant.audio.CaptureDiag
     @Inject lateinit var vad: VoiceActivityDetector
     @Inject lateinit var stt: SpeechRecognizer
     @Inject lateinit var speakerId: SpeakerIdentifier
@@ -163,8 +164,12 @@ class ListeningService : LifecycleService() {
         captureJob = lifecycleScope.launch(SupervisorJob() + Dispatchers.IO) {
             if (!audioCapture.hasMicPermission()) return@launch
             audioCapture.stream().collect { pcm ->
+                var peak = 0
+                for (s in pcm) { val a = if (s < 0) -s.toInt() else s.toInt(); if (a > peak) peak = a }
+                captureDiag.onChunk(peak)
                 val speech = vad.isSpeech(pcm)
                 if (speech) {
+                    captureDiag.onSpeech()
                     synchronized(pcmLock) {
                         capturePcm.addLast(pcm)
                         // bound history: 60 s
@@ -179,6 +184,7 @@ class ListeningService : LifecycleService() {
     private suspend fun onSpeechChunk(pcm: ShortArray) {
         val hint = inferSttLanguageHint()
         val result = stt.recognize(pcm, hint)
+        captureDiag.onRecognize(result.text)
         if (result.text.isBlank()) return
         val loc = location.current()
         val owner = ownerDao.get()

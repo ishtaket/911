@@ -122,6 +122,11 @@ fun DashboardScreen(
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
+            Text(
+                text = s.capDiag,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
 
             if (s.bridgeUrlMissing) {
                 Spacer(Modifier.height(8.dp))
