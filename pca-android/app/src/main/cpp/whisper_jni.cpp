@@ -82,10 +82,26 @@ Java_com_pca_assistant_stt_WhisperJniRecognizer_nativeRecognize(
     {
         jshort* raw = env->GetShortArrayElements(jPcm, nullptr);
         if (!raw) return env->NewStringUTF("");
+        float maxAbs = 0.0f;
         for (jsize i = 0; i < len; ++i) {
-            samples[i] = static_cast<float>(raw[i]) / 32768.0f;
+            float v = static_cast<float>(raw[i]) / 32768.0f;
+            samples[i] = v;
+            float a = v < 0 ? -v : v;
+            if (a > maxAbs) maxAbs = a;
         }
         env->ReleaseShortArrayElements(jPcm, raw, JNI_ABORT);
+        // Peak-normalize quiet far-field audio. Whisper's internal
+        // no_speech_thold rejects low-amplitude segments and returns empty
+        // text; the phone's mic often yields peaks around 0.05-0.3 of full
+        // scale. Scale the peak up to ~0.95, but cap the gain so we don't
+        // blow up pure silence/noise into a false signal.
+        if (maxAbs > 1e-4f) {
+            float gain = 0.95f / maxAbs;
+            if (gain > 20.0f) gain = 20.0f;
+            if (gain > 1.0f) {
+                for (jsize i = 0; i < len; ++i) samples[i] *= gain;
+            }
+        }
     }
 
     whisper_full_params fparams = whisper_full_default_params(WHISPER_SAMPLING_GREEDY);
@@ -98,6 +114,9 @@ Java_com_pca_assistant_stt_WhisperJniRecognizer_nativeRecognize(
     fparams.single_segment   = false;
     fparams.suppress_blank   = true;
     fparams.n_threads        = nThreads > 0 ? nThreads : 4;
+    // Be tolerant of quiet far-field phone audio: raise the no-speech
+    // rejection bar so a soft but real utterance isn't dropped as silence.
+    fparams.no_speech_thold  = 0.85f;
 
     std::string langStr = jstring_to_utf8(env, jLanguage);
     // Empty / "auto" — whisper.cpp will run language detection itself.
