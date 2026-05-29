@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  PCA Network Security Config (spec §7.2).
+
+  Decision (B-13): cleartext is permitted globally at the manifest layer
+  because Android's network_security_config does NOT support CIDR-range
+  rules — we cannot whitelist "any RFC-1918 address" without enumerating
+  ~65 000 entries. Users put their bridge on arbitrary LAN IPs
+  (192.168.x.y, 10.x.y.z) and the restrictive form silently broke that.
+
+  Sensitive endpoints are protected at the code layer instead:
+    - ModelDownloader.isAcceptableModelUrl REQUIRES https for any host
+      outside loopback + RFC-1918 (model weights are effectively
+      executable code — see SECURITY.md §PCA-S-5).
+    - HttpBridgeProvider.validateBridgeUrl pre-rejects everything that
+      isn't http/https.
+    - The bridge JSON contains only anonymised window context (no raw
+      PII per PCA-S-1), so an on-path observer on the LAN gains the
+      least-sensitive payload in the system.
+
+  Users who want belt-and-braces TLS for the bridge can:
+    1. Run the bridge over HTTPS with a self-signed cert
+    2. Install that cert as a user-trust CA (Settings → Security →
+       Install certificate) — the trust-anchors block below already
+       includes the user store
+-->
+<network-security-config>
+    <base-config cleartextTrafficPermitted="true">
+        <trust-anchors>
+            <certificates src="system" />
+            <certificates src="user" overridePins="false" />
+        </trust-anchors>
+    </base-config>
+</network-security-config>

@@ -1,0 +1,108 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">עוזר הקשר אישי</string>
+    <string name="app_short">PCA</string>
+
+    <string name="notif_channel_listening">האזנה רציפה</string>
+    <string name="notif_channel_listening_desc">חיווי ש-PCA מקליט שמע לניתוח</string>
+    <string name="notif_channel_advice">המלצות העוזר</string>
+    <string name="notif_channel_advice_desc">המלצות יזומות מהעוזר</string>
+    <string name="notif_listening_title">PCA — מאזין</string>
+    <string name="notif_listening_text_active">הקלטה פעילה · חלונות של 5 דקות</string>
+    <string name="notif_listening_text_paused">מושהה</string>
+    <string name="action_pause">השהה</string>
+    <string name="action_resume">המשך</string>
+    <string name="action_stop">עצור</string>
+
+    <string name="feedback_useful">מועיל</string>
+    <string name="feedback_not_useful">לא</string>
+    <string name="feedback_not_now">לא עכשיו</string>
+
+    <string name="onb_welcome_title">ברוכים הבאים ל-PCA</string>
+    <string name="onb_welcome_body">עוזר הקשר אישי. מאזין בחלונות של 5 דקות, מעריך את המצב מקומית ומציע הצעה רק כשהיא באמת מועילה. STT, מסד נתונים והטמעות נשארים על המכשיר.</string>
+    <string name="onb_consent_title">הסכמה</string>
+    <string name="onb_consent_body">PCA מקליט את המיקרופון ברציפות. בחלק מהמדינות הקלטת שיחות מחייבת הסכמת כל הצדדים. בלחיצה על אישור אתה מקבל אחריות לעמידה בחוק במדינתך.</string>
+    <string name="onb_consent_accept">הבנתי ואני מסכים</string>
+    <string name="onb_perms_title">הרשאות</string>
+    <string name="onb_perms_body">ל-PCA דרושים מיקרופון, התראות ומיקום. מיקום ברקע אופציונלי אך מאפשר את הגדר "אל תקליט בבית".</string>
+    <string name="onb_perms_grant">הענק הרשאות</string>
+    <string name="onb_enroll_title">רישום הבעלים</string>
+    <string name="onb_enroll_body">אמת את זהותך עם ביומטריה ולאחר מכן אמור את חמש המשפטים כדי ש-PCA יוכל להבדיל את קולך מאחרים בקרבת מקום. ההטבעה הקולית מוצפנת ב-Android Keystore ולא יוצאת מהמכשיר.</string>
+    <string name="onb_enroll_biometric">אמת ביומטריה</string>
+    <string name="onb_enroll_phrase">משפט %1$d / 5: «%2$s»</string>
+    <string name="onb_enroll_record">הקלט משפט</string>
+    <string name="onb_enroll_done">הרישום הסתיים</string>
+    <string name="onb_finish_title">הכל מוכן</string>
+    <string name="onb_finish_body">PCA יפעל ברקע. פתח את לוח הבקרה כדי לראות חלונות, או עצור את השירות בכל עת.</string>
+    <string name="onb_start">התחל להאזין</string>
+
+    <string name="dash_title">לוח בקרה</string>
+    <string name="dash_state_listening">מאזין</string>
+    <string name="dash_state_paused">מושהה</string>
+    <string name="dash_state_stopped">עצור</string>
+    <string name="dash_windows_today">חלונות היום: %1$d</string>
+    <string name="dash_interventions_today">התערבויות היום: %1$d</string>
+    <string name="dash_open_threads">נושאים פתוחים: %1$d</string>
+    <string name="dash_llm_provider">ספק LLM: %1$s</string>
+    <string name="dash_recent_window">חלון אחרון</string>
+    <string name="dash_no_windows">אין חלונות עדיין — התחל לדבר</string>
+    <string name="dash_quick_pause">השהה</string>
+    <string name="dash_quick_resume">המשך</string>
+
+    <string name="hist_title">היסטוריה</string>
+    <string name="hist_day">יום %1$s</string>
+    <string name="hist_delete_window">מחק חלון</string>
+    <string name="hist_view_original">מקור</string>
+    <string name="hist_view_anonymized">לאחר אנונימיזציה (נשלח ל-LLM)</string>
+
+    <string name="settings_title">הגדרות</string>
+    <string name="settings_provider">ספק LLM</string>
+    <string name="settings_provider_mock">דמה מקומית (גיבוי לא-מקוון)</string>
+    <string name="settings_provider_bridge">HTTP bridge (codex / Gemini) — ברירת מחדל</string>
+    <string name="settings_bridge_url">כתובת ה-bridge</string>
+    <string name="settings_bridge_token">טוקן ה-bridge (מודפס בהפעלה הראשונה)</string>
+    <string name="settings_bridge_url_missing">כתובת ה-bridge ריקה. עד שתגדיר אותה (או תבחר ב"דמה מקומית" למעלה) כל חלון נופל ל-mock הלא-מקוון — הרץ את bridge/server.py על המחשב הנייד / Termux כדי לקבל תשובות אמיתיות של codex/Gemini.</string>
+    <string name="settings_window_minutes">משך חלון (דקות)</string>
+    <string name="settings_language">שפה ראשית</string>
+    <string name="settings_lang_system">שפת מערכת</string>
+    <string name="settings_lang_ru">רוסית</string>
+    <string name="settings_lang_he">עברית</string>
+    <string name="settings_lang_en">אנגלית</string>
+    <string name="settings_model">מודל STT</string>
+    <string name="settings_model_android">Android SpeechRecognizer (מובנה, חינם)</string>
+    <string name="settings_model_whisper_small">Whisper small Q5 (~500 MB)</string>
+    <string name="settings_model_whisper_turbo">Whisper Large-v3 turbo Q5 (~800 MB)</string>
+    <string name="settings_model_ivrit">Ivrit.AI turbo (בוסטר עברית)</string>
+    <string name="settings_download_model">הורד מודל</string>
+    <string name="settings_models_title">הורדת מודלים</string>
+    <string name="settings_models_delete">מחק</string>
+    <string name="settings_models_ecapa_warning">ניסיוני — כתובת ברירת המחדל מצביעה על ייצוא ERes2Net שדורש mel-features, אבל הצינור שלנו שולח PCM גולמי. ההטבעות יהיו רעש, זיהוי הבעלים לא יעבוד בשקט. ראה SECURITY.md (PCA-S-19).</string>
+    <string name="settings_allow_cellular">הורד דרך רשת סלולרית</string>
+    <string name="settings_allow_cellular_desc">כבוי כברירת מחדל. Whisper turbo במשקל ~800 מ"ב — עדיף להמתין ל-Wi-Fi.</string>
+    <string name="dash_bootstrap_waiting_wifi">ממתין ל-Wi-Fi להורדת מודלים (%1$d/%2$d). בהגדרות אפשר לאפשר רשת סלולרית.</string>
+    <string name="dash_bootstrap_running">מוריד מודל %1$d / %2$d: %3$d %% (%4$d / %5$d מ"ב)</string>
+    <string name="dash_bootstrap_failed">הורדת המודל נכשלה: %1$s</string>
+    <string name="settings_geofence_pause">השהה בבית (Geofence)</string>
+    <string name="settings_wipe">מחיקה מלאה</string>
+    <string name="settings_wipe_confirm">למחוק את כל הנתונים?</string>
+    <string name="settings_wipe_confirm_body">כל התמלולים, הסיכומים, פרופיל הבעלים והמשוב יימחקו. לא ניתן לשחזר.</string>
+    <string name="settings_wipe_yes">מחק</string>
+    <string name="settings_re_enroll">רישום מחדש של הקול</string>
+
+    <string name="perm_denied_mic">הרשאת מיקרופון נדחתה. PCA לא יכול לפעול בלעדיה.</string>
+    <string name="perm_denied_notif">הרשאת התראות נדחתה. אינדיקטור הרקע יוצג, אך לא יישלחו התראות עם המלצות.</string>
+
+    <string-array name="enroll_phrases">
+        <item>זהו קולי לרישום בעוזר הקשר אישי.</item>
+        <item>אני הבעלים של המכשיר הזה ואלו המילים שלי.</item>
+        <item>שועל חום זריז מדלג מעל הכלב העצלן בחמש אחר הצהריים.</item>
+        <item>אנא זכור את צליל קולי לזיהוי בעתיד.</item>
+        <item>עוזר הקשר האישי לומד עכשיו לזהות אותי.</item>
+    </string-array>
+
+    <string name="action_continue">המשך</string>
+    <string name="action_cancel">ביטול</string>
+    <string name="action_back">חזור</string>
+    <string name="action_close">סגור</string>
+    <string name="action_save">שמור</string>
+</resources>

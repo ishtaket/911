@@ -1,0 +1,117 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Personal Context Assistant</string>
+    <string name="app_short">PCA</string>
+
+    <!-- Foreground notification -->
+    <string name="notif_channel_listening">Continuous listening</string>
+    <string name="notif_channel_listening_desc">Indicates that PCA is recording audio for analysis</string>
+    <string name="notif_channel_advice">Assistant advice</string>
+    <string name="notif_channel_advice_desc">Proactive suggestions from the assistant</string>
+    <string name="notif_listening_title">PCA — listening</string>
+    <string name="notif_listening_text_active">Recording in progress · 5-min windows</string>
+    <string name="notif_listening_text_paused">Paused</string>
+    <string name="action_pause">Pause</string>
+    <string name="action_resume">Resume</string>
+    <string name="action_stop">Stop</string>
+
+    <!-- Feedback -->
+    <string name="feedback_useful">Useful</string>
+    <string name="feedback_not_useful">No</string>
+    <string name="feedback_not_now">Not now</string>
+
+    <!-- Onboarding -->
+    <string name="onb_welcome_title">Welcome to PCA</string>
+    <string name="onb_welcome_body">A personal context assistant that listens in 5-minute windows, evaluates the situation locally, and surfaces a proactive suggestion only when it truly helps. STT, DB, and embeddings stay on this device.</string>
+    <string name="onb_consent_title">Consent</string>
+    <string name="onb_consent_body">PCA continuously records the microphone. In some jurisdictions recording conversations requires the consent of all parties. By tapping Accept you confirm responsibility for legal compliance in your country.</string>
+    <string name="onb_consent_accept">I understand and accept</string>
+    <string name="onb_perms_title">Permissions</string>
+    <string name="onb_perms_body">PCA needs microphone, notifications, and location access. Background location is optional but enables the "do not record at home" geofence.</string>
+    <string name="onb_perms_grant">Grant permissions</string>
+    <string name="onb_enroll_title">Owner enrollment</string>
+    <string name="onb_enroll_body">Confirm your identity with biometrics, then say the five reference phrases so PCA can distinguish your voice from others nearby. The voice embedding is encrypted in Android Keystore and never leaves the device.</string>
+    <string name="onb_enroll_biometric">Verify biometrics</string>
+    <string name="onb_enroll_phrase">Phrase %1$d / 5: "%2$s"</string>
+    <string name="onb_enroll_record">Record phrase</string>
+    <string name="onb_enroll_done">Enrollment complete</string>
+    <string name="onb_finish_title">All set</string>
+    <string name="onb_finish_body">PCA will now run quietly in the background. Open the dashboard to see live windows or stop the service at any time.</string>
+    <string name="onb_start">Start listening</string>
+
+    <!-- Dashboard -->
+    <string name="dash_title">Dashboard</string>
+    <string name="dash_state_listening">Listening</string>
+    <string name="dash_state_paused">Paused</string>
+    <string name="dash_state_stopped">Stopped</string>
+    <string name="dash_windows_today">Windows today: %1$d</string>
+    <string name="dash_interventions_today">Interventions today: %1$d</string>
+    <string name="dash_open_threads">Open threads: %1$d</string>
+    <string name="dash_llm_provider">LLM provider: %1$s</string>
+    <string name="dash_recent_window">Recent window</string>
+    <string name="dash_no_windows">No windows yet — start speaking</string>
+    <string name="dash_quick_pause">Pause</string>
+    <string name="dash_quick_resume">Resume</string>
+
+    <!-- History -->
+    <string name="hist_title">History</string>
+    <string name="hist_day">Day %1$s</string>
+    <string name="hist_delete_window">Delete window</string>
+    <string name="hist_view_original">Original</string>
+    <string name="hist_view_anonymized">Anonymized (sent to LLM)</string>
+
+    <!-- Settings -->
+    <string name="settings_title">Settings</string>
+    <string name="settings_provider">LLM provider</string>
+    <string name="settings_provider_mock">Local mock (offline fallback)</string>
+    <string name="settings_provider_bridge">HTTP bridge (codex / Gemini) — default</string>
+    <string name="settings_bridge_url">Bridge URL</string>
+    <string name="settings_bridge_token">Bridge token (printed by the bridge on first run)</string>
+    <string name="settings_bridge_url_missing">Bridge URL is empty. Until you set it (or pick "Local mock" above) every window falls back to the offline mock provider — set up bridge/server.py on your laptop / Termux to get real codex/Gemini answers.</string>
+    <string name="settings_window_minutes">Window duration (minutes)</string>
+    <string name="settings_language">Primary language</string>
+    <string name="settings_lang_system">System</string>
+    <string name="settings_lang_ru">Russian</string>
+    <string name="settings_lang_he">Hebrew</string>
+    <string name="settings_lang_en">English</string>
+    <string name="settings_model">STT model</string>
+    <string name="settings_model_android">Android SpeechRecognizer (built-in, free)</string>
+    <string name="settings_model_whisper_small">Whisper small Q5 (~500 MB)</string>
+    <string name="settings_model_whisper_turbo">Whisper Large-v3 turbo Q5 (~800 MB)</string>
+    <string name="settings_model_ivrit">Ivrit.AI turbo (Hebrew booster)</string>
+    <string name="settings_download_model">Download model</string>
+    <string name="settings_models_title">Model downloads</string>
+    <string name="settings_models_delete">Delete</string>
+    <string name="settings_models_ecapa_warning">Experimental — current default URL points at an ERes2Net export that expects mel features but our pipeline feeds raw PCM. Speaker identification will produce noise embeddings and silently fail to recognize the owner. See SECURITY.md (PCA-S-19).</string>
+    <string name="settings_allow_cellular">Download over cellular</string>
+    <string name="settings_allow_cellular_desc">Off by default. Whisper turbo is ~800 MB — keep on Wi-Fi unless you really want to pay for the bytes.</string>
+    <string name="dash_bootstrap_waiting_wifi">Waiting for Wi-Fi to download models (%1$d/%2$d). Toggle Settings → Download over cellular if you don\'t mind the data.</string>
+    <string name="dash_bootstrap_running">Downloading model %1$d / %2$d: %3$d %% (%4$d / %5$d MB)</string>
+    <string name="dash_bootstrap_failed">Model download failed: %1$s</string>
+    <string name="settings_geofence_pause">Pause at home (geofence)</string>
+    <string name="settings_wipe">Full wipe</string>
+    <string name="settings_wipe_confirm">Erase all data?</string>
+    <string name="settings_wipe_confirm_body">All transcripts, summaries, owner profile, and feedback will be deleted. This cannot be undone.</string>
+    <string name="settings_wipe_yes">Erase</string>
+    <string name="settings_re_enroll">Re-enroll voice</string>
+
+    <!-- Permissions denied -->
+    <string name="perm_denied_mic">Microphone permission denied. PCA cannot work without it.</string>
+    <string name="perm_denied_notif">Notification permission denied. The foreground indicator will still show, but advice will not be delivered.</string>
+
+    <!-- Voice enrollment phrases (English) -->
+    <string-array name="enroll_phrases">
+        <item>This is my voice for personal context assistant enrollment.</item>
+        <item>I am the owner of this device and these are my own words.</item>
+        <item>The quick brown fox jumps over the lazy dog at five in the afternoon.</item>
+        <item>Please remember the sound of my voice for future identification.</item>
+        <item>Personal context assistant is now learning to recognise me.</item>
+    </string-array>
+
+    <!-- Generic -->
+    <string name="action_continue">Continue</string>
+    <string name="action_cancel">Cancel</string>
+    <string name="action_back">Back</string>
+    <string name="action_close">Close</string>
+    <string name="action_save">Save</string>
+</resources>

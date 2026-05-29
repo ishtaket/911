@@ -1,0 +1,108 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Личный контекст-ассистент</string>
+    <string name="app_short">PCA</string>
+
+    <string name="notif_channel_listening">Постоянное прослушивание</string>
+    <string name="notif_channel_listening_desc">Индикатор того, что PCA записывает звук для анализа</string>
+    <string name="notif_channel_advice">Подсказки ассистента</string>
+    <string name="notif_channel_advice_desc">Проактивные подсказки от ассистента</string>
+    <string name="notif_listening_title">PCA — слушаю</string>
+    <string name="notif_listening_text_active">Идёт запись · окна по 5 минут</string>
+    <string name="notif_listening_text_paused">Пауза</string>
+    <string name="action_pause">Пауза</string>
+    <string name="action_resume">Продолжить</string>
+    <string name="action_stop">Остановить</string>
+
+    <string name="feedback_useful">Полезно</string>
+    <string name="feedback_not_useful">Нет</string>
+    <string name="feedback_not_now">Не сейчас</string>
+
+    <string name="onb_welcome_title">Добро пожаловать в PCA</string>
+    <string name="onb_welcome_body">Личный контекст-ассистент. Слушает окнами по 5 минут, локально оценивает ситуацию и выдаёт подсказку только если она реально полезна. STT, БД и эмбеддинги — на устройстве.</string>
+    <string name="onb_consent_title">Согласие</string>
+    <string name="onb_consent_body">PCA непрерывно записывает микрофон. В ряде юрисдикций запись разговоров требует согласия всех участников. Принимая, вы подтверждаете ответственность за соблюдение законодательства своей страны.</string>
+    <string name="onb_consent_accept">Понятно и принимаю</string>
+    <string name="onb_perms_title">Разрешения</string>
+    <string name="onb_perms_body">PCA нужны микрофон, уведомления и геолокация. Фоновая геолокация необязательна, но включает геозону «не записывать дома».</string>
+    <string name="onb_perms_grant">Дать разрешения</string>
+    <string name="onb_enroll_title">Регистрация владельца</string>
+    <string name="onb_enroll_body">Подтвердите личность биометрией, затем произнесите пять опорных фраз, чтобы PCA отличал ваш голос от голосов рядом. Голосовой эмбеддинг шифруется в Android Keystore и не покидает устройство.</string>
+    <string name="onb_enroll_biometric">Проверить биометрию</string>
+    <string name="onb_enroll_phrase">Фраза %1$d / 5: «%2$s»</string>
+    <string name="onb_enroll_record">Записать фразу</string>
+    <string name="onb_enroll_done">Регистрация завершена</string>
+    <string name="onb_finish_title">Готово</string>
+    <string name="onb_finish_body">PCA будет работать в фоне. Откройте панель, чтобы видеть окна, или остановите сервис в любой момент.</string>
+    <string name="onb_start">Начать прослушивание</string>
+
+    <string name="dash_title">Панель</string>
+    <string name="dash_state_listening">Слушает</string>
+    <string name="dash_state_paused">Пауза</string>
+    <string name="dash_state_stopped">Остановлен</string>
+    <string name="dash_windows_today">Окон сегодня: %1$d</string>
+    <string name="dash_interventions_today">Подсказок сегодня: %1$d</string>
+    <string name="dash_open_threads">Открытых тем: %1$d</string>
+    <string name="dash_llm_provider">LLM-провайдер: %1$s</string>
+    <string name="dash_recent_window">Последнее окно</string>
+    <string name="dash_no_windows">Окон ещё нет — начните говорить</string>
+    <string name="dash_quick_pause">Пауза</string>
+    <string name="dash_quick_resume">Продолжить</string>
+
+    <string name="hist_title">История</string>
+    <string name="hist_day">День %1$s</string>
+    <string name="hist_delete_window">Удалить окно</string>
+    <string name="hist_view_original">Оригинал</string>
+    <string name="hist_view_anonymized">Анонимизировано (ушло в LLM)</string>
+
+    <string name="settings_title">Настройки</string>
+    <string name="settings_provider">LLM-провайдер</string>
+    <string name="settings_provider_mock">Локальная заглушка (offline-фолбэк)</string>
+    <string name="settings_provider_bridge">HTTP-bridge (codex / Gemini) — по умолчанию</string>
+    <string name="settings_bridge_url">URL bridge</string>
+    <string name="settings_bridge_token">Токен bridge (печатается при первом запуске)</string>
+    <string name="settings_bridge_url_missing">URL bridge не задан. Пока его нет (или не выбрана «Локальная заглушка») каждое окно уходит в офлайн-заглушку — подними bridge/server.py на ноутбуке / Termux, чтобы получать настоящие ответы codex/Gemini.</string>
+    <string name="settings_window_minutes">Длительность окна (мин)</string>
+    <string name="settings_language">Основной язык</string>
+    <string name="settings_lang_system">Системный</string>
+    <string name="settings_lang_ru">Русский</string>
+    <string name="settings_lang_he">Иврит</string>
+    <string name="settings_lang_en">Английский</string>
+    <string name="settings_model">STT-модель</string>
+    <string name="settings_model_android">Android SpeechRecognizer (встроен, бесплатно)</string>
+    <string name="settings_model_whisper_small">Whisper small Q5 (~500 МБ)</string>
+    <string name="settings_model_whisper_turbo">Whisper Large-v3 turbo Q5 (~800 МБ)</string>
+    <string name="settings_model_ivrit">Ivrit.AI turbo (бустер иврита)</string>
+    <string name="settings_download_model">Скачать модель</string>
+    <string name="settings_models_title">Загрузка моделей</string>
+    <string name="settings_models_delete">Удалить</string>
+    <string name="settings_models_ecapa_warning">Экспериментально — URL по умолчанию указывает на ERes2Net-экспорт, которому нужны mel-features, а мы шлём raw PCM. Эмбеддинги будут шумом, owner-ID молча не работает. См. SECURITY.md (PCA-S-19).</string>
+    <string name="settings_allow_cellular">Загружать по мобильному</string>
+    <string name="settings_allow_cellular_desc">По умолчанию выключено. Whisper turbo весит ~800 МБ — лучше дождаться Wi-Fi.</string>
+    <string name="dash_bootstrap_waiting_wifi">Жду Wi-Fi чтобы скачать модели (%1$d/%2$d). В Настройках можно разрешить мобильный трафик.</string>
+    <string name="dash_bootstrap_running">Качаю модель %1$d / %2$d: %3$d %% (%4$d / %5$d МБ)</string>
+    <string name="dash_bootstrap_failed">Загрузка модели не удалась: %1$s</string>
+    <string name="settings_geofence_pause">Пауза дома (геозона)</string>
+    <string name="settings_wipe">Полная очистка</string>
+    <string name="settings_wipe_confirm">Удалить все данные?</string>
+    <string name="settings_wipe_confirm_body">Все транскрипты, сводки, профиль владельца и обратная связь будут удалены. Действие необратимо.</string>
+    <string name="settings_wipe_yes">Удалить</string>
+    <string name="settings_re_enroll">Переобучить голос</string>
+
+    <string name="perm_denied_mic">Доступ к микрофону запрещён. PCA не работает без него.</string>
+    <string name="perm_denied_notif">Доступ к уведомлениям запрещён. Индикатор фонового сервиса показан будет, но подсказки не придут.</string>
+
+    <string-array name="enroll_phrases">
+        <item>Это мой голос для регистрации в личном контекст-ассистенте.</item>
+        <item>Я являюсь владельцем этого устройства и это мои собственные слова.</item>
+        <item>Съешь же ещё этих мягких французских булок да выпей чаю в пять часов.</item>
+        <item>Пожалуйста, запомни звучание моего голоса для дальнейшего распознавания.</item>
+        <item>Личный контекст-ассистент сейчас учится меня узнавать.</item>
+    </string-array>
+
+    <string name="action_continue">Дальше</string>
+    <string name="action_cancel">Отмена</string>
+    <string name="action_back">Назад</string>
+    <string name="action_close">Закрыть</string>
+    <string name="action_save">Сохранить</string>
+</resources>

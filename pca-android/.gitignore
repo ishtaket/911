@@ -1,0 +1,20 @@
+.gradle/
+build/
+local.properties
+captures/
+.idea/
+*.iml
+.DS_Store
+app/release/
+app/debug/
+*.keystore
+*.jks
+# Exception: the committed stable DEBUG keystore (well-known password, not a
+# secret) so every build shares a signature and sideload updates install.
+!/app/pca-debug.jks
+
+# NDK / CMake build outputs (whisper.cpp FetchContent + JNI bridge)
+.cxx/
+app/.cxx/
+app/src/main/cpp/build/
+app/src/main/cpp/_deps/

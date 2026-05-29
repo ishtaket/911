@@ -1,97 +1,90 @@
-# Rescue911 OSINT — Israel Missing-Person Search Platform
+# Personal Context Assistant (PCA)
 
-A lawful, evidence-based, multilingual platform for missing-person cases inside Israel, built **Android-first, server-ready**.
+An Android app that listens to the owner's day in five-minute windows,
+transcribes locally with whisper.cpp, identifies the owner's voice via
+an ECAPA-TDNN ONNX embedding, anonymises PII, and asks a
+subscription-CLI LLM (codex / Claude Code / Gemini CLI) whether the
+window contains anything worth surfacing or remembering. Built for a
+Samsung Galaxy S21 Ultra (SM-G998B/DS, Exynos 2100, Android 14) but
+runs on any arm64 Android 13+ device.
 
 ```
-Android operator UI  →  FastAPI backend  →  Public OSINT / GeoINT providers
-                              ↓
-                  Postgres+PostGIS / Redis / S3 / OpenSearch / Qdrant
+mic → AudioCapture → Whisper STT
+                   → ECAPA owner-ID
+                   → SQLCipher transcript store
+                   → Anonymizer (PII → tokens)
+                   → LLM (codex CLI / Gemini CLI / mock)
+                   → Advice notification, open-threads, hour/day rollups
 ```
 
-The Android app is the primary operator UI (volunteers, analysts).
-The backend is the secure OSINT/GeoINT brain and storage.
+## Download the APK directly to your phone
 
-## Status (milestone 1)
+No GitHub login needed. The latest debug build is auto-published from
+the development branch:
 
-- ✅ Android Kotlin/Compose scaffold (`com.rescue911.osint`) — 16 screens, theme, navigation, mock data, EN/HE/RU strings, JUnit + Compose UI tests.
-- ✅ FastAPI backend with health, cases, search, geoint, evidence, hypotheses, review, audit endpoints — 19 tests pass.
-- ✅ Provider interfaces + mock providers for web (Brave/CSE/SerpAPI), social (FB/IG/TT/YT/TG/Reddit/X/VK/LinkedIn), archive (Wayback/CommonCrawl/snippet/mirror), GeoINT (EXIF/OCR/Vision/GeoSeer/Picarta/OpenAI), maps (Google/LocationIQ/OSM/Sentinel).
-- ✅ Three-level validation engine (L1 automated → L2 cross-source → L3 human).
-- ✅ Audit log on every external provider call and L3 review.
-- ✅ `infra/docker-compose.local.yml` (Postgres+PostGIS, Redis, MinIO, optional OpenSearch / Qdrant; backend container).
-- ✅ PowerShell scripts for env check, Docker, backend, Android build/install/smoke, scaffold verification.
-- ✅ GitHub Actions CI (backend pytest; Android lint check).
+* APK — <https://github.com/ishtaket/911/releases/download/pca-latest/app-debug.apk>
+* SHA-256 — <https://github.com/ishtaket/911/releases/download/pca-latest/app-debug.apk.sha256>
+* Build info — <https://github.com/ishtaket/911/releases/download/pca-latest/BUILD_INFO.txt>
+
+Open the APK link in Chrome on the phone, allow "install unknown
+apps" for Chrome once when prompted, and tap install. The
+`whisper.cpp` and ECAPA-TDNN ONNX models download on first launch
+over WiFi.
 
 ## Hard safety boundaries
 
-- Public, lawful, permissioned, or API-accessible data only.
-- No hacking, login bypass, leaked data, rate-limit evasion, fake identity, or automated contact.
-- Sensitive personal data is minimized, protected, access-controlled, audit-logged.
-- No "found" without **Level 3 human confirmation**.
-
-## Quick start (Windows)
-
-```powershell
-# 1. Verify your machine has the prerequisites:
-.\scripts\check_local_environment.ps1
-
-# 2. Bring up infra (Postgres+PostGIS, Redis, MinIO):
-.\scripts\dev_docker_up.ps1
-
-# 3. Run backend in dev mode:
-.\scripts\dev_backend.ps1
-# → http://localhost:8011/v1/health  (Rescue911 dedicated local port; 8000 is reserved)
-
-# 4. Run backend tests:
-.\scripts\dev_backend_test.ps1
-
-# 5. Build the Android app (requires JDK 17 + Android SDK):
-.\scripts\dev_android_build.ps1
-.\scripts\dev_android_smoke.ps1   # installs + launches + checks logcat
-```
+* No raw PCM is ever persisted. Audio is forwarded to STT and dropped.
+* Local DB is encrypted with SQLCipher; the passphrase is wrapped by
+  an AndroidKeystore AES/GCM key (StrongBox preferred).
+* The Anonymizer runs before any transcript leaves device memory.
+  Owner identity (email, phone) never appears in an LLM payload.
+* LLM CLIs use **subscription auth** (the CLI's own browser-OAuth
+  flow), never pay-per-token API keys. The Android side carries no
+  `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, or `GEMINI_API_KEY`.
+* The HTTP bridge listens on `127.0.0.1` by default; cleartext HTTP
+  is allowed only on loopback and RFC-1918 ranges via
+  `network_security_config.xml`.
 
 ## Repository layout
 
 ```
 .
-├── android/              # Kotlin/Compose app (com.rescue911.osint)
-├── backend/              # FastAPI backend
-├── infra/                # Docker compose + nginx skeleton
-├── scripts/              # PowerShell scripts for Windows local dev
-├── docs/                 # Specs, runbooks, legal/privacy/security
-├── .claude/              # Claude Code agents, skills, prompts, ROUTER
-├── .github/workflows/    # CI
-├── CLAUDE.md             # Project operating system for Claude Code
-├── .env.example          # Backend config template (no secrets)
+├── pca-android/             # Kotlin/Compose app (com.pca.assistant)
+│   ├── app/                 # Android module + tests
+│   ├── bridge/              # Python HTTP bridge to codex / Claude / Gemini CLI
+│   └── ...
+├── .github/workflows/       # CI (pca-ci.yml) + repo safety
+├── CLAUDE.md                # Project operating system for Claude Code
 └── README.md
 ```
 
-## Languages
+## Build locally
 
-- **English** (default)
-- **Hebrew** with full RTL layout (`values-iw/`)
-- **Russian** (`values-ru/`)
-- Arabic place-name variants are used in backend query generation only.
+JDK 17 + Android SDK with platform 34 + NDK 26.1.10909125 + CMake 3.22.
 
-## Documentation
+```bash
+cd pca-android
+./gradlew :app:assembleDebug
+./gradlew :app:testDebugUnitTest
+```
 
-- [`docs/PROJECT_SPEC.md`](docs/PROJECT_SPEC.md)
-- [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md)
-- [`docs/ANDROID_APP.md`](docs/ANDROID_APP.md)
-- [`docs/BACKEND_API.md`](docs/BACKEND_API.md)
-- [`docs/GEOINT_PIPELINE.md`](docs/GEOINT_PIPELINE.md)
-- [`docs/SOCIAL_SEARCH.md`](docs/SOCIAL_SEARCH.md)
-- [`docs/ARCHIVE_SEARCH.md`](docs/ARCHIVE_SEARCH.md)
-- [`docs/LEGAL_BOUNDARIES.md`](docs/LEGAL_BOUNDARIES.md)
-- [`docs/PRIVACY.md`](docs/PRIVACY.md)
-- [`docs/SECURITY.md`](docs/SECURITY.md)
-- [`docs/TESTING.md`](docs/TESTING.md)
-- [`docs/RUNBOOK.md`](docs/RUNBOOK.md)
-- [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md)
-- [`docs/API_KEYS.md`](docs/API_KEYS.md)
-- [`docs/LOCAL_ENVIRONMENT.md`](docs/LOCAL_ENVIRONMENT.md)
-- [`docs/FINAL_REPORT.md`](docs/FINAL_REPORT.md) — what's built, what's mocked, what's blocked.
+The resulting APK is at
+`pca-android/app/build/outputs/apk/debug/app-debug.apk`.
 
-## Contributing
+## Bridge (subscription CLI access)
 
-This is a sensitive domain. Read `CLAUDE.md`, `docs/LEGAL_BOUNDARIES.md`, and `docs/PRIVACY.md` before opening a PR. Every milestone must include unit tests, mocked-provider integration tests, smoke / E2E checks, doc updates, and a security/legal review note.
+The Android app POSTs a `LlmRequest` JSON to a user-controlled HTTP
+bridge that fronts an installed CLI (`codex`, `claude`, or `gemini`).
+A reference Python bridge lives at `pca-android/bridge/server.py`,
+and `pca-android/bridge/install-termux.sh` runs it on the same phone
+under Termux. Authentication is handled by the CLI's own browser
+login flow — no API keys are stored on the device.
+
+## CI / branch model
+
+* Develop on `claude/build-samsung-app-YaU0S`.
+* Every push to that branch triggers `pca-ci.yml`, which builds the
+  debug APK, runs JVM unit tests, and refreshes the rolling
+  `pca-latest` GitHub Release with the new APK + SHA-256.
+* `repo-safety.yml` blocks tracked APKs, AABs, binary leaks outside
+  `pca-android/app/src/main/res/`, and pattern-matched API keys.

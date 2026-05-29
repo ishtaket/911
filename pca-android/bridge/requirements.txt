@@ -1,0 +1,9 @@
+# No third-party dependencies.
+#
+# The bridge (server.py) is written against the Python standard library only
+# (http.server, json, subprocess) so it runs under Termux with a bare
+# `pkg install python` — no FastAPI / uvicorn / pydantic, which would drag in
+# Rust-built wheels (pydantic-core, watchfiles) that have no aarch64-android
+# build and fail to compile on-device.
+#
+# Just run:  python server.py --provider codex
