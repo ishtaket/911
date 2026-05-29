@@ -133,6 +133,7 @@ class DashboardViewModel @Inject constructor(
                 recentInterventions = ints,
                 sttDiag = sttDiag(),
                 capDiag = "cap=${cap.chunks} peak=${cap.lastPeak} vad=${cap.speech} rec=${cap.recognize} txt=${cap.nonEmpty}" +
+                    (if (cap.whisperNote.isNotEmpty()) "\n${cap.whisperNote}" else "") +
                     (if (cap.lastErr.isNotEmpty()) "\nerr=${cap.lastErr}" else ""),
             )
         }.stateIn(

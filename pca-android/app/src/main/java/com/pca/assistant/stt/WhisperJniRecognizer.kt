@@ -26,6 +26,7 @@ import javax.inject.Singleton
 class WhisperJniRecognizer @Inject constructor(
     private val registry: ModelRegistry,
     private val settings: AppSettings,
+    private val diag: com.pca.assistant.audio.CaptureDiag,
 ) : SpeechRecognizer {
 
     override val id: String = "whisper.cpp"
@@ -67,7 +68,10 @@ class WhisperJniRecognizer @Inject constructor(
             return SttResult("", 0f, hintLanguage)
         }
         ensureLoaded(modelFile)
-        if (ctxPtr == 0L) return SttResult("", 0f, hintLanguage)
+        if (ctxPtr == 0L) {
+            diag.setWhisperNote("ctx=0 init-failed model=${modelFile.name} ${modelFile.length() / 1_000_000}MB")
+            return SttResult("", 0f, hintLanguage)
+        }
 
         val text = withContext(Dispatchers.Default) {
             // Whisper.cpp is not internally thread-safe across a single
@@ -78,6 +82,7 @@ class WhisperJniRecognizer @Inject constructor(
                 if (ptr == 0L) "" else nativeRecognize(ptr, pcm, hintLanguage, recommendedThreads())
             }
         }
+        diag.setWhisperNote("ctx=ok in=${pcm.size} out='${text.take(40)}' lang=${hintLanguage ?: "auto"}")
         return SttResult(
             text = text.trim(),
             confidence = if (text.isBlank()) 0f else 0.85f,

@@ -16,8 +16,8 @@ android {
         // Spec 12.6: Android 11+ (API 30) for stable Foreground Service + NNAPI
         minSdk = 30
         targetSdk = 34
-        versionCode = 7
-        versionName = "0.2.5-mvp"
+        versionCode = 8
+        versionName = "0.2.6-mvp"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 

@@ -31,6 +31,7 @@ class CaptureDiag @Inject constructor() {
         val nonEmpty: Long = 0,
         val lastPeak: Int = 0,
         val lastErr: String = "",
+        val whisperNote: String = "",
     )
 
     private val _flow = MutableStateFlow(Snap())
@@ -45,4 +46,5 @@ class CaptureDiag @Inject constructor() {
         )
     }
     fun onError(msg: String) = _flow.update { it.copy(lastErr = msg.take(120)) }
+    fun setWhisperNote(note: String) = _flow.update { it.copy(whisperNote = note.take(120)) }
 }
