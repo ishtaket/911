@@ -163,6 +163,21 @@ class ListeningService : LifecycleService() {
         if (captureJob?.isActive == true) return
         captureJob = lifecycleScope.launch(SupervisorJob() + Dispatchers.IO) {
             if (!audioCapture.hasMicPermission()) return@launch
+            // Accumulate consecutive speech chunks into one utterance and
+            // transcribe it whole — Whisper returns empty on isolated ~1 s
+            // slivers. Flush on a silence gap or when the buffer hits the cap.
+            val utter = ArrayList<ShortArray>()
+            var utterSamples = 0
+            suspend fun flush() {
+                if (utterSamples >= MIN_UTTER_SAMPLES) {
+                    val merged = ShortArray(utterSamples)
+                    var off = 0
+                    for (c in utter) { System.arraycopy(c, 0, merged, off, c.size); off += c.size }
+                    runCatching { onSpeechChunk(merged) }
+                        .onFailure { captureDiag.onError("${it.javaClass.simpleName}: ${it.message}") }
+                }
+                utter.clear(); utterSamples = 0
+            }
             audioCapture.stream().collect { pcm ->
                 var peak = 0
                 for (s in pcm) { val a = if (s < 0) -s.toInt() else s.toInt(); if (a > peak) peak = a }
@@ -175,8 +190,11 @@ class ListeningService : LifecycleService() {
                         // bound history: 60 s
                         while (capturePcm.size > MAX_CHUNKS) capturePcm.removeFirst()
                     }
-                    runCatching { onSpeechChunk(pcm) }
-                        .onFailure { captureDiag.onError("${it.javaClass.simpleName}: ${it.message}") }
+                    utter.add(pcm); utterSamples += pcm.size
+                    if (utterSamples >= MAX_UTTER_SAMPLES) flush()
+                } else if (utter.isNotEmpty()) {
+                    // Silence after speech → utterance boundary.
+                    flush()
                 }
             }
         }
@@ -322,6 +340,11 @@ class ListeningService : LifecycleService() {
         const val ACTION_STOP = "com.pca.assistant.ACTION_STOP"
 
         const val MAX_CHUNKS = 60
+        // Whisper returns empty on isolated ~1 s chunks, so we accumulate
+        // consecutive speech into an utterance and transcribe it whole, flushing
+        // on a silence gap or at the cap. 16 kHz mono → samples = seconds * 16000.
+        const val MIN_UTTER_SAMPLES = 16_000          // ~1.0 s: skip tiny blips
+        const val MAX_UTTER_SAMPLES = 16_000 * 20     // ~20 s: bound latency/memory
 
         fun start(context: Context) {
             // Android 14 enforces "started FGS must call startForeground()
