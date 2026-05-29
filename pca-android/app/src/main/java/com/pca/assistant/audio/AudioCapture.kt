@@ -36,8 +36,13 @@ class AudioCapture @Inject constructor(
         val minBuf = AudioRecord.getMinBufferSize(
             SAMPLE_RATE_HZ, AudioFormat.CHANNEL_IN_MONO, AudioFormat.ENCODING_PCM_16BIT
         ).coerceAtLeast(BUFFER_BYTES)
+        // MIC (not VOICE_RECOGNITION): Samsung routes VOICE_RECOGNITION through
+        // an aggressive wake-word noise-suppressor/AGC that flattens ordinary
+        // speech into a low-level noise-shaped signal (observed rms≈0.04 with
+        // near-flat crest factor), which Whisper decodes to zero segments.
+        // UNPROCESSED would be ideal but isn't guaranteed on all devices.
         val record = AudioRecord(
-            MediaRecorder.AudioSource.VOICE_RECOGNITION,
+            MediaRecorder.AudioSource.MIC,
             SAMPLE_RATE_HZ,
             AudioFormat.CHANNEL_IN_MONO,
             AudioFormat.ENCODING_PCM_16BIT,

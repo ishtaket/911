@@ -100,13 +100,14 @@ Java_com_pca_assistant_stt_WhisperJniRecognizer_nativeRecognize(
             sumSq += static_cast<double>(v) * v;
         }
         env->ReleaseShortArrayElements(jPcm, raw, JNI_ABORT);
-        // Peak-normalize quiet far-field audio so a soft but real utterance
-        // isn't decoded as silence. Cap the gain so pure noise isn't blown up.
-        if (maxAbs > 1e-4f) {
-            float gain = 0.95f / maxAbs;
-            if (gain > 20.0f) gain = 20.0f;
+        // Gentle peak-normalize for quiet but real speech. Cap the gain low
+        // (8x) so a near-silent noisy buffer isn't amplified into clipping
+        // garbage that the decoder rejects.
+        if (maxAbs > 0.02f) {
+            float gain = 0.7f / maxAbs;
+            if (gain > 8.0f) gain = 8.0f;
             if (gain > 1.0f) {
-                for (jsize i = 0; i < len; ++i) samples[i] *= gain;
+                for (size_t i = 0; i < inLen; ++i) samples[i] *= gain;
             }
         }
     }
