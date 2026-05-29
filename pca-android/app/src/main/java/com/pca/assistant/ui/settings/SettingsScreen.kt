@@ -60,7 +60,9 @@ fun SettingsScreen(vm: SettingsViewModel, onBack: () -> Unit, onReEnroll: () -> 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(stringResource(R.string.settings_title)) },
+                title = {
+                    Text(stringResource(R.string.settings_title) + "  v" + com.pca.assistant.BuildConfig.VERSION_NAME)
+                },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.action_back))

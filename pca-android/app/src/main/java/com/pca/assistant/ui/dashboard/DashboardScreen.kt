@@ -51,7 +51,9 @@ fun DashboardScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(stringResource(R.string.dash_title)) },
+                title = {
+                    Text(stringResource(R.string.dash_title) + "  v" + com.pca.assistant.BuildConfig.VERSION_NAME)
+                },
                 actions = {
                     IconButton(onClick = onOpenHistory) {
                         Icon(Icons.Default.History, contentDescription = stringResource(R.string.hist_title))

@@ -16,8 +16,8 @@ android {
         // Spec 12.6: Android 11+ (API 30) for stable Foreground Service + NNAPI
         minSdk = 30
         targetSdk = 34
-        versionCode = 1
-        versionName = "0.1.0-mvp"
+        versionCode = 2
+        versionName = "0.2.0-mvp"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
@@ -59,6 +59,21 @@ android {
     ndkVersion = "26.1.10909125"
 
     signingConfigs {
+        // Stable debug key committed to the repo (PCA install-update fix).
+        // Android refuses to update an installed app when the new APK is signed
+        // with a different key. The default auto-generated ~/.android/debug.keystore
+        // is regenerated on every fresh CI runner, so each rolling pca-latest APK
+        // was signed differently — sideload updates failed ("App not installed")
+        // and the phone silently stayed on the first build ever installed.
+        // A committed debug keystore (well-known password "android", not a secret)
+        // gives every build — local and CI — the same signature, so updates
+        // install over each other.
+        create("debugStable") {
+            storeFile = file("pca-debug.jks")
+            storePassword = "android"
+            keyAlias = "androiddebugkey"
+            keyPassword = "android"
+        }
         create("releaseLocal") {
             // Default debug-keystore-style local signing for sideload to SM-G998B/DS.
             // Override via gradle properties for production.
@@ -80,6 +95,7 @@ android {
             isMinifyEnabled = false
             applicationIdSuffix = ".debug"
             versionNameSuffix = "-debug"
+            signingConfig = signingConfigs.getByName("debugStable")
         }
         release {
             isMinifyEnabled = true
