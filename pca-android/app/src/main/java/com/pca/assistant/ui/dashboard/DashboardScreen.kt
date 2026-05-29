@@ -116,6 +116,13 @@ fun DashboardScreen(
                 }
             }
 
+            Spacer(Modifier.height(4.dp))
+            Text(
+                text = s.sttDiag,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+
             if (s.bridgeUrlMissing) {
                 Spacer(Modifier.height(8.dp))
                 Card(

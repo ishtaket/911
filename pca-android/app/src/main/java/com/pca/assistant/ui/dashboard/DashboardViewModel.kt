@@ -43,6 +43,13 @@ data class DashboardState(
     val openThreads: List<OpenThreadEntity>,
     val recentWindows: List<WindowEntity>,
     val recentInterventions: List<InterventionEntity>,
+    /**
+     * Compact STT/audio diagnostic shown on the dashboard so a phone-only
+     * user (no logcat) can see why windows are skipped as no_speech:
+     * which engine is active, whether the native lib loaded, and whether
+     * mic permission is actually granted to the capture loop.
+     */
+    val sttDiag: String,
 )
 
 @HiltViewModel
@@ -53,7 +60,20 @@ class DashboardViewModel @Inject constructor(
     windowDao: WindowDao,
     interventionDao: InterventionDao,
     openThreadDao: OpenThreadDao,
+    private val whisper: com.pca.assistant.stt.WhisperJniRecognizer,
+    private val audioCapture: com.pca.assistant.audio.AudioCapture,
 ) : ViewModel() {
+
+    private fun sttDiag(): String {
+        val engine = when (whisper.readyState()) {
+            com.pca.assistant.stt.WhisperJniRecognizer.Ready.Loaded -> "whisper-ready"
+            com.pca.assistant.stt.WhisperJniRecognizer.Ready.NoModel -> "no-model"
+            com.pca.assistant.stt.WhisperJniRecognizer.Ready.NativeMissing -> "native-missing"
+        }
+        val native = com.pca.assistant.stt.WhisperJniRecognizer.nativeAvailable
+        val mic = audioCapture.hasMicPermission()
+        return "STT: $engine · native=$native · mic=$mic"
+    }
 
     val state: StateFlow<DashboardState>
 
@@ -108,6 +128,7 @@ class DashboardViewModel @Inject constructor(
                 openThreads = threads,
                 recentWindows = windows,
                 recentInterventions = ints,
+                sttDiag = sttDiag(),
             )
         }.stateIn(
             viewModelScope,
@@ -123,6 +144,7 @@ class DashboardViewModel @Inject constructor(
                 openThreads = emptyList(),
                 recentWindows = emptyList(),
                 recentInterventions = emptyList(),
+                sttDiag = "STT: …",
             )
         )
     }
