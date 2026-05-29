@@ -132,7 +132,8 @@ class DashboardViewModel @Inject constructor(
                 recentWindows = windows,
                 recentInterventions = ints,
                 sttDiag = sttDiag(),
-                capDiag = "cap=${cap.chunks} peak=${cap.lastPeak} vad=${cap.speech} rec=${cap.recognize} txt=${cap.nonEmpty}",
+                capDiag = "cap=${cap.chunks} peak=${cap.lastPeak} vad=${cap.speech} rec=${cap.recognize} txt=${cap.nonEmpty}" +
+                    (if (cap.lastErr.isNotEmpty()) "\nerr=${cap.lastErr}" else ""),
             )
         }.stateIn(
             viewModelScope,

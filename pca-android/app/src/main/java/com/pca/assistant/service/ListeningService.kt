@@ -176,6 +176,7 @@ class ListeningService : LifecycleService() {
                         while (capturePcm.size > MAX_CHUNKS) capturePcm.removeFirst()
                     }
                     runCatching { onSpeechChunk(pcm) }
+                        .onFailure { captureDiag.onError("${it.javaClass.simpleName}: ${it.message}") }
                 }
             }
         }
