@@ -85,7 +85,11 @@ fun SettingsScreen(vm: SettingsViewModel, onBack: () -> Unit, onReEnroll: () -> 
             Section(title = stringResource(R.string.settings_provider)) {
                 // BRIDGE first — per spec §3.4 it's the primary provider.
                 // Mock is the explicit-offline choice.
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                // Stacked vertically: the bridge label is long enough that a
+                // horizontal Row squeezed the second chip to ~zero width, which
+                // wrapped its label character-by-character into a screen-tall
+                // sliver and left a giant empty gap before the fields below.
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     AssistChip(
                         onClick = { vm.setProvider(ProviderMode.BRIDGE) },
                         label = { Text(stringResource(R.string.settings_provider_bridge)) },
