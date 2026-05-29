@@ -122,8 +122,26 @@ class ModelDownloader @Inject constructor(
                     return@flow
                 }
             }
-            if (!part.renameTo(target)) {
-                emit(Progress.Failed("rename failed"))
+            // File.renameTo() is unreliable on Android's emulated/FUSE storage
+            // and returns false for non-obvious reasons even within a single
+            // directory — which silently threw away finished ~800 MB downloads.
+            // Prefer Files.move; fall back to a byte copy so a completed
+            // download is never lost over a flaky rename.
+            val installed = runCatching {
+                java.nio.file.Files.move(
+                    part.toPath(),
+                    target.toPath(),
+                    java.nio.file.StandardCopyOption.REPLACE_EXISTING,
+                )
+                Unit
+            }.recoverCatching {
+                part.copyTo(target, overwrite = true)
+                part.delete()
+                Unit
+            }
+            if (installed.isFailure) {
+                runCatching { part.delete() }
+                emit(Progress.Failed("install failed: ${installed.exceptionOrNull()?.message ?: "move/copy error"}"))
                 return@flow
             }
             emit(Progress.Done(target))

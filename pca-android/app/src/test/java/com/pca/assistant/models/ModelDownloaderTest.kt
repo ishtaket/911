@@ -74,6 +74,24 @@ class ModelDownloaderTest {
         assertEquals(registry.fileFor(spec), file)
     }
 
+    @Test fun `installed file content matches the downloaded bytes`() = runTest {
+        // Guards the rename -> Files.move/copy install path: the bytes that
+        // land at the target must be exactly what was streamed.
+        val payload = bytesFilled(96 * 1024)
+        server.enqueue(
+            MockResponse()
+                .setResponseCode(200)
+                .setHeader("Content-Length", payload.size.toString())
+                .setBody(Buffer().write(payload))
+        )
+        val spec = spec()
+        val done = downloader.download(spec).toList().last()
+        assertTrue("expected Done, got $done", done is ModelDownloader.Progress.Done)
+        val file = (done as ModelDownloader.Progress.Done).file
+        assertEquals(sha256Hex(payload), sha256Hex(file.readBytes()))
+        assertFalse("temp .part must be gone", registry.modelsDir().list()?.contains(spec.filename + ".part") == true)
+    }
+
     @Test fun `progress events monotonically increase to 100`() = runTest {
         val payload = bytesFilled(128 * 1024)
         server.enqueue(
